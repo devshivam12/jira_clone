@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '../../components/ui/select';
+import { Avatar, AvatarFallback } from '../../components/ui/avatar';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-
+import { Card, CardContent } from '@/components/ui/card';
+import Epic from './Epic';
+import Sprint from './Sprint';
+import CreateBacklog from './CreateBacklog';
+import { Search } from 'lucide-react';
 
 const randomData = [
   { first_name: "Shivam" },
@@ -19,13 +17,9 @@ const randomData = [
   { first_name: "SM" }
 ];
 
-// const usualData = [
-//   {name : Epic}
-// ]
-
 const Backlog = () => {
-  const [userData, setUserData] = useState(JSON.parse(localStorage.getItem("userData")) || {});
-  const [isExpand, setIsExpand] = useState(false)
+  const [isExpand, setIsExpand] = useState(false);
+  const [showEpic, setShowEpic] = useState(false);
 
   return (
     <div>
@@ -36,13 +30,18 @@ const Backlog = () => {
       <div>
         <div className="flex items-center gap-x-4">
           {/* Search Box */}
-          <Input
-            type="text"
-            placeholder="Search"
-            className={`px-2 w-40 border border-neutral-300 rounded-md focus:ring-2 focus:ring-primary focus:outline-none transition hover:bg-neutral-100 ${isExpand === true ? 'w-52 transition-all' : 'w-40 transition-all'}`}
-            onFocus={() => setIsExpand(true)}
-            onBlur={() => setIsExpand(false)}
-          />
+          <div className='flex items-center justify-between space-x-1 relative'>
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+              <Search size={15} className="text-neutral-500" />
+            </div>
+            <Input
+              type="text"
+              placeholder="Search"
+              className={`px-8 pl-8 w-40 border border-neutral-300 rounded-md focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300 hover:bg-neutral-100 ${isExpand ? 'w-52' : 'w-40'}`}
+              onFocus={() => setIsExpand(true)}
+              onBlur={() => setIsExpand(false)}
+            />
+          </div>
 
           {/* Multiple Avatars */}
           <div className="flex -space-x-1">
@@ -54,30 +53,37 @@ const Backlog = () => {
               </Avatar>
             ))}
           </div>
-          {/* for showcasing epic */}
 
+          {/* Select Dropdown for Epic */}
           <div>
             <Select>
-              <SelectTrigger className="w-full hover:bg-neutral-100 font-medium px-10">
+              <SelectTrigger className="w-full px-5 py-2 rounded-md hover:bg-neutral-100 transition focus:outline-none">
                 <SelectValue placeholder="Epic" />
-                <SelectContent className="py-2 px-5" >
-                  <div>
-                    <p className='text-neutral-600 font-normal text-sm'>Your project has no Epic</p>
+                <SelectContent className="w-full mt-2 bg-white shadow-sm rounded-md border border-neutral-300 z-10">
+                  <div className="p-3">
+                    <p className="text-neutral-600 font-medium text-sm">Your project has no Epic</p>
                   </div>
-
                   <DottedSeparator className="my-1" />
-
-                  <div>
-                    <Switch id="show-epic" />
-                    <Label htmlFor="show-epic">Show Epic</Label>
+                  <div className="flex items-center gap-x-2 p-3">
+                    <Switch id="show-epic" onClick={() => setShowEpic(prev => !prev)} />
+                    <Label htmlFor="show-epic" className="text-sm font-medium text-neutral-800">Show Epic</Label>
                   </div>
                 </SelectContent>
               </SelectTrigger>
             </Select>
           </div>
+        </div>
+      </div>
 
-          <div>
-
+      {/* Main Content */}
+      <div className="flex justify-between my-7">
+        <div>{showEpic && <Epic />}</div>
+        <div className="space-y-6 w-full overflow-y-auto max-h-[350px]">
+          <div className='w-full'>
+            <Sprint />
+          </div>
+          <div className='w-full'>
+            <CreateBacklog />
           </div>
         </div>
       </div>
