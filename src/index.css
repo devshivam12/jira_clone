@@ -13,7 +13,6 @@ body {
     @layer base {
       html {
         @apply bg-gray-50;
-        overflow: hidden;
     }
   :root {
 

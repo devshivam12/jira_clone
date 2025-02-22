@@ -24,7 +24,7 @@ const progressTask = [
   { title: "Done", color: "bg-green-500", value: "2" },
 ];
 
-const Sprint = () => {
+const Sprint = ({ sprintName }) => {
   const [isExpand, setIsExpand] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [startDate, setStartDate] = useState()
@@ -58,7 +58,7 @@ const Sprint = () => {
               <ChevronRight size={17} className="text-neutral-500 transition-transform duration-200 hover:scale-110" />
             )}
             <div className='flex items-center gap-3'>
-              <span>SCRUM Sprint 1</span>
+              <span>{name}</span>
 
               {/* Drawer trigger with stopPropagation to prevent the card expansion */}
               <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
