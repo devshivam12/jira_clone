@@ -5,13 +5,16 @@ import { Select, SelectContent, SelectTrigger, SelectValue } from '../../compone
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Tooltip } from 'react-tooltip';
+
 import Epic from './Epic';
 import Sprint from './Sprint';
 import CreateBacklog from './CreateBacklog';
 import { ChartSpline, Ellipsis, Maximize, Maximize2, Search, Settings2, Share2 } from 'lucide-react';
-import { SheetDescription } from '@/components/ui/sheet';
-import Share from './common/Share';
+import Share from '../Share';
+import Insight from '../Insight';
+import TooltipWrapper from '@/components/common/TooltipWrapper';
+import BacklogLayoutSetting from '../BacklogLayoutSetting';
+import EditIssue from './EditIssue';
 
 const randomData = [
   { first_name: "Shivam" },
@@ -29,7 +32,11 @@ const Backlog = () => {
     }
   ])
 
+  const [selectedIssue, setSelectedIssue] = useState(null)
+
   const [openCommonShare, setOpenCommonShare] = useState(false)
+  const [openInsight, setOpenInsight] = useState(false)
+  const [backlogSetting, setBacklogSetting] = useState(false)
 
   const handleCreateSprint = () => {
     const newSprint = {
@@ -39,6 +46,10 @@ const Backlog = () => {
     setSprint([...sprint, newSprint])
   }
 
+  const handleIssueClick = (issue) => {
+    setSelectedIssue(issue)
+  }
+console.log("selectedIssue", selectedIssue)
   return (
     <div className='space-y-5'>
       {/* Title */}
@@ -46,16 +57,18 @@ const Backlog = () => {
         <h1 className="text-neutral-500 text-2xl font-semibold">Backlog</h1>
         <div className='flex items-center gap-x-4'>
           <div className='relative'>
-            <Share2 aria-label="Share" data-tooltip-id="share-tooltip"
-              data-tooltip-content="Share" size={10} className='h-9 w-9 flex item-center justify-center py-1 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 cursor-pointer rounded-sm' onClick={() => setOpenCommonShare(prev => !prev)} />
-            <Tooltip id="share-tooltip" place='top' />
+
+            <TooltipWrapper content="Share">
+              <Share2 size={10} className='h-9 w-9 flex item-center justify-center py-1 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 cursor-pointer rounded-sm' onClick={() => setOpenCommonShare(prev => !prev)} />
+            </TooltipWrapper>
+
             {openCommonShare && (
               <div className='absolute top-full right-0 mt-2 z-50 w-[400px]'>
                 <Share />
               </div>
             )}
           </div>
-          <Maximize2 size={10} className='h-9 w-9 flex item-center justify-center py-1 px-2 text-neutral-600 bg-neutral-100 hover:bg-neutral-200 cursor-pointer rounded-sm' />
+          {/* <Maximize2 size={10} className='h-9 w-9 flex item-center justify-center py-1 px-2 text-neutral-600 bg-neutral-100 hover:bg-neutral-200 cursor-pointer rounded-sm' /> */}
           <Ellipsis size={10} className='h-9 w-9 flex item-center justify-center py-1 px-2 bg-neutral-100 hover:bg-neutral-200 cursor-pointer rounded-sm text-neutral-600' />
         </div>
       </div>
@@ -108,27 +121,79 @@ const Backlog = () => {
           </div>
         </div>
         <div className='flex items-center gap-x-4'>
-          <ChartSpline size={10} className='h-9 w-9 flex item-center justify-center py-1 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 cursor-pointer rounded-sm' />
-          <Settings2 size={10} className='h-9 w-9 flex item-center justify-center py-1 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 cursor-pointer rounded-sm' />
+          <div>
+            <TooltipWrapper content="Backlog insight">
+              <ChartSpline
+                size={10}
+                className='h-9 w-9 flex item-center justify-center py-1 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 cursor-pointer rounded-sm'
+                onClick={() => {
+                  setOpenInsight(prev => !prev)
+                  setBacklogSetting(false)
+                }}
+              />
+            </TooltipWrapper>
+          </div>
+          <div>
+
+            <TooltipWrapper content="View settings">
+              <Settings2
+                size={10}
+                className='h-9 w-9 flex item-center justify-center py-1 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 cursor-pointer rounded-sm'
+                onClick={() => {
+                  setBacklogSetting(prev => !prev)
+                  setOpenInsight(false)
+                }}
+              />
+            </TooltipWrapper>
+
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex justify-between">
-        <div>{showEpic && <Epic showEpic={showEpic} setShowEpic={setShowEpic} />}</div>
-        <div className="space-y-6 w-full overflow-y-auto max-h-[350px]">
-          {
-            sprint.map((sprint) => (
-              <div key={sprint.id} className='w-full'>
-                <Sprint sprintName={sprint.name} />
-              </div>
-            ))
-          }
-          <div className='w-full'>
-            <CreateBacklog createSprint={handleCreateSprint} />
+      <div className="flex justify-between gap-x-2 w-full max-w-full">
+        {/* Left Div */}
+        <div className="flex-shrink-0">
+          {showEpic && <Epic showEpic={showEpic} setShowEpic={setShowEpic} />}
+        </div>
+
+        {/* Middle Div with Horizontal Scrollbar */}
+        <div className="space-y-6 flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-auto max-h-[390px]">
+          <div className="min-w-[800px]">
+            {
+              sprint.map((sprint) => (
+                <div key={sprint.id} className="w-full">
+                  <Sprint sprintName={sprint.name} />
+                </div>
+              ))
+            }
+            <div className="w-full">
+              <CreateBacklog
+                onIssueClick={handleIssueClick}
+                createSprint={handleCreateSprint}
+                selectedIssue={selectedIssue}
+                setSelectedIssue={setSelectedIssue}
+              />
+            </div>
           </div>
         </div>
+
+        {/* Right Div */}
+        <div className="flex-shrink-0 ">
+          {openInsight &&
+            <Insight openInsight={openInsight} setOpenInsight={setOpenInsight} />}
+          {
+            backlogSetting &&
+            <BacklogLayoutSetting backlogSetting={backlogSetting} setBacklogSetting={setBacklogSetting} setShowEpic={setShowEpic} />
+          }
+          {
+            selectedIssue && (
+              <EditIssue issue={selectedIssue} onClose={() => setSelectedIssue(null)} />
+            )
+          }
+        </div>
       </div>
+
     </div>
   );
 };

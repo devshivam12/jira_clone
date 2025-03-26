@@ -6,7 +6,7 @@ import EpicImage from '../../assets/epic-image.svg'
 
 const Epic = ({ showEpic, setShowEpic }) => {
     return (
-        <div className='w-full h-full pr-4'>
+        <div className='w-full h-full'>
             <Card className="w-full sm:max-w-md lg:w-[250px] h-auto bg-neutral-100 shadow-sm rounded-lg py-2 px-3 border border-neutral-200">
                 <div className="flex items-center justify-between">
                     <CardHeader className="px-0 py-0">

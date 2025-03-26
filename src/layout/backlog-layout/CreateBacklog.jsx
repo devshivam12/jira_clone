@@ -32,18 +32,18 @@ const labels = [
   "maintenance",
 ]
 
-const CreateBacklog = ({ createSprint }) => {
+const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedIssue }) => {
   const [userData, setUserData] = useState(() => {
     const storeData = localStorage.getItem("userData");
     return storeData ? JSON.parse(storeData) : null
   })
-
+  console.log("selectedIssue", selectedIssue)
   const [isExpand, setIsExpand] = useState(false);
   const [createIssue, setCreateIssue] = useState(false);
   const [issueType, setIssueType] = useState('story')
   const [issueName, setIssueName] = useState("")
   const [submittedIssue, setSubmittedIssue] = useState([])
-  const [selectedIssue, setSelectedIssue] = useState(false)
+  // const [selectedIssue, setSelectedIssue] = useState(false)
   const [selectProgress, setSelectProgress] = useState('to_do')
 
   const [editIssue, setEditIssue] = useState(null)
@@ -70,7 +70,8 @@ const CreateBacklog = ({ createSprint }) => {
   }
 
   const handleIssueClick = (id) => {
-    setSelectedIssue((prev) => (prev === id ? null : id))
+    const issue = submittedIssue.find(issue => issue.id === id);
+    onIssueClick(issue); // Pass the selected issue to the parent
   }
 
   const handleEditClick = (id, changeText) => {
@@ -149,8 +150,8 @@ const CreateBacklog = ({ createSprint }) => {
                 className="relative w-full group"
               >
                 <Card
-                  onClick={() => handleIssueClick(index)}
-                  className={`w-full hover:bg-neutral-100 shadow-none bg-none bg-card-none border-neutral-300 hover:cursor-pointer border py-2 px-4 rounded-none outline-none text-neutral-600 font-normal flex items-center justify-between ${selectedIssue === index ? ' border-neutral-400 text-neutral-600 font-semibold  bg-neutral-100' : ''
+                  onClick={() => handleIssueClick(item.id)}
+                  className={`w-full hover:bg-neutral-100 shadow-none bg-none bg-card-none border-neutral-300 hover:cursor-pointer border py-2 px-4 rounded-none outline-none text-neutral-600 font-normal flex items-center justify-between ${selectedIssue === item ? ' border-neutral-400 text-neutral-600 font-semibold  bg-neutral-100' : ''
                     }`}
                 >
                   <div className='flex items-center justify-start gap-4 min-h-5'>
@@ -223,10 +224,10 @@ const CreateBacklog = ({ createSprint }) => {
 
                   <div className='flex items-center gap-5'>
                     <Select className="w-full border" value={selectProgress} onValueChange={(value) => setSelectProgress(value)}>
-                      <SelectTrigger className="w-full h-7 border-neutral-500 px-3 py-0 rounded-sm hover:bg-neutral-100 transition focus:outline-none">
+                      <SelectTrigger className="w-full h-7 border-neutral-500 px-3 py-0 rounded-sm transition focus:outline-none">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="w-full mt-2 bg-white shadow-sm rounded-md border border-neutral-300 z-10">
+                      <SelectContent className="w-full mt-2">
                         <SelectGroup>
                           <SelectItem value="to_do" >
                             <span>To Do</span>
