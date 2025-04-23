@@ -10,13 +10,18 @@ import { useDispatch } from 'react-redux'
 
 import { useToast } from '@/hooks/use-toast'
 import { useLoginMutation } from '@/redux/api/authApi'
+import { setClientId, userExist } from '@/redux/reducers/auth'
+import { Eye, EyeClosed, EyeOff } from 'lucide-react'
 const apiService = new ApiService()
 
 const Login = () => {
+  const dispatch = useDispatch()
   const { handleSubmit, register, reset, formState: { errors } } = useForm()
   const { toast } = useToast()
   const navigate = useNavigate()
   const [login, { isLoading, error }] = useLoginMutation()
+
+  const [showPassword, setShowPassword] = useState(false)
 
   const isValidEmail = (input) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,16 +33,21 @@ const Login = () => {
       const response = await login(formData).unwrap()
       console.log("response", response)
 
-      localStorage.setItem('userData', JSON.stringify(response.user))
-      localStorage.setItem('accessToken', response.user.token)
 
       if (response.status === 200) {
+        localStorage.setItem('userData', JSON.stringify(response.user))
+        localStorage.setItem('accessToken', response.user.token)
+        // Update Redux state
+        console.log("response", response)
+        dispatch(userExist(response.user));
+        dispatch(setClientId(response.user.clientId));
+
         toast({
           title: "Login success",
           description: response.message,
           variant: "success",
         })
-        window.location.href = '/'
+        window.location.href = '/dashboard'
       }
       // }
       else if (response.status === 404) {
@@ -104,12 +114,27 @@ const Login = () => {
               {...register('identifier', { required: true })}
             />
             {errors.identifier && <p className='text-red-500 text-sm'>{errors.identifier.message}</p>}
-            <Input
-              type="password"
-              required
-              placeholder="Enter password"
-              {...register('password', { required: true })}
-            />
+            <div className='flex items-center relative'>
+              <Input
+                type={showPassword === true ? 'text' : 'password'}
+                required
+                placeholder="Enter password"
+                {...register('password', { required: true })}
+              />
+              {showPassword ? (
+                <EyeOff
+                  size={20}
+                  className='text-neutral-500 absolute right-3 cursor-pointer'
+                  onClick={() => setShowPassword(!showPassword)}
+                />
+              ) : (
+                <Eye
+                  size={20}
+                  className='text-neutral-500 absolute right-3 cursor-pointer'
+                  onClick={() => setShowPassword(!showPassword)}
+                />
+              )}
+            </div>
             {errors.password && <p className='text-red-500 text-sm'>{errors.password.message}</p>}
             <Button type="submit" disable={isLoading} size="lg" className="w-full">
               Login

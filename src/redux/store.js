@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit"
-import { api } from "./api/api"
+import { api } from "../redux/api/company/api"
 import { apiAuth } from "./api/authApi"
 
 const store = configureStore({

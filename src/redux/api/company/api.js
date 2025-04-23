@@ -10,7 +10,7 @@ export const api = createApi({
             console.log("userData", userData)
             if (token && userData) {
                 headers.set('Authorization', token)
-                headers.set('x-userId', userData.userId)
+                headers.set('x-clientId', userData.clientId)
             }
             return headers
         }
@@ -19,22 +19,31 @@ export const api = createApi({
     endpoints: (build) => ({
         getWorkSpaceData: build.query({
             query: () => ({
-                url: '/work-space/get-workspace',
+                url: '/company/work-space/get-workspace',
             }),
-            providesTags : ['WorkSpace']
+            providesTags: ['WorkSpace']
         }),
         createWorkSpace: build.mutation({
             query: (formData) => ({
-                url: '/work-space/create-work-space',
+                url: '/company/work-space/create-work-space',
                 method: 'POST',
                 body: formData
             }),
-            invalidatesTags : ['WorkSpace']
+            invalidatesTags: ['WorkSpace']
         }),
-    })
+        addPeople : build.mutation({
+            query: (formData) => ({
+                url : '/company/team/add-member',
+                method : 'POST',
+                body : formData
+            }),
+            invalidatesTags: ['People']
+        })
+    }),
 })
 
 export const {
     useCreateWorkSpaceMutation,
-    useGetWorkSpaceDataQuery
+    useGetWorkSpaceDataQuery,
+    useAddPeopleMutation
 } = api

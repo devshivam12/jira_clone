@@ -12,7 +12,6 @@ import { Link, useNavigate, useRoutes } from 'react-router-dom'
 import { userNotExist } from '@/redux/reducers/auth'
 import { useToast } from '@/hooks/use-toast'
 import ApiService from '@/api/apiService'
-import { clearUserId } from '@/redux/reducers/userSlice'
 import { useLogoutMutation } from '@/redux/api/authApi'
 
 const apiSerivce = new ApiService()

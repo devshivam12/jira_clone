@@ -17,12 +17,12 @@ export default class ApiService {
 
     async setAuthorizationToken(token, userData) {
         this.api.defaults.headers.common['Authorization'] = `${token}`; // Optional if needed
-        this.api.defaults.headers.common['x-userId'] = userData.userId; // Set clientId
+        this.api.defaults.headers.common['x-clientId'] = userData.clientId; // Set clientId
     }
 
     async clearHeaders() {
         delete this.api.defaults.headers.common['Authorization'];
-        delete this.api.defaults.headers.common['x-userId']; // ✅ Fix typo
+        delete this.api.defaults.headers.common['x-clientId']; // ✅ Fix typo
     }
     
 

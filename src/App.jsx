@@ -23,52 +23,92 @@ import Backlog from './layout/backlog-layout/index'
 import Board from './layout/board-layout/index'
 import Timeline from './layout/timeline-layout/index'
 import Forms from './layout/forms/index'
+import Team from './layout/team/index'
+import PublicRoute from './components/auth/PublicRoute'
+import SetPassword from './components/auth/SetPassword'
 
 function App() {
-  // const { user, loader } = useSelector((state => state.auth))
-  const [user, setUser] = useState(null)
-  const [loader, setLoader] = useState(true)
-  // const dispatch = useDispatch()
-  const apiService = new ApiService()
+  const accessToken = localStorage.getItem('accessToken')
 
-  useEffect(() => {
-    apiService.get(`${server}/auth/user-details`, { withCredentials: true })
-      .then((res) => {
-        // console.log("res", res.data.data)
-        // dispatch(userExist(res.data.data))
-        setUser(res.data.data)
-        setLoader(false)
-      })
-      .catch((error) => {
-        setUser(null)
-        setLoader(false)
-      })
-  }, [])
+  // // const { user, loader } = useSelector((state => state.auth))
+  // const [user, setUser] = useState(null)
+  // const [loader, setLoader] = useState(true)
+  // // const dispatch = useDispatch()
+  // const apiService = new ApiService()
 
-  console.log("user", user)
-  return loader ? <Loader /> : (
+  // useEffect(() => {
+  //   apiService.get(`${server}/user/auth/user-details`, { withCredentials: true })
+  //     .then((res) => {
+  //       // console.log("res", res.data.data)
+  //       // dispatch(userExist(res.data.data))
+  //       setUser(res.data.data)
+  //       setLoader(false)
+  //     })
+  //     .catch((error) => {
+  //       setUser(null)
+  //       setLoader(false)
+  //     })
+  // }, [])
+
+  // console.log("user", user)
+  return (
     <>
       <BrowserRouter>
-        <Suspense>
+        <Suspense fallback={<Loader />}>
           <Routes>
             <Route
+              path='/'
+              element={
+                accessToken ? (
+                  <Navigate to='/dashboard' replace />
+                )
+                  : (
+                    <Navigate to='/login' replace />
+                  )
+              }
+            />
+            {/* <Route
               path="/login"
               element={
                 <ProtectedRoute user={!user} redirect='/'>
                   <Login />
                 </ProtectedRoute>
-              } />
-            <Route path="/register" element={<Register />} />
+              } /> */}
+            <Route path="/login" element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            } />
+            {/* <Route path="/register" element={<Register />} /> */}
+            <Route path="/register" element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            } />
+
+            <Route path='/set-password' element={
+              <PublicRoute>
+                  <SetPassword />
+              </PublicRoute>
+            }
+
+            />
 
             {/* for dashboards  */}
 
-            <Route path="/dashboard" element={<ProtectedRoute user={user} redirect="/login"><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+            >
               <Route index element={<Navigate to="backlog" replace />} />
               <Route path="summary" element={<Summary />} />
               <Route path="timeline" element={<Timeline />} />
               <Route path="backlog" element={<Backlog />} />
               <Route path="board" element={<Board />} />
               <Route path='forms' element={<Forms />} />
+              <Route path='people' element={<Team />} />
             </Route>
 
             {/* for managing user profile */}
@@ -76,7 +116,7 @@ function App() {
             <Route
               path='/manage-account'
               element={
-                <ProtectedRoute user={user} redirect='/login'>
+                <ProtectedRoute>
                   <AccountLayout />
                 </ProtectedRoute>
               }

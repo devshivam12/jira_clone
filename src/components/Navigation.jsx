@@ -3,6 +3,7 @@ import React from 'react'
 import { Globe, Frame, ChartNoAxesGantt, SquareKanban, SquareLibrary } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { RiTeamFill } from 'react-icons/ri'
 const routes = [
     {
         label: "Summary",
@@ -28,6 +29,11 @@ const routes = [
         label: "Forms",
         href: "/dashboard/forms",
         icon: SquareLibrary
+    },
+    {
+        label : "Team",
+        href: "/dashboard/people",
+        icon: RiTeamFill
     }
 ]
 

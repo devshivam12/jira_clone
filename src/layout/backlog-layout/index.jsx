@@ -53,7 +53,7 @@ console.log("selectedIssue", selectedIssue)
   return (
     <div className='space-y-5'>
       {/* Title */}
-      <div className='flex items-cetner justify-between'>
+      <div className='flex items-center justify-between'>
         <h1 className="text-neutral-500 text-2xl font-semibold">Backlog</h1>
         <div className='flex items-center gap-x-4'>
           <div className='relative'>

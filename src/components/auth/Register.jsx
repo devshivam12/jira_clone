@@ -1,56 +1,91 @@
 import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card'
+import { Eye, EyeClosed, EyeOff } from 'lucide-react'
 import { DottedSeparator } from '../dotted-separator'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { Form, FormControl, FormItem, FormMessage } from '../ui/form'
-import axios from 'axios'
 import { server } from '@/constant/config'
 import { useDispatch } from 'react-redux'
-import { userExist, userNotExist } from '@/redux/reducers/auth'
+import { userExist, userNotExist, setClientId } from '@/redux/reducers/auth'
 import { motion } from 'framer-motion'
 import { Separator } from '../ui/separator'
 import apiService from '@/api/apiService'
+import { useRegisterMutation } from '@/redux/api/authApi'
+import { useToast } from '@/hooks/use-toast'
 
 const Register = () => {
   const { handleSubmit, register, reset, formState: { errors } } = useForm()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [registerUser, { isLoading, error }] = useRegisterMutation()
   const [step, setStep] = useState(1)
-
+  const [showPassword, setShowPassword] = useState(false)
+  const {toast} = useToast()
   const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   const handleSignUp = async (data) => {
     console.log("data", data)
-    setIsLoading(true)
 
-    const formData = new FormData()
-    formData.append('username', data.username)
-    formData.append('email', data.email)
-    formData.append('password', data.password)
-    formData.append('first_name', data.first_name)
-    formData.append('last_name', data.last_name)
+    // const formData = new FormData()
+    // formData.append('username', data.username)
+    // formData.append('email', data.email)
+    // formData.append('password', data.password)
+    // formData.append('first_name', data.first_name)
+    // formData.append('last_name', data.last_name)
     try {
-      const config = {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      };
-      const response = await apiService.post('/auth/register', formData, config)
-      console.log("response", response)
-      const userData = response.data.user
-      if (response.status === 201) {
-        localStorage.setItem('user', JSON.stringify(userData))
-        console.log("userData", userData)
-      }
-      dispatch(userExist(response.data.user));
+      // const config = {
+      //   withCredentials: true,
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      // };
+      const response = await registerUser({
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        first_name: data.first_name,
+        last_name: data.last_name
+      }).unwrap();
 
+      console.log("response", response)
+      const userData = response.user
+      if (response.status === 201) {
+        localStorage.setItem('userData', JSON.stringify(userData))
+        localStorage.setItem('accessToken', response.user.token)
+        console.log("userData", userData)
+        dispatch(userExist(response.user));
+        dispatch(setClientId(response.user.clientId));
+        navigate('/dashboard')
+        toast({
+          title: "Registeration successfully done",
+          description: response.message,
+          variant: "success",
+        })
+
+      }
+      else if (response.status === 400) {
+        toast({
+          title: "Registeration failed",
+          description: response.message,
+          variant: "destructive",
+        })
+      }
+      else {
+        toast({
+          title: "Registeration failed",
+          description: response.message,
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       console.log("error", error)
-      dispatch(userNotExist(true))
+      // dispatch(userNotExist(true))
+      toast({
+        title: "Registeration failed",
+        description: error.message,
+        variant: "destructive",
+      })
     }
   }
 
@@ -102,19 +137,36 @@ const Register = () => {
                   disable={false}
                 />
                 <span>{errors.email ? 'Email is required' : ''}</span>
-                <Input
-                  type="password"
-                  required
-                  placeholder="Enter password"
-                  {...register('password', { required: true })}
-                  error={!!errors.password}
-                  disable={false}
-                  min={8}
-                  max={256}
-                />
+                <div className='flex items-center relative'>
+                  <Input
+                    type={showPassword === true ? 'text' : "password"}
+                    required
+                    placeholder="Enter password"
+                    {...register('password', { required: true })}
+                    error={!!errors.password}
+                    disable={false}
+                    min={8}
+                    max={256}
+                  />
+                  {
+                    showPassword ? (
+                      <EyeOff
+                        size={20}
+                        className='text-neutral-500 absolute right-3 cursor-pointer'
+                        onClick={() => setShowPassword(!showPassword)}
+                      />
+                    ) : (
+                      <Eye
+                        size={20}
+                        className='text-neutral-500 absolute right-3 cursor-pointer'
+                        onClick={() => setShowPassword(!showPassword)}
+                      />
+                    )
+                  }
+                </div>
                 <span>{errors.password ? 'Password is required' : ''}</span>
 
-                <Button disabled={false} size="lg" className="w-full" type="submit">
+                <Button variant="teritary" disabled={false} size="lg" className="w-full" type="submit">
                   Next
                 </Button>
               </motion.div>
@@ -152,10 +204,10 @@ const Register = () => {
 
 
                 <div className='flex items-center gap-2'>
-                  <Button size="lg" className="w-full" onClick={handleBack} disabled={step === 1}>
+                  <Button variant="outline" size="lg" className="w-full" onClick={handleBack} disabled={step === 1}>
                     Back
                   </Button>
-                  <Button disabled={false} size="lg" className="w-full" type="submit">
+                  <Button variant="teritary" disabled={false} size="lg" className="w-full" type="submit">
                     Next
                   </Button>
                 </div>
@@ -184,10 +236,10 @@ const Register = () => {
                 <span>{errors.username ? 'Username is required' : ''}</span>
 
                 <div className='flex items-center gap-2'>
-                  <Button disabled={false} size="lg" className="w-full" onClick={handleBack} >
+                  <Button variant="outline" disabled={false} size="lg" className="w-full" onClick={handleBack} >
                     Back
                   </Button>
-                  <Button disabled={false} size="lg" className="w-full" type="submit">
+                  <Button variant="teritary" disabled={false} size="lg" className="w-full" type="submit">
                     Register
                   </Button>
                 </div>

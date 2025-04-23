@@ -4,6 +4,7 @@ import { DottedSeparator } from './dotted-separator'
 import Navigation from './Navigation'
 import Logo from '../assets/logo.svg'
 import WorkspaceSwitcher from './WorkspaceSwitcher'
+
 const Sidebar = () => {
     return (
         <aside className='h-full bg-neutral-100 p-4 w-full'>

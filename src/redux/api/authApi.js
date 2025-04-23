@@ -2,12 +2,37 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
 export const apiAuth = createApi({
     reducerPath: "apiAuth",
-    baseQuery: fetchBaseQuery({ baseUrl: import.meta.env.VITE_SERVER, credentials: 'include' }),
+    baseQuery: fetchBaseQuery({
+        baseUrl: import.meta.env.VITE_SERVER,
+        credentials: 'include',
+        prepareHeaders: (headers) => {
+            const userData = JSON.parse(localStorage.getItem('userData'));
+            console.log("userData", userData)
+            let clientId = userData?.clientId
+            console.log("clientId", clientId)
+            if (clientId) {
+                headers.set('x-clientId', clientId);
+            }
+            return headers;
+        }
+    }),
     tagTypes: ["User", "Auth"],
     endpoints: (build) => ({
+        register: build.mutation({
+            query: (formData) => ({
+                url: 'user/auth/register',
+                method: 'POST',
+                body: formData,
+                // headers: {
+                //     'Content-type' : 'application/json'
+                // },
+                // credentials: 'include'
+            }),
+            invalidatesTags: ['User']
+        }),
         login: build.mutation({
             query: (formData) => ({
-                url: '/auth/login',
+                url: '/user/auth/login',
                 method: 'POST',
                 body: formData
             }),
@@ -15,16 +40,22 @@ export const apiAuth = createApi({
         }),
         logout: build.mutation({
             query: () => ({
-                url: '/auth/logout',
+                url: '/user/auth/logout',
                 method: 'POST',
-                credentials : 'include'
+                credentials: 'include'
             }),
             invalidatesTags: ['Auth', 'User']
         }),
+        verifyUser: build.query({
+            query: () => '/user/auth/user-details',
+            providesTags: ['User']
+        })
     })
 })
 
 export const {
+    useRegisterMutation,
     useLoginMutation,
-    useLogoutMutation
+    useLogoutMutation,
+    useVerifyUserQuery
 } = apiAuth

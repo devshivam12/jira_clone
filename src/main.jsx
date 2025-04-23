@@ -10,12 +10,12 @@ import { Toaster } from './components/ui/toaster'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
-      <div onContextMenu={(e) => e.preventDefault()}>
+      {/* <div onContextMenu={(e) => e.preventDefault()}> */}
         {/* <ToastProvider>. */}
         <App />
         <Toaster />
         {/* </ToastProvider> */}
-      </div>
+      {/* </div> */}
     </Provider>
   </StrictMode>,
 )

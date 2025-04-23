@@ -27,7 +27,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 
 import { ChevronDown, ChevronRight, ChevronUp, Cog, Ellipsis, Eye, Info, LockKeyholeOpen, Pen, Pin, Plus, Share, Share2, ThumbsUp, X } from 'lucide-react'
-import MultiSelect from '@/components/ui/multiSelect'
+// import MultiSelect from '@/components/ui/MultiSelect'
 import SelectTeam from './common-component/SelectTeam'
 import TooltipWrapper from '@/components/common/TooltipWrapper'
 import CreateEpic from './common-component/CreateEpic'
@@ -312,7 +312,7 @@ const EditIssue = ({ issue, onClose }) => {
                                         <Pin size={15} className='cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200 ' />
                                     </TooltipWrapper>
                                 </Label>
-                                <MultiSelect />
+                                {/* <MultiSelect /> */}
                             </div>
 
                             {/* For Parents */}

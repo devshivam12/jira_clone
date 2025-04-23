@@ -1,6 +1,6 @@
 import React from 'react'
 import { RiAddCircleFill } from 'react-icons/ri'
-import { useGetWorkSpaceDataQuery } from '@/redux/api/api'
+import { useGetWorkSpaceDataQuery } from '../redux/api/company/api'
 import {
   Select,
   SelectContent,
@@ -24,7 +24,7 @@ const WorkspaceSwitcher = () => {
           <SelectTrigger className="w-full bg-neutral-200 font-medium p-1">
             <SelectValue placeholder="No workspace selected" />
             <SelectContent>
-              {workspace?.data.map((workspaces, index) => (
+              {workspace?.data?.map((workspaces, index) => (
                 <SelectItem
                   key={index}
                   value={index}
