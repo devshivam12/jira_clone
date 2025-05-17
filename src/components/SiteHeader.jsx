@@ -24,7 +24,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, Plus, Search } from "lucide-react"
+import { ChevronDown, PanelRightOpen, Plus, Search, SidebarIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Link, useNavigate } from 'react-router-dom'
 import { Input } from './ui/input'
@@ -39,6 +39,7 @@ import ButtonLoader from './ui/buttonLoader'
 import { DottedSeparator } from './dotted-separator'
 import { Select, SelectContent, SelectGroup, SelectTrigger, SelectValue, SelectItem } from './ui/select'
 import { useGetRolesQuery } from '@/redux/api/authApi'
+import { useSidebar } from './ui/sidebar'
 
 
 
@@ -52,9 +53,11 @@ const options = [
 ];
 
 
-const Navbar = () => {
+const SiteHeader = () => {
     const [isWorked, setIsWork] = useState(false)
     const [isTeam, setIsTeam] = useState(false)
+
+    const { toggleSidebar } = useSidebar()
 
     const [dialogState, setDialogState] = useState({
         isOpen: false,
@@ -76,16 +79,27 @@ const Navbar = () => {
     })
 
     return (
-        <nav className='pr-4 flex items-center justify-between'>
-            <div className="flex h-16 items-center px-4">
+        <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background ">
+            <div className="flex h-[--header-height] items-center gap-2 px-4">
+                <Button
+                    className="h-8 w-8"
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleSidebar}
+                >
+                    {/* <SidebarIcon /> */}
+                    <PanelRightOpen />
+                </Button>
+            </div>
+            <div className='flex align-end justify-end w-full'>
                 <NavigationMenu>
                     <NavigationMenuList>
                         {/* Logo/brand item */}
-                        <NavigationMenuItem>
+                        {/* <NavigationMenuItem>
                             <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                                 Your Brand
                             </NavigationMenuLink>
-                        </NavigationMenuItem>
+                        </NavigationMenuItem> */}
 
                         {/* Your Work Dropdown */}
                         <NavigationMenuItem>
@@ -256,24 +270,33 @@ const Navbar = () => {
                                 </DropdownMenu>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
-                        <NavigationMenuItem>
+                        {/* <NavigationMenuItem>
                             <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                                 Pricing
                             </NavigationMenuLink>
-                        </NavigationMenuItem>
+                        </NavigationMenuItem> */}
                     </NavigationMenuList>
                 </NavigationMenu>
             </div>
+            <div className='w-full px-4'>
+                <Input
+                    placeholder="Search"
+                    className="hover:bg-neutral-100"
+                />
+            </div>
+
+            <div className='pr-4'>
+                <UserButton />
+            </div>
+
             <EmailMultiSelect
                 slug={dialogState.slug}
                 isOpen={dialogState.isOpen}
                 onOpenChange={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
                 userData={userData}
             />
-            <MobileSidebar />
-            <UserButton />
-        </nav>
+        </header>
     )
 }
 
-export default Navbar
+export default SiteHeader

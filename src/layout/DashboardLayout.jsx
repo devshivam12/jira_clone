@@ -1,26 +1,31 @@
-import Navbar from '@/components/Navbar'
-import Sidebar from '@/components/Sidebar'
 import React from 'react'
 import { Outlet } from 'react-router-dom'
+import {
+    SidebarInset,
+    SidebarProvider,
+    SidebarTrigger,
+} from "@/components/ui/sidebar"
+import AppSidebar from '@/components/AppSidebar'
+import SiteHeader from '@/components/SiteHeader'
 
 const DashboardLayout = () => {
     return (
-        <div className='min-h-screen'>
-            <div className='flex w-full h-full'>
-                <div className='fixed left-0 top-0 hidden lg:block lg:w-[264px] h-full overflow-y-auto'>
-                    <Sidebar />
-                </div>
-                <div className='lg:pl-[264px] w-full'>
-                    <div className='mx-auto max-w-screen-2xl h-full'>
-                        <Navbar />
-                        <main className='h-full py-8 px-6 flex flex-col'>
+        <div className="[--header-height:calc(theme(spacing.14))]">
+            <SidebarProvider className="flex flex-col">
+                <SiteHeader />
+                <div className="flex flex-1">
+                    <AppSidebar />
+                    <SidebarInset>
+                        <div className="flex flex-1 flex-col gap-4 py-4 pr-2 pl-4 ">
                             <Outlet />
-                        </main>
-                    </div>
+                        </div>
+                    </SidebarInset>
                 </div>
-            </div>
+            </SidebarProvider>
         </div>
     )
 }
 
 export default DashboardLayout
+
+

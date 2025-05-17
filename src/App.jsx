@@ -26,6 +26,7 @@ import Forms from './layout/forms/index'
 import Team from './layout/team/index'
 import PublicRoute from './components/auth/PublicRoute'
 import SetPassword from './components/auth/SetPassword'
+import GetTeamDetails from './layout/team/GetTeamDetails'
 
 function App() {
   const accessToken = localStorage.getItem('accessToken')
@@ -108,7 +109,8 @@ function App() {
               <Route path="backlog" element={<Backlog />} />
               <Route path="board" element={<Board />} />
               <Route path='forms' element={<Forms />} />
-              <Route path='people' element={<Team />} />
+              <Route path='team' element={<Team />} />
+              <Route path='team/:id' element={<GetTeamDetails />} />
             </Route>
 
             {/* for managing user profile */}

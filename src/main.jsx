@@ -8,7 +8,7 @@ import { ToastProvider } from './components/ui/toast'
 import { Toaster } from './components/ui/toaster'
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
+  // <StrictMode>
     <Provider store={store}>
       {/* <div onContextMenu={(e) => e.preventDefault()}> */}
         {/* <ToastProvider>. */}
@@ -17,5 +17,5 @@ createRoot(document.getElementById('root')).render(
         {/* </ToastProvider> */}
       {/* </div> */}
     </Provider>
-  </StrictMode>,
+  // </StrictMode>,
 )

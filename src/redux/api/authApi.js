@@ -16,7 +16,7 @@ export const apiAuth = createApi({
             return headers;
         }
     }),
-    tagTypes: ["User", "Auth"],
+    tagTypes: ["User", "Auth", "Roles"],
     endpoints: (build) => ({
         register: build.mutation({
             query: (formData) => ({
@@ -49,6 +49,12 @@ export const apiAuth = createApi({
         verifyUser: build.query({
             query: () => '/user/auth/user-details',
             providesTags: ['User']
+        }),
+        getRoles: build.query({
+            query: () => ({
+                url: '/user/get-role',
+            }),
+            providesTags: ['Roles']
         })
     })
 })
@@ -57,5 +63,6 @@ export const {
     useRegisterMutation,
     useLoginMutation,
     useLogoutMutation,
-    useVerifyUserQuery
+    useVerifyUserQuery,
+    useGetRolesQuery
 } = apiAuth

@@ -49,7 +49,7 @@ const Backlog = () => {
   const handleIssueClick = (issue) => {
     setSelectedIssue(issue)
   }
-console.log("selectedIssue", selectedIssue)
+  console.log("selectedIssue", selectedIssue)
   return (
     <div className='space-y-5'>
       {/* Title */}
@@ -151,15 +151,16 @@ console.log("selectedIssue", selectedIssue)
       </div>
 
       {/* Main Content */}
-      <div className="flex justify-between gap-x-2 w-full max-w-full">
+      <div className="flex justify-between gap-x-2 w-full ">
         {/* Left Div */}
         <div className="flex-shrink-0">
           {showEpic && <Epic showEpic={showEpic} setShowEpic={setShowEpic} />}
         </div>
 
         {/* Middle Div with Horizontal Scrollbar */}
-        <div className="space-y-6 flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-auto max-h-[390px]">
-          <div className="min-w-[800px]">
+        {/* <div className="space-y-6 flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-auto max-h-[390px]"> */}
+        <div className={`flex-1 ${showEpic ? 'max-w-[calc(100%-16rem)]' : 'max-w-full'} overflow-x-auto`}>
+          <div className="min-w-fit space-y-6">
             {
               sprint.map((sprint) => (
                 <div key={sprint.id} className="w-full">
@@ -180,17 +181,25 @@ console.log("selectedIssue", selectedIssue)
 
         {/* Right Div */}
         <div className="flex-shrink-0 ">
-          {openInsight &&
-            <Insight openInsight={openInsight} setOpenInsight={setOpenInsight} />}
-          {
-            backlogSetting &&
-            <BacklogLayoutSetting backlogSetting={backlogSetting} setBacklogSetting={setBacklogSetting} setShowEpic={setShowEpic} />
-          }
-          {
-            selectedIssue && (
+          {openInsight && (
+            <div className='w-80'>
+              <Insight openInsight={openInsight} setOpenInsight={setOpenInsight} />
+            </div>
+          )}
+          {backlogSetting && (
+            <div className="w-80">
+              <BacklogLayoutSetting
+                backlogSetting={backlogSetting}
+                setBacklogSetting={setBacklogSetting}
+                setShowEpic={setShowEpic}
+              />
+            </div>
+          )}
+          {selectedIssue && (
+            <div className="w-80">
               <EditIssue issue={selectedIssue} onClose={() => setSelectedIssue(null)} />
-            )
-          }
+            </div>
+          )}
         </div>
       </div>
 

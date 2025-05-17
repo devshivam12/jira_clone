@@ -109,14 +109,14 @@ const EditIssue = ({ issue, onClose }) => {
     console.log("isScrolle", isScrolled)
     console.log("isEpicOpen", isEpicOpen)
     return (
-        <Card className='flex flex-col rounded-sm bg-neutral-100 shadow-neutral-200 w-[400px] overflow-y-auto max-h-[350px]'>
+        <Card className='flex flex-col rounded-sm bg-neutral-100 shadow-neutral-200  overflow-y-auto max-h-[350px]'>
             <div
                 className={`sticky top-0 bg-neutral-100 z-10 ${isScrolled ? 'shadow-sm' : ''}`}
 
             >
-                <CardHeader className="m-0 pb-0">
+                <CardHeader className="m-0 pb-0 px-0">
                     <CardTitle className>
-                        <div className='flex items-center justify-between'>
+                        <div className='flex items-center justify-between px-2'>
                             <div
                                 className='hover:bg-neutral-200 cursor-pointer p-1 rounded-sm'
                                 onClick={() => {
@@ -139,32 +139,42 @@ const EditIssue = ({ issue, onClose }) => {
                                 }
                             </div>
                             <div className='flex items-center'>
-                                <div className='flex items-center justify-center w-9 h-9 py-0 px-2 rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
-                                    <LockKeyholeOpen />
+                                <div className='flex items-center justify-center w-9 h-9 py-0  rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
+                                    <LockKeyholeOpen size={20} />
                                 </div>
-                                <div className='flex items-center justify-center w-9 h-9 py-0 px-2 rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
+                                <div className='flex items-center justify-center w-9 h-9 py-0  rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
                                     <Eye />
                                 </div>
-                                <div className='flex items-center justify-center w-9 h-9 py-0 px-2 rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
-                                    <ThumbsUp />
+                                <div className='flex items-center justify-center w-9 h-9 py-0  rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
+                                    <ThumbsUp size={20} />
                                 </div>
-                                <div className='flex items-center justify-center w-9 h-9 py-0 px-2 rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
-                                    <Share2 />
+                                <div className='flex items-center justify-center w-9 h-9 py-0  rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
+                                    <Share2 size={20} />
                                 </div>
-                                <div className='flex items-center justify-center w-9 h-9 py-0 px-2 rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
-                                    <Ellipsis />
+                                <div className='flex items-center justify-center w-9 h-9 py-0  rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
+                                    <Ellipsis size={20} />
                                 </div>
-                                <div className='flex items-center justify-center w-9 h-9 py-0 px-2 rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
-                                    <X />
+                                <div 
+                                className='flex items-center justify-center w-9 h-9 py-0  rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'
+                                onClick={handleClose}
+                                >
+                                    <X size={20} />
                                 </div>
                             </div>
                         </div>
                     </CardTitle>
                 </CardHeader>
             </div>
-            <CardContent className="mt-0 overflow-y-auto" onScroll={handleScrollEffect}>
+            <CardContent
+                className="mt-0 w-full overflow-y-auto px-2"
+                onScroll={handleScrollEffect}
+                style={{
+                    scrollbarWidth: 'none',  /* Firefox */
+                    msOverflowStyle: 'none',  /* IE and Edge */
+                }}
+            >
 
-                <div className='space-y-2'>
+                <div className='space-y-2 [&::-webkit-scrollbar]:hidden"'>
                     <div className='mt-[0.8rem] pb-0'>
                         <Input
                             type="text"

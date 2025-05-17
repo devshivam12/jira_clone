@@ -39,7 +39,10 @@ const Login = () => {
         localStorage.setItem('accessToken', response.user.token)
         // Update Redux state
         console.log("response", response)
-        dispatch(userExist(response.user));
+        dispatch(userExist({
+          ...response.user,
+          role: response.user.role
+        }));
         dispatch(setClientId(response.user.clientId));
 
         toast({

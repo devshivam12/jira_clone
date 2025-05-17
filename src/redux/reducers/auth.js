@@ -4,7 +4,8 @@ const initialState = {
     user: null,
     isAdmin: false,
     loader: true,
-    clientId: null 
+    clientId: null ,
+    role : null
 }
 
 const authSlice = createSlice({
@@ -13,12 +14,14 @@ const authSlice = createSlice({
     reducers: {
         userExist: (state, action) => {
             state.user = action.payload;
-            state.loader = false
+            state.loader = false;
+            state.role = action.payload.role
         },
         userNotExist: (state) => {
             state.user = null;
             state.isAdmin = false;
             state.loader = false;
+            state.role = null
         },
         setLoading: (state) => {
             state.loader = true

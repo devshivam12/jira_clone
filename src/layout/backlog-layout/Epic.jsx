@@ -20,7 +20,10 @@ const Epic = ({ showEpic, setShowEpic }) => {
                     />
 
                 </div>
-                <CardContent className="overflow-y-auto max-h-[350px]">
+                <CardContent className="overflow-y-auto max-h-[350px]" style={{
+                    scrollbarWidth: 'none',  /* Firefox */
+                    msOverflowStyle: 'none',  /* IE and Edge */
+                }}>
                     <div className='w-24 mt-10 mx-auto'>
                         <img src={EpicImage} />
                     </div>

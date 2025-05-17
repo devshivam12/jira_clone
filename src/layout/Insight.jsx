@@ -15,8 +15,14 @@ const Insight = ({ openInsight, setOpenInsight }) => {
     const [selectedValue, setSelectedValue] = useState(previousSprint[0].value)
     const [selectedFeedback, setSelectedFeedback] = useState("")
     return (
-        <Card className='flex flex-col rounded-sm bg-neutral-100 shadow-neutral-200 w-[360px] overflow-y-auto max-h-[350px]'>
-            <CardHeader className="py-2" >
+        <Card 
+        className='flex flex-col rounded-sm bg-neutral-100 shadow-neutral-200  overflow-y-auto max-h-[350px]'
+        style={{
+            scrollbarWidth: 'none',  /* Firefox */
+            msOverflowStyle: 'none',  /* IE and Edge */
+        }}
+        > 
+            <CardHeader className="py-2 px-2" >
                 <CardTitle className='flex items-center justify-between text-neutral-800'>
                     Backlog Insights
                     <div className='flex items-center font-normal text-neutral-500 text-sm'>
@@ -60,7 +66,7 @@ const Insight = ({ openInsight, setOpenInsight }) => {
                     </Select>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2 px-2 [&::-webkit-scrollbar]:hidden">
                 <Card className="border-none bg-neutral-200 rounded-sm shadow-none outline-none">
                     <CardHeader className="py-2 px-3">
                         <CardTitle className="text-neutral-700 font-normal text-md">

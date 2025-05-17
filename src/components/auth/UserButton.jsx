@@ -19,7 +19,7 @@ const apiSerivce = new ApiService()
 
 const UserButton = () => {
     const navigate = useNavigate()
-
+    const dispatch = useDispatch()
     const [userData, setUserData] = useState(() => {
         const storeData = localStorage.getItem("userData");
         return storeData ? JSON.parse(storeData) : null
@@ -32,6 +32,8 @@ const UserButton = () => {
     const fullName = userData?.first_name.charAt(0).toUpperCase() + userData?.first_name.slice(1) + " " + userData?.last_name.charAt(0).toUpperCase() + userData?.last_name.slice(1)
     console.log("fullName", fullName)
 
+    const name = userData?.first_name.charAt(0).toUpperCase() + userData?.last_name.charAt(0).toUpperCase()
+    console.log("name", name)
     const avatarFallback = userData?.first_name.charAt(0).toUpperCase() ?? userData?.email.charAt(0).toUpperCase() ?? "U";
 
     const handleLogout = async () => {
@@ -39,6 +41,7 @@ const UserButton = () => {
             const response = await logout().unwrap()
             window.location.href = '/login'
             localStorage.clear()
+            dispatch(userNotExist())
             toast({
                 title: "Logout success",
                 description: response.message,
@@ -59,15 +62,15 @@ const UserButton = () => {
             <DropdownMenuTrigger className='outline-none relative'>
                 <Avatar className="size-10 hover:opacity-75 transition border border-neutral-300 ">
                     <AvatarFallback className="bg-neutral-200 font-medium text-neutral-500 flex items-center ">
-                        {avatarFallback}
+                        {name}
                     </AvatarFallback>
                 </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="bottom" className="w-60" sideOffset={10}>
+            <DropdownMenuContent align="end" side="bottom" className="w-70" sideOffset={10}>
                 <div className='flex items-center gap-2 px-3 py-4'>
-                    <Avatar className="size-[48px] border border-neutral-300 ">
+                    <Avatar className="size-[48px] border border-neutral-200 ">
                         <AvatarFallback className="bg-neutral-200 text-xl font-medium text-neutral-500 flex items-center ">
-                            {avatarFallback}
+                            {name}
                         </AvatarFallback>
                     </Avatar>
                     <div className='flex flex-col '>
@@ -88,36 +91,36 @@ const UserButton = () => {
 
                 <DottedSeparator className="mb-1" />
 
-                <div className='h-10 flex items-center justify-between gap-2 px-3  mb-2'>
+                <div className='h-10 flex items-center justify-between gap-2 px-3  '>
                     <p className='text-neutral-700 text-sm'>
                         Jira
                     </p>
                 </div>
 
-                <DropdownMenuItem className='h-10 flex items-center justify-between gap-2 px-3 cursor-pointer mb-2'>
+                <DropdownMenuItem className='h-10 flex items-center justify-between gap-2 px-3 cursor-pointer '>
                     <p className='text-neutral-700'>
                         Open Quick
                     </p>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem className='h-10 flex items-center justify-between gap-2 px-3 cursor-pointer mb-2'>
+                <DropdownMenuItem className='h-10 flex items-center justify-between gap-2 px-3 cursor-pointer '>
                     <p className='text-neutral-700'>
                         Profile
                     </p>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem className='h-10 flex items-center justify-between gap-2 px-3 cursor-pointer mb-2'>
+                <DropdownMenuItem className='h-10 flex items-center justify-between gap-2 px-3 cursor-pointer '>
                     <p className='text-neutral-700'>
                         Personal Settings
                     </p>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem className='h-10 flex items-center justify-between gap-2 px-3 cursor-pointer mb-2'>
+                <DropdownMenuItem className='h-10 flex items-center justify-between gap-2 px-3 cursor-pointer'>
                     <p className='text-neutral-700'>
                         Notifications
                     </p>
                 </DropdownMenuItem>
-                <DottedSeparator className="mb-1" />
+                <DottedSeparator className="mb-1 mt-1" />
                 <DropdownMenuItem
                     onClick={handleLogout}
                     className="h-10 flex items-center justify-center text-amber-700 font-medium cursor-pointer" >
