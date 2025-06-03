@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { ChevronRight } from "lucide-react"
 
 import {
@@ -19,7 +19,10 @@ import {
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
-const NavMain = ({ items, currentPath }) => {
+const NavMain = ({ items, currentPath, project_slug,
+    template_slug }) => {
+    // const [projectSlug, setProjectSlug] = useState("software_development")
+    // const [templateSlug, setTemplateSlug] = useState('scrum')
     return (
         <SidebarGroup>
             <SidebarGroupLabel>Manage Work</SidebarGroupLabel>
@@ -45,7 +48,7 @@ const NavMain = ({ items, currentPath }) => {
                                         <SidebarMenuSubItem key={subItem.title}>
                                             <SidebarMenuSubButton asChild>
                                                 <Link key={subItem.url}
-                                                    to={subItem.url}
+                                                    to={`/dashboard/${project_slug}/${template_slug}${subItem.url}`}
                                                     className={cn(
                                                         "flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
                                                         subItem.isActive || currentPath === subItem.url

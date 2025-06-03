@@ -17,7 +17,7 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "../ui/dropdown-menu"
+} from "./dropdown-menu"
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -26,13 +26,13 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
     useSidebar,
-} from "../ui/sidebar"
+} from "./sidebar"
 import { Link } from 'react-router-dom'
 import { DottedSeparator } from '../dotted-separator'
 import { EmailMultiSelect } from './EmailMultiSelect'
 import { cn } from '@/lib/utils'
 
-const NavProjects = ({ projects, currentPath }) => {
+const NavPeoples = ({ peoples, currentPath }) => {
     const [userData, setUserData] = useState(() => {
         const storeData = localStorage.getItem("userData");
         return storeData ? JSON.parse(storeData) : null
@@ -48,9 +48,9 @@ const NavProjects = ({ projects, currentPath }) => {
 
     return (
         <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-            <SidebarGroupLabel>Manage Projects</SidebarGroupLabel>
+            <SidebarGroupLabel>Manage Peoples</SidebarGroupLabel>
             <SidebarMenu>
-                {projects.map((item) => (
+                {peoples.map((item) => (
                     <SidebarMenuItem key={item.name} className="">
                         <SidebarMenuButton asChild>
                             <Link to={item.url} className={cn(
@@ -120,4 +120,4 @@ const NavProjects = ({ projects, currentPath }) => {
     )
 }
 
-export default NavProjects
+export default NavPeoples

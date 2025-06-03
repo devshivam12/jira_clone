@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useGetTeamDetailsQuery } from '@/redux/api/company/api'
+import { useGetTeamDetailsQuery, useGetTemplateQuery } from '@/redux/api/company/api'
 import { Users } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -16,10 +16,11 @@ const TeamCard = () => {
             return null
         }
     })
-    console.log("userData", userData)
+    // console.log("userData", userData)
     const isAdmin = userData?.role === 'Admin' ? 'Admin' : undefined;
-    console.log('isAdmin', isAdmin)
-    console.log("userData?.member_id", userData?.member_id)
+    // console.log('isAdmin', isAdmin)
+    // console.log("userData?.member_id", userData?.member_id)
+    
     const { data, isLoading } = useGetTeamDetailsQuery({
         member_id: userData?.member_id,
         role: isAdmin

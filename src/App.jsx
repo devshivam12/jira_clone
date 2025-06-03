@@ -27,9 +27,18 @@ import Team from './layout/team/index'
 import PublicRoute from './components/auth/PublicRoute'
 import SetPassword from './components/auth/SetPassword'
 import GetTeamDetails from './layout/team/GetTeamDetails'
+// import ProjectLayout from './layout/ProjectLayout'
+import Project from './layout/projects'
+import ProjectLayout from './layout/ProjectLayout'
+import CreateProject from './layout/create-project'
+import CreateFirstCompanyProject from './components/auth/CreateFirstCompanyProject'
+import AutoLogin from './components/auth/AutoLogin'
+import { loadLastAccessedProject, setLastAccessedProject } from './redux/reducers/dynamicRouting'
+import DashboardRedirect from './components/auth/DashboardRedirect'
 
 function App() {
   const accessToken = localStorage.getItem('accessToken')
+  const dispatch = useDispatch()
 
   // // const { user, loader } = useSelector((state => state.auth))
   // const [user, setUser] = useState(null)
@@ -52,6 +61,15 @@ function App() {
   // }, [])
 
   // console.log("user", user)
+  useEffect(() => {
+    if (accessToken) {
+      dispatch(loadLastAccessedProject())
+    }
+  }, [dispatch, accessToken])
+
+  console.log("lastAccessedProject", loadLastAccessedProject())
+  console.log("setLastAccessedProject", setLastAccessedProject())
+
   return (
     <>
       <BrowserRouter>
@@ -61,7 +79,7 @@ function App() {
               path='/'
               element={
                 accessToken ? (
-                  <Navigate to='/dashboard' replace />
+                  <DashboardRedirect />
                 )
                   : (
                     <Navigate to='/login' replace />
@@ -87,9 +105,23 @@ function App() {
               </PublicRoute>
             } />
 
+            <Route
+              path='/auth-callback/'
+              element={<AutoLogin />}
+            />
+
+            <Route
+              path='/create-project'
+              element={
+                // <PublicRoute>
+                <CreateFirstCompanyProject />
+                // </PublicRoute>
+              }
+            />
+
             <Route path='/set-password' element={
               <PublicRoute>
-                  <SetPassword />
+                <SetPassword />
               </PublicRoute>
             }
 
@@ -101,16 +133,33 @@ function App() {
               <ProtectedRoute>
                 <DashboardLayout />
               </ProtectedRoute>
-            }
-            >
-              <Route index element={<Navigate to="backlog" replace />} />
-              <Route path="summary" element={<Summary />} />
-              <Route path="timeline" element={<Timeline />} />
-              <Route path="backlog" element={<Backlog />} />
-              <Route path="board" element={<Board />} />
-              <Route path='forms' element={<Forms />} />
-              <Route path='team' element={<Team />} />
+            }>
+              <Route index element={<DashboardRedirect />} />
+              {/* Static routes */}
+              {/* <Route index element={<Navigate to="team" replace />} /> */}
+              <Route path="team" element={<Team />} />
               <Route path='team/:id' element={<GetTeamDetails />} />
+
+              <Route path='projects' element={<Project />} />
+
+              {/* Project routes - Modified to ensure backlog is default */}
+              <Route path=":project_slug/:template_slug" element={<ProjectLayout />}>
+                <Route index element={<Backlog />} />
+                <Route path="summary" element={<Summary />} />
+                <Route path="timeline" element={<Timeline />} />
+                <Route path="backlog" element={<Backlog />} />
+                <Route path="board" element={<Board />} />
+                <Route path="forms" element={<Forms />} />
+              </Route>
+            </Route>
+
+            {/* ok so tell me how this last-accessed-project api will i create means i dont even understand that how am i create this so please explain me how this will be work and also this autologin is only happend when the company is create in my system the token will be expire in a month of duration so this autlogin component is only a one time will be call also i am using redux for the state menagement right now the give solution is in the context api */}
+
+            {/* for create project */}
+
+            <Route path="/create-project" element={<CreateProject />}>
+              <Route path=':project_slug' element={<CreateProject />} />
+              {/* <Route path=':template_slug' element={< />} /> */}
             </Route>
 
             {/* for managing user profile */}

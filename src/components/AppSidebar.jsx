@@ -84,6 +84,7 @@ import {
     BookOpen,
     Bot,
     Command,
+    FolderOpenDot,
     Frame,
     GalleryVerticalEnd,
     LifeBuoy,
@@ -118,7 +119,8 @@ import {
     SidebarRail,
 } from "@/components/ui/sidebar"
 import NavSecondary from './ui/nav-secondary'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
+import NavPeoples from './ui/nav-peoples'
 
 
 
@@ -146,6 +148,14 @@ const data = {
             plan: "Free",
         },
     ],
+    projects: [
+        {
+            name: "Projects",
+            url: "/dashboard/projects",
+            icon: FolderOpenDot,
+        },
+
+    ],
     navMain: [
         {
             title: "Project Managment",
@@ -155,23 +165,23 @@ const data = {
             items: [
                 {
                     title: "Summary",
-                    url: "/dashboard/summary",
+                    url: "/summary",
                 },
                 {
                     title: "Timeline",
-                    url: "/dashboard/timeline",
+                    url: "/timeline",
                 },
                 {
                     title: "Backlog",
-                    url: "/dashboard/backlog",
+                    url: "/backlog",
                 },
                 {
                     title: "Board",
-                    url: "/dashboard/board",
+                    url: "/board",
                 },
                 {
                     title: "Forms",
-                    url: "/dashboard/forms",
+                    url: "/forms",
                 },
             ],
         },
@@ -253,7 +263,7 @@ const data = {
             icon: Send,
         },
     ],
-    projects: [
+    peoples: [
         {
             name: "Teams",
             url: "/dashboard/team",
@@ -274,34 +284,55 @@ const data = {
 
 const AppSidebar = (props) => {
     const location = useLocation()
+    const { project_slug, template_slug } = useParams();
+
+    const getDynamicUrl = (basePath) => {
+        if (project_slug && template_slug) {
+            return `/dashboard/${project_slug}/${template_slug}${basePath}`;
+        }
+        return basePath;
+    };
+
     const updateData = {
         ...data,
         navMain: data.navMain.map(group => ({
             ...group,
             items: group.items.map(item => ({
-                ...item,
-                isActive: location.pathname === item.url
+                ...item,    
+                isActive: location.pathname === getDynamicUrl(item.url.replace('/dashboard', ''))
             }))
         })),
         projects: data.projects.map(project => ({
             ...project,
-            isActive: location.pathname === project.url
+            isactive: location.pathname === project.url
+        })),
+        peoples: data.peoples.map(people => ({
+            ...people,
+            isActive: location.pathname === people.url
         }))
     };
+
+    
+    // const updateData = {
+    //     ...data,
+    //     navMain: data.navMain.map(group => ({
+    //         ...group,
+    //         items: group.items.map(item => ({
+    //             ...item,
+    //             isActive: location.pathname === item.url
+    //         }))
+    //     })),
+    //     projects: data.projects.map(project => ({
+    //         ...project,
+    //         isactive: location.pathname === project.url
+    //     })),
+    //     peoples: data.peoples.map(people => ({
+    //         ...people,
+    //         isActive: location.pathname === people.url
+    //     }))
+    // };
+
     return (
-        // <Sidebar className="top-[--header-height] !h-[calc(100svh-var(--header-height))]" collapsible="icon" {...props}>
-        //     <SidebarHeader>
-        //         <TeamSwitcher teams={data.teams} />
-        //     </SidebarHeader>
-        //     <SidebarContent>
-        //         <NavMain items={data.navMain} />
-        //         <NavProjects projects={data.projects} />
-        //     </SidebarContent>
-        //     <SidebarFooter>
-        //         <NavUser user={data.user} />
-        //     </SidebarFooter>
-        //     <SidebarRail />
-        // </Sidebar>
         <Sidebar
             className="top-[--header-height] !h-[calc(100svh-var(--header-height))]"
             collapsible="icon"
@@ -325,8 +356,10 @@ const AppSidebar = (props) => {
                 </SidebarMenu>
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={updateData.navMain} currentPath={location.pathname} />
                 <NavProjects projects={updateData.projects} currentPath={location.pathname} />
+                <NavMain items={updateData.navMain} currentPath={location.pathname} project_slug={project_slug} template_slug={template_slug} />
+                <NavPeoples peoples={updateData.peoples} currentPath={location.pathname} />
+
                 <NavSecondary items={updateData.navSecondary} className="mt-auto" />
             </SidebarContent>
             <SidebarFooter>

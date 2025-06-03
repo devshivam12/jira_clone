@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import axios from 'axios'
 import { server } from '@/constant/config'
 import { Link, useNavigate, useRoutes } from 'react-router-dom'
-import { userNotExist } from '@/redux/reducers/auth'
+import { setClientId, userNotExist } from '@/redux/reducers/auth'
 import { useToast } from '@/hooks/use-toast'
 import ApiService from '@/api/apiService'
 import { useLogoutMutation } from '@/redux/api/authApi'
@@ -40,8 +40,10 @@ const UserButton = () => {
         try {
             const response = await logout().unwrap()
             window.location.href = '/login'
-            localStorage.clear()
+            localStorage.removeItem('userData')
+            localStorage.removeItem('accessToken')
             dispatch(userNotExist())
+            dispatch(setClientId(null))
             toast({
                 title: "Logout success",
                 description: response.message,
@@ -52,7 +54,7 @@ const UserButton = () => {
             toast({
                 title: "Logout failed",
                 description: error.message,
-                variant: "success",
+                variant: "destructive",
             })
         }
     }
