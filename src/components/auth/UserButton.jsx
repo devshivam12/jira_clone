@@ -10,9 +10,13 @@ import axios from 'axios'
 import { server } from '@/constant/config'
 import { Link, useNavigate, useRoutes } from 'react-router-dom'
 import { setClientId, userNotExist } from '@/redux/reducers/auth'
-import { useToast } from '@/hooks/use-toast'
 import ApiService from '@/api/apiService'
 import { useLogoutMutation } from '@/redux/api/authApi'
+import { clearLastAccessedProject } from '@/redux/reducers/dynamicRouting'
+import { toast } from 'sonner'
+import ShowToast from '../common/ShowToast'
+import { clearProjects } from '@/redux/reducers/projectSlice'
+import { persistor } from '@/redux/store'
 
 const apiSerivce = new ApiService()
 
@@ -27,8 +31,6 @@ const UserButton = () => {
     console.log("userData", userData)
     const [logout, { isLoading }] = useLogoutMutation()
 
-    const { toast } = useToast()
-
     const fullName = userData?.first_name.charAt(0).toUpperCase() + userData?.first_name.slice(1) + " " + userData?.last_name.charAt(0).toUpperCase() + userData?.last_name.slice(1)
     console.log("fullName", fullName)
 
@@ -42,19 +44,30 @@ const UserButton = () => {
             window.location.href = '/login'
             localStorage.removeItem('userData')
             localStorage.removeItem('accessToken')
+            localStorage.removeItem('projectDetails')
+            localStorage.removeItem('lastAccessedProject')
+            localStorage.clear()
+            
             dispatch(userNotExist())
+            dispatch(clearLastAccessedProject())
             dispatch(setClientId(null))
-            toast({
-                title: "Logout success",
-                description: response.message,
-                variant: "success",
+            dispatch(clearProjects())
+
+            await persistor.purge();
+
+            // toast.success('Logout success', {
+            //     description: response.message,
+            // })
+            ShowToast.success('Logout success', {
+                description : response.message,
+                useCustom : true
             })
         } catch (error) {
             console.log("error", error)
-            toast({
-                title: "Logout failed",
+            ShowToast.error('Logout failed', {
                 description: error.message,
-                variant: "destructive",
+                duration : '4000',                
+                useCustom : true,
             })
         }
     }

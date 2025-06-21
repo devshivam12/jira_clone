@@ -7,6 +7,7 @@
 body {
   @apply antialiased;
   @apply bg-gray-50;
+  pointer-events: auto !important;
   font-family: 'poppins', sans-serif; /* Add your preferred font */
   }
   
@@ -158,3 +159,28 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+
+
+/* [data-radix-dropdown-menu-content],
+[data-radix-popover-content],
+[data-radix-select-content] {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+}
+/* 
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content] {
+  pointer-events: auto !important;
+}
+
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content] {
+  pointer-events: auto !important;
+}
+
+.radix-dropdown-menu-overlay,
+.radix-popover-overlay {
+  pointer-events: none;
+} */ 

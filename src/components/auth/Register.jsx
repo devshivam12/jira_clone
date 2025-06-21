@@ -6,27 +6,81 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { server } from '@/constant/config'
+
 import { useDispatch } from 'react-redux'
 import { userExist, userNotExist, setClientId } from '@/redux/reducers/auth'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Separator } from '../ui/separator'
-import apiService from '@/api/apiService'
+
 import { useRegisterMutation } from '@/redux/api/authApi'
-import { useToast } from '@/hooks/use-toast'
 
 import { Label } from '../ui/label'
 import ButtonLoader from '../ui/buttonLoader'
 
+import ShowToast from '../common/ShowToast'
+
 const Register = () => {
 
-  const { handleSubmit, register, reset, formState: { errors } } = useForm()
+  const { handleSubmit, register, reset, watch, setValue, formState: { errors } } = useForm()
   const [registerUser, { isLoading, error }] = useRegisterMutation()
   const [step, setStep] = useState(1)
   const [showPassword, setShowPassword] = useState(false)
-  const { toast } = useToast()
   const dispatch = useDispatch()
   const navigate = useNavigate()
+
+  const firstName = watch('first_name')
+  const lastName = watch('last_name')
+
+  useEffect(() => {
+    if (step === 2 && (firstName || lastName)) {
+      const cleanFirstName = (firstName || '').trim().replace(/\s+/g, '')
+        .toLowerCase();
+
+      const randomDigits = Math.floor(10 + Math.random() * 90)
+
+      const username = `${cleanFirstName}@${randomDigits}`
+      setValue('username', username)
+    }
+  }, [firstName, lastName, setValue, step])
+
+  const formatName = (value, fieldName) => {
+    if (!value) return value;
+
+    let formatted = value.replace(/\s+/g, '');
+
+    switch (fieldName) {
+      case 'first_name':
+
+        if (formatted.length > 0) {
+          formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1).toLowerCase();
+        }
+        break;
+
+      case 'last_name':
+
+        break;
+
+      case 'email':
+
+        formatted = formatted.toLowerCase();
+        break;
+
+      default:
+        // No additional formatting for other fields
+        break;
+    }
+
+    return formatted;
+  };
+
+  const handleInputChange = (e, fieldName) => {
+    
+    if (e.target.value.includes(' ')) {
+      e.target.value = e.target.value.replace(/\s/g, '');
+    }
+
+    const formattedValue = formatName(e.target.value, fieldName);
+    setValue(fieldName, formattedValue);
+  };
 
   const handleSignUp = async (data) => {
     console.log("data", data)
@@ -46,35 +100,34 @@ const Register = () => {
         console.log("userData", userData)
         dispatch(userExist(response.user));
         dispatch(setClientId(response.user.clientId));
-        navigate(`/create-project?token=${response.user.token}&clientId=${response.user.clientId}`)
-        toast({
-          title: "Registeration successfully done",
+        navigate(`/choose-project?token=${response.user.token}&clientId=${response.user.clientId}`)
+        ShowToast.success('Successfully register', {
           description: response.message,
-          variant: "success",
         })
 
       }
       else if (response.status === 400) {
-        toast({
-          title: "Registeration failed",
+        ShowToast.error('Registeration failed', {
           description: response.message,
-          variant: "destructive",
+          useCustom: true
+        })
+      }
+      else if (response.status === 409) {
+        ShowToast.error('Registeration failed', {
+          description: response.message,
+          useCustom: true
         })
       }
       else {
-        toast({
-          title: "Registeration failed",
+        ShowToast.error('Registeration failed', {
           description: response.message,
-          variant: "destructive",
         })
       }
     } catch (error) {
       console.log("error", error)
       // dispatch(userNotExist(true))
-      toast({
-        title: "Registeration failed",
+      ShowToast.error('Registeration failed', {
         description: error.message,
-        variant: "destructive",
       })
     }
   }
@@ -145,7 +198,10 @@ const Register = () => {
                     required
                     name="email"
                     placeholder="Ex. shivam@gmail.com"
-                    {...register('email', { required: true })}
+                    {...register('email', {
+                      required: true,
+                      onChange: (e) => handleInputChange(e, 'email')
+                    })}
                     error={!!errors.email}
                     disable={false}
                   />
@@ -214,7 +270,10 @@ const Register = () => {
                     required
                     name="first_name"
                     placeholder="Ex. Shivam"
-                    {...register('first_name', { required: true })}
+                    {...register('first_name', {
+                      required: true,
+                      onChange: (e) => handleInputChange(e, 'first_name')
+                    })}
                     error={!!errors.first_name}
                     disable={false}
                   />
@@ -229,7 +288,10 @@ const Register = () => {
                     type="text"
                     required
                     placeholder="Ex. Mittal"
-                    {...register('last_name', { required: true })}
+                    {...register('last_name', { 
+                      required: true, 
+                      onChange: (e) => handleInputChange(e, 'last_name')
+                    })}
                     error={!!errors.last_name}
                     disable={false}
                   />

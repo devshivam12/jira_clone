@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { DottedSeparator } from '../dotted-separator'
 import { Input } from '../ui/input'
@@ -8,18 +8,30 @@ import { useForm } from 'react-hook-form'
 import ApiService from '@/api/apiService'
 import { useDispatch } from 'react-redux'
 
-import { useToast } from '@/hooks/use-toast'
+
 import { useLoginMutation } from '@/redux/api/authApi'
 import { setClientId, userExist } from '@/redux/reducers/auth'
 import { Eye, EyeClosed, EyeOff } from 'lucide-react'
 import { Label } from '../ui/label'
 import { setLastAccessedProject } from '@/redux/reducers/dynamicRouting'
-const apiService = new ApiService()
+import ShowToast from '../common/ShowToast'
+import ButtonLoader from '../ui/buttonLoader'
+import { initializeWithDefaultProject, setAllProjects, setCurrentProject } from '@/redux/reducers/projectSlice'
+import { useGetAllCompanyProjectQuery, useGetProjectByIdQuery } from '@/redux/api/company/api'
 
 const Login = () => {
   const dispatch = useDispatch()
   const { handleSubmit, register, reset, formState: { errors } } = useForm()
-  const { toast } = useToast()
+  const [projectId, setProjectId] = useState(null)
+  const [shouldNavigate, setShouldNavigate] = useState(false)
+  const { data: project } = useGetAllCompanyProjectQuery({
+    skip: !shouldNavigate
+  })
+
+  // const { data: project } = useGetProjectByIdQuery(projectId, {
+  //   skip: !projectId
+  // })
+
   const navigate = useNavigate()
   const [login, { isLoading, error }] = useLoginMutation()
 
@@ -30,6 +42,25 @@ const Login = () => {
     return emailRegex.test(input);
   }
 
+  useEffect(() => {
+    if (project && project.status === 200 && shouldNavigate) {
+      // dispatch(setCurrentProject(project.data))
+      console.log("this is working")
+      console.log("project------------", project)
+      dispatch(setAllProjects(project.data))
+
+      dispatch(setCurrentProject(project.data[0]))
+      
+      const defaultTab = project.data[0].template.fields.tabs.find(tab => tab.isDefault === true)
+      
+      const defaultRouting = defaultTab ? defaultTab.url : 'backlog'
+
+      navigate(`/dashboard/${project.data[0].project_slug}/${project.data[0].template.slug}/${defaultRouting}`)
+      ShowToast.success('Login successful')
+      setShouldNavigate(false) // Reset flag
+    }
+  }, [project, navigate, shouldNavigate, dispatch])
+
   const handleLogin = async (formData) => {
     try {
       const response = await login(formData).unwrap()
@@ -37,9 +68,10 @@ const Login = () => {
 
 
       if (response.status === 200) {
-        localStorage.setItem('userData', JSON.stringify(response.user))
-        localStorage.setItem('accessToken', response.user.token)
-        // localStorage.setItem()
+        const { project_details, ...userData } = response.user;
+        localStorage.setItem('userData', JSON.stringify(userData))
+        localStorage.setItem('accessToken', userData.token)
+        localStorage.setItem('projectDetails', JSON.stringify(project_details))
         // Update Redux state
         console.log("response", response)
         dispatch(userExist({
@@ -47,50 +79,53 @@ const Login = () => {
           role: response.user.role
         }));
         dispatch(setClientId(response.user.clientId));
-        dispatch(setLastAccessedProject({
-          project_slug : response.user.project_slug,
-          template_slug :response.user.template_slug 
-      }))
 
-      // 3. Redirect to dashboard
-      navigate(`/dashboard/${response.user.project_slug}/${response.user.template_slug}/backlog`);
-        toast({
-          title: "Login success",
-          description: response.message,
-          variant: "success",
-        })
+        if (response.user.project_id.length > 0) {
+          console.log("is it working")
+          const userProjectId = response.user.project_id[0]
+          // setProjectId(userProjectId)
+
+          setShouldNavigate(true)
+        }
+
+        // let project_slug = response.user.project_details.project_slug
+        // let template_slug = response.user.project_details.template.slug
+
+        // dispatch(setLastAccessedProject({
+        //   project_slug: project_slug,
+        //   template_slug: template_slug
+        // }))
+
+        // // 3. Redirect to dashboard
+        // navigate(`/dashboard/${project_slug}/${template_slug}/backlog`);
+        // ShowToast.success('Login successfull', {
+        //   description: response.message,
+        // })
         // window.location.href = '/dashboard'
+        reset()
       }
       // }
       else if (response.status === 404) {
-        toast({
-          title: "Login failed",
+        ShowToast.error('Login failed', {
           description: response.message,
-          variant: "destructive"
+          useCustom: true
         })
       }
       else if (response.status === 400) {
-        toast({
-          title: "Login failed",
+        ShowToast.error('Login failed', {
           description: response.message,
-          variant: "destructive"
+          useCustom: true
         })
       }
       else {
-        toast({
-          title: "Something Went Wrong",
-          description: response.message || "Please try again later.",
-          variant: "destructive",
-        });
+        ShowToast.error('Login failed', {
+          description: response.message || 'Please try again letter'
+        })
       }
-      reset()
+
     } catch (error) {
       console.log("error", error)
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive"
-      })
+      ShowToast.error(error.message)
     }
   }
   console.log("error", error)
@@ -160,9 +195,9 @@ const Login = () => {
               </div>
               {errors.password && <p className='text-red-500 text-sm'>{errors.password.message}</p>}
             </div>
-            <Button variant="teritary" type="submit" disable={isLoading} size="lg" className="w-full">
+            <ButtonLoader variant="teritary" type="submit" isLoading={isLoading} size="lg" className="w-full">
               Login
-            </Button>
+            </ButtonLoader>
           </form>
         </CardContent>
         <div className='px-7'>

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronRight, ChevronDown, Plus, X, Check, BookMarked, BookMarkedIcon, Bookmark, Bug, Ellipsis, SquareArrowOutUpRight, Pencil } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, X, Check, BookMarked, BookMarkedIcon, Bookmark, Bug, Ellipsis, SquareArrowOutUpRight, Pencil, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent, DropdownMenuLabel } from "@/components/ui/dropdown-menu"
 import {
   Command,
   CommandEmpty,
@@ -15,6 +15,16 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { DottedSeparator } from '@/components/dotted-separator';
+import SprintManagement from '@/components/data-table/create-sprint-data-table';
+import SprintManagementTwo from '@/components/data-table/create-sprint-data-table-1';
+
+
+
+import { MoreHorizontal } from "lucide-react"
+import { Checkbox } from '@/components/ui/checkbox';
+
+
+
 
 const progressTask = [
   { title: "Progress", color: "bg-neutral-500", value: "0" },
@@ -99,9 +109,16 @@ const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedI
 
 
   const avatarFallback = userData?.first_name.charAt(0).toUpperCase() ?? userData?.email.charAt(0).toUpperCase() ?? "U";
+
+
+  
+
+
   return (
     <Card className="w-full border-0 bg-none bg-card-none shadow-none border-bg-0 outline-none p-4 min-h-[100px] transition-all duration-300 rounded-none ">
       {/* Header */}
+      <SprintManagementTwo/>
+      <SprintManagement />
       <div className="flex items-center justify-between">
         <CardHeader
           onClick={() => {

@@ -11,7 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { useGetMemberListQuery } from '@/redux/api/company/api'
+import { useSearchMemberQuery } from '@/redux/api/company/team'
 import { Search } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import TeamCard from './TeamCard'
@@ -47,7 +47,7 @@ const Team = () => {
     setIsCommandOpen(searchValue.length > 0)
   }, [searchValue])
 
-  const { data: memberResponse, isFetching, isError } = useGetMemberListQuery(
+  const { data: memberResponse, isFetching, isError } = useSearchMemberQuery(
     debouncedSearch.trim() ? debouncedSearch : undefined,
     { skip: !debouncedSearch.trim() }
   )

@@ -3,17 +3,37 @@ import { api } from "../redux/api/company/api"
 import { apiAuth } from "./api/authApi"
 import dynamicRoutingReducer from "./reducers/dynamicRouting"
 import authReducer from "./reducers/auth"
+import projectSlice from "./reducers/projectSlice"
+import storage from "redux-persist/lib/storage"
+import { persistReducer, persistStore } from "redux-persist"
+import { team } from "./api/company/team"
+
+const projectPersistConfig = {
+    key: 'root',
+    storage
+}
+
+const persistedProjectReducer = persistReducer(projectPersistConfig, projectSlice)
 
 const store = configureStore({
     reducer: {
-        dynamicRouting : dynamicRoutingReducer,
-        auth : authReducer,
+        auth: authReducer,
+        dynamicRouting: dynamicRoutingReducer,
+        projectSlice: persistedProjectReducer,
         [apiAuth.reducerPath]: apiAuth.reducer,
         [api.reducerPath]: api.reducer,
+        [team.reducerPath]: team.reducer
     },
     middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat(api.middleware, apiAuth.middleware)
-      
+        getDefaultMiddleware({
+            serializableCheck: {
+                // Ignore redux-persist action types
+                ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+            },
+        }).concat(api.middleware, apiAuth.middleware, team.middleware)
+
 })
+
+export const persistor = persistStore(store)
 
 export default store

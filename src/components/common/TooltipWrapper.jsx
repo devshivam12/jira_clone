@@ -4,14 +4,16 @@ import {
     TooltipTrigger,
     TooltipContent,
     TooltipProvider
-} from "@/components/ui/tooltip";
+} from "../../components/ui/tooltip";
+import { TooltipArrow } from '@radix-ui/react-tooltip';
 
 const TooltipWrapper = ({
     children,
     content,
-    delay = 100,
+    delay = 50,
     className = "",
-    direction = "top" // default direction
+    direction = "top",
+    width =' auto'
 }) => {
     // Map direction to side and align for the TooltipContent
     const directionMap = {
@@ -28,17 +30,23 @@ const TooltipWrapper = ({
     const { side, align } = directionMap[direction] || directionMap.top;
 
     return (
-        <TooltipProvider delayDuration={delay}>
-            <Tooltip>
+        <TooltipProvider delayDuration={delay} >
+            <Tooltip >
                 <TooltipTrigger asChild>
                     {children}
                 </TooltipTrigger>
                 <TooltipContent
                     side={side}
                     align={align}
-                    className={className}
+                    className="bg-neutral-500 text-white px-3 py-2 rounded-md shadow-lg text-justify"
+                    style={{ width: width === "auto" ? "max-content" : width }}
                 >
                     {content}
+                    <TooltipArrow
+                        className="fill-neutral-500"
+                        width={11}  // Optional: control arrow size
+                        height={5}
+                    />
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>

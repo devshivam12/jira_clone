@@ -3,15 +3,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Search, XCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useGetMemberListQuery } from "@/redux/api/company/api";
+
+import { useSearchMemberQuery } from "@/redux/api/company/team";
+import ShowToast from "../common/ShowToast";
 
 export const EmailMultiSelectInput = ({
     onSuccess,
     placeholder = "Add team members...",
     disabled = false,
 }) => {
-    const { toast } = useToast();
 
     // State
     const [inputValue, setInputValue] = useState("");
@@ -21,7 +21,7 @@ export const EmailMultiSelectInput = ({
     const [teamMembers, setTeamMembers] = useState([]);
 
     // API hook
-    const { data: memberResponse, isFetching } = useGetMemberListQuery(
+    const { data: memberResponse, isFetching } = useSearchMemberQuery(
         isDropdownOpen && debouncedSearchTerm.trim() ? debouncedSearchTerm : undefined
     );
 
@@ -97,10 +97,9 @@ export const EmailMultiSelectInput = ({
             onSuccess?.(teamMembers);
             resetForm();
         } catch (error) {
-            toast({
-                title: "Operation failed",
+            ShowToast.error('Operation failed', {
                 description: error.message,
-                variant: "destructive",
+
             });
         }
     };
@@ -133,7 +132,7 @@ export const EmailMultiSelectInput = ({
                         placeholder={teamMembers?.length > 0 ? "" : placeholder}
                         className="flex-1 min-w-[100px] outline-none bg-transparent font-normal text-sm cursor-pointer"
                         disabled={disabled}
-                     />
+                    />
                     <Search className="text-neutral-400 " size={15} />
                 </div>
             </div>

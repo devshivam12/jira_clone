@@ -33,7 +33,7 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogT
 import { Label } from './ui/label'
 import { MultiSelect } from './ui/MultiSelect'
 import { EmailMultiSelect } from './ui/EmailMultiSelect'
-import { useAddPeopleMutation, useCreateTeamMutation, useGetMemberListQuery } from '@/redux/api/company/api'
+
 import { useToast } from '@/hooks/use-toast'
 import ButtonLoader from './ui/buttonLoader'
 import { DottedSeparator } from './dotted-separator'

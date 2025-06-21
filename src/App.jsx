@@ -35,6 +35,7 @@ import CreateFirstCompanyProject from './components/auth/CreateFirstCompanyProje
 import AutoLogin from './components/auth/AutoLogin'
 import { loadLastAccessedProject, setLastAccessedProject } from './redux/reducers/dynamicRouting'
 import DashboardRedirect from './components/auth/DashboardRedirect'
+import { Toaster } from 'sonner'
 
 function App() {
   const accessToken = localStorage.getItem('accessToken')
@@ -111,7 +112,7 @@ function App() {
             />
 
             <Route
-              path='/create-project'
+              path='/choose-project'
               element={
                 // <PublicRoute>
                 <CreateFirstCompanyProject />
@@ -144,7 +145,7 @@ function App() {
 
               {/* Project routes - Modified to ensure backlog is default */}
               <Route path=":project_slug/:template_slug" element={<ProjectLayout />}>
-                <Route index element={<Backlog />} />
+                {/* <Route index element={<Backlog />} /> */}
                 <Route path="summary" element={<Summary />} />
                 <Route path="timeline" element={<Timeline />} />
                 <Route path="backlog" element={<Backlog />} />
@@ -152,8 +153,6 @@ function App() {
                 <Route path="forms" element={<Forms />} />
               </Route>
             </Route>
-
-            {/* ok so tell me how this last-accessed-project api will i create means i dont even understand that how am i create this so please explain me how this will be work and also this autologin is only happend when the company is create in my system the token will be expire in a month of duration so this autlogin component is only a one time will be call also i am using redux for the state menagement right now the give solution is in the context api */}
 
             {/* for create project */}
 
@@ -181,6 +180,12 @@ function App() {
           </Routes>
         </Suspense>
       </BrowserRouter>
+      <Toaster
+        position="bottom-right"
+        richColors
+        // expand={true}
+        // offset={{ bottom: '24px', right: "16px", left: "16px" }} 
+      />
     </>
   )
 }

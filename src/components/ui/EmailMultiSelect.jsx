@@ -15,9 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ButtonLoader from "@/components/ui/buttonLoader";
-import { useToast } from "@/hooks/use-toast";
-import { useAddPeopleMutation, useCreateTeamMutation, useGetMemberListQuery } from "@/redux/api/company/api";
+
+import { useAddPeopleMutation, useCreateTeamMutation, useSearchMemberQuery } from "@/redux/api/company/team";
 import { useGetRolesQuery } from "@/redux/api/authApi";
+import ShowToast from "../common/ShowToast";
 
 export const EmailMultiSelect = ({
   slug,
@@ -26,7 +27,7 @@ export const EmailMultiSelect = ({
   userData,
   onSuccess,
 }) => {
-  const { toast } = useToast();
+
   const isForPeople = slug === "for_people";
   const isForTeam = slug === "for_team";
 
@@ -48,10 +49,10 @@ export const EmailMultiSelect = ({
   const [addPeople, { isLoading: isAddingPeople }] = useAddPeopleMutation();
   const [addTeam, { isLoading: isCreatingTeam }] = useCreateTeamMutation();
   console.log("isForPeople", isForPeople)
-  const { data: roleData } = useGetRolesQuery(undefined,{
-    skip : !shouldFetchRole  
+  const { data: roleData } = useGetRolesQuery(undefined, {
+    skip: !shouldFetchRole
   });
-  const { data: memberResponse, isFetching } = useGetMemberListQuery(
+  const { data: memberResponse, isFetching } = useSearchMemberQuery(
     isForTeam && isDropdownOpen && debouncedSearchTerm.trim() ? debouncedSearchTerm : undefined,
     { skip: isForPeople }
   );
@@ -175,10 +176,8 @@ export const EmailMultiSelect = ({
         }).unwrap();
 
         if (response.status === 200) {
-          toast({
-            title: "Invitation sent",
+          ShowToast.success('Invitation sent', {
             description: response.message,
-            variant: "success",
           });
           resetForm();
           onSuccess?.();
@@ -196,20 +195,16 @@ export const EmailMultiSelect = ({
         const response = await addTeam(payload).unwrap();
 
         if (response.status === 200) {
-          toast({
-            title: "Team created successfully",
+          ShowToast.success('Team created successfully', {
             description: response.message,
-            variant: "success",
           });
           resetForm();
           onSuccess?.();
         }
       }
     } catch (error) {
-      toast({
-        title: isForPeople ? "Invitation failed" : "Team creation failed",
+      ShowToast.error(`${isForPeople ? 'Invitation failed' : 'Team creation failed'}` , {
         description: error.message,
-        variant: "destructive",
       });
     }
   };

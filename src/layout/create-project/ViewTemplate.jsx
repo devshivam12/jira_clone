@@ -52,7 +52,7 @@ const ViewTemplate = ({ openTemplate, onClose, templateSlug, projectSlug }) => {
                 >
                     {
                         showForm ? (
-                            <UseTemplate showForm={showForm} setShowForm={setShowForm} name={fieldsData?.data?.name} />
+                            <UseTemplate showForm={showForm} setShowForm={setShowForm} fieldsData={fieldsData} project_slug={projectSlug} />
                         ) : (
                             <>
                                 {/* Header Section */}

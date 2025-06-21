@@ -13,11 +13,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Separator } from '../ui/separator'
 import apiService from '@/api/apiService'
 import { useRegisterMutation } from '@/redux/api/authApi'
-import { useToast } from '@/hooks/use-toast'
-import { useGetFieldsDataQuery, useGetProjectQuery, useGetTemplateQuery } from '@/redux/api/company/api'
+
 import { Label } from '../ui/label'
 import TooltipWrapper from '../common/TooltipWrapper'
 import axios from 'axios'
+import ShowToast from '../common/ShowToast'
+import { useGetFieldsDataQuery, useGetProjectQuery, useGetTemplateQuery } from '@/redux/api/company/api'
 
 const CreateFirstCompanyProject = () => {
     const [searchParams] = useSearchParams();
@@ -44,8 +45,6 @@ const CreateFirstCompanyProject = () => {
     const { handleSubmit, register, reset, formState: { errors } } = useForm()
 
     const [step, setStep] = useState(1)
-
-    const { toast } = useToast()
     const dispatch = useDispatch()
     const navigate = useNavigate()
 
@@ -64,7 +63,7 @@ const CreateFirstCompanyProject = () => {
                 }
             }
             const response = await axios.post(
-                `${import.meta.env.VITE_SERVER}/company/work-space/create-project`,
+                `${import.meta.env.VITE_SERVER}/company/work-space/create-client-default-project`,
                 query,
                 {
                     headers: {
@@ -76,34 +75,29 @@ const CreateFirstCompanyProject = () => {
             );
             console.log("response", response)
             if (response.status === 200) {
-                navigate(`/auth-callback?token=${token}`)
-                toast({
-                    title: "Project created",
-                    description: response.message,
-                    variant: "success",
+                navigate(`/auth-callback?token=${token}&clientId=${clientId}`)
+                ShowToast.success('Project created', {
+                    description: response.message
                 })
 
             }
             else if (response.status === 400) {
-                toast({
-                    title: "Project creation failed",
+                ShowToast.error('Project creation failed', {
                     description: response.message,
-                    variant: "destructive",
+                    useCustom: true
                 })
             }
             else {
-                toast({
-                    title: "Please check error",
+                ShowToast.error('Please check error', {
                     description: response.message,
-                    variant: "destructive",
+                    useCustom: true
                 })
             }
         } catch (error) {
             console.log("error", error)
-            toast({
-                title: "Please check error",
+            ShowToast.error('Please check error', {
                 description: error.message,
-                variant: "destructive",
+                useCustom: true
             })
         }
     }
@@ -128,6 +122,18 @@ const CreateFirstCompanyProject = () => {
         if (step > 1) {
             setStep((prevStep) => prevStep - 1)
         }
+    }
+
+    if (projectLoading || templateLoading || fieldsLoading) {
+        return (
+            <div className='flex items-center justify-center h-screen'>
+                <Card className="w-full md:w-[487px] border-none shadow-[0_3px_35px_rgba(0,0,0,0.25)] shadow-indigo-300/50">
+                    <CardContent className="flex items-center justify-center h-64">
+                        <Loader2 className="h-12 w-12 animate-spin text-neutral-500" />
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
     return (
@@ -217,9 +223,9 @@ const CreateFirstCompanyProject = () => {
                                 )}
 
                                 <div className='flex items-center gap-2'>
-                                    <Button variant="outline" size="lg" className="w-full" onClick={handleBack} disabled={step === 1}>
+                                    {/* <Button variant="outline" size="lg" className="w-full" onClick={handleBack} disabled={step === 1}>
                                         Back
-                                    </Button>
+                                    </Button> */}
                                     <Button
                                         variant="teritary"
                                         size="lg"
@@ -399,7 +405,10 @@ const CreateFirstCompanyProject = () => {
                                                                             <p className="text-xs text-blue-700 font-medium mb-2">Work type</p>
                                                                             <div className="grid grid-cols-2 items-center gap-2">
                                                                                 {fieldsData?.data?.fields?.work_type.map((item, index) => (
-                                                                                    <div className='border border-blue-200 flex items-center gap-x-2 rounded-md p-2'>
+                                                                                    <div
+                                                                                        className='border border-blue-200 flex items-center gap-x-2 rounded-md p-2'
+                                                                                        key={index}
+                                                                                    >
                                                                                         <div className={`w-6 h-6 rounded-md flex items-center justify-center ${item.color}`}>
                                                                                             <img
                                                                                                 src={item.icon}
@@ -460,11 +469,16 @@ const CreateFirstCompanyProject = () => {
                                         required
                                         name="project_name"
                                         placeholder="Project name"
+                                        onKeyDown={(e) => {
+                                            if (/\d/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }}
                                         {...register('project_name', { required: true })}
                                         error={!!errors.project_name}
                                         disable={false}
                                     />
-                                    <span>{errors.project_name ? 'Project name is required' : ''}</span>
+                                    <span className='text-red-400 text-sm font-semibold'>{errors.project_name ? 'Project name is required' : ''}</span>
 
                                 </div>
 

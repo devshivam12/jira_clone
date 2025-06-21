@@ -15,6 +15,7 @@ import Insight from '../Insight';
 import TooltipWrapper from '@/components/common/TooltipWrapper';
 import BacklogLayoutSetting from '../BacklogLayoutSetting';
 import EditIssue from './EditIssue';
+import { useSelector } from 'react-redux';
 
 const randomData = [
   { first_name: "Shivam" },
@@ -32,6 +33,10 @@ const Backlog = () => {
     }
   ])
 
+  const getProjectDetails = useSelector((state) => state.projectSlice.currentProject)
+  const isLoading = useSelector((state) => state.projectSlice.loading)
+
+  console.log("getProjectDetails------------", getProjectDetails)
   const [selectedIssue, setSelectedIssue] = useState(null)
 
   const [openCommonShare, setOpenCommonShare] = useState(false)
@@ -50,6 +55,17 @@ const Backlog = () => {
     setSelectedIssue(issue)
   }
   console.log("selectedIssue", selectedIssue)
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading project details...</p>
+        </div>
+      </div>
+    )
+
+  }
   return (
     <div className='space-y-5'>
       {/* Title */}

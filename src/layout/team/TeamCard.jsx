@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useGetTeamDetailsQuery, useGetTemplateQuery } from '@/redux/api/company/api'
+import { useGetTeamDetailsQuery } from '@/redux/api/company/team'
 import { Users } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'

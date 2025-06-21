@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
 export const api = createApi({
+    reducerPath: 'companyApi', 
     baseQuery: fetchBaseQuery({
         baseUrl: import.meta.env.VITE_SERVER,
         credentials: "include",
@@ -15,7 +16,7 @@ export const api = createApi({
             return headers
         }
     }),
-    tagTypes: ["Template", "WorkSpace", "People", "Team"],
+    tagTypes: ["Template", "WorkSpace", "Project"],
     endpoints: (build) => ({
         getProject: build.query({
             query: () => ({
@@ -47,7 +48,19 @@ export const api = createApi({
                 method: 'POST',
                 body: formData
             }),
-            invalidatesTags: ['Template']
+            invalidatesTags: ['Project']
+        }),
+        getAllProject: build.query({
+            query: () => ({
+                url: 'company/work-space/getAllProject'
+            }),
+            providesTags: ['Project']
+        }),
+        getClientWiseProject: build.query({
+            query: () => ({
+                url: '/company/work-space/get-client-project'
+            }),
+            providesTags: ['Project']
         }),
         getWorkSpaceData: build.query({
             query: () => ({
@@ -63,63 +76,31 @@ export const api = createApi({
             }),
             invalidatesTags: ['WorkSpace']
         }),
-        addPeople: build.mutation({
-            query: (formData) => ({
-                url: '/company/team/add-member',
-                method: 'POST',
-                body: formData
+        getProjectById: build.query({
+            query: (id) => ({
+                url: `/company/work-space/get-projectById/${id}`,
             }),
-            invalidatesTags: ['People']
+            providesTags: ['Project']
         }),
-        getMemberList: build.query({
-            query: (search = '') => ({
-                url: '/company/team/get-member-list',
-                params: { search }
+        getAllCompanyProject: build.query({
+            query: () => ({
+                url: `/company/work-space/get-companyProject`,
             }),
-            providesTags: ['People']
+            providesTags: ['Project']
         }),
-        createTeam: build.mutation({
-            query: (formData) => ({
-                url: '/company/team/create-team',
-                method: 'POST',
-                body: formData
-            }),
-            invalidatesTags: ['Team']
-        }),
-        getTeamDetails: build.query({
-            query: (args) => {
-                // args can be either member_id or an object { member_id, role }
-                const params = {};
 
-                // If args is an object with role property
-                if (args?.member_id) {
-                    params.member_id = args.member_id;
-                }
-
-                if (args?.role === 'Admin') {
-                    params.role = args.role;
-                }
-
-                return {
-                    url: '/company/team/get-team-details',
-                    method: 'GET',
-                    params: params
-                };
-            },
-            providesTags: ['Team']
-        })
     }),
 })
 
 export const {
-    useGetTemplateQuery,
     useGetProjectQuery,
+    useGetTemplateQuery,
     useGetFieldsDataQuery,
     useCreateProjectMutation,
-    useCreateWorkSpaceMutation,
+    useGetAllProjectQuery,
+    useGetClientWiseProjectQuery,
     useGetWorkSpaceDataQuery,
-    useAddPeopleMutation,
-    useGetMemberListQuery,
-    useCreateTeamMutation,
-    useGetTeamDetailsQuery
+    useCreateWorkSpaceMutation,
+    useGetProjectByIdQuery,
+    useGetAllCompanyProjectQuery,
 } = api
