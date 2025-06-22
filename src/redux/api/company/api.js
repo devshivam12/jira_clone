@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
 export const api = createApi({
-    reducerPath: 'companyApi', 
+    reducerPath: 'companyApi',
     baseQuery: fetchBaseQuery({
         baseUrl: import.meta.env.VITE_SERVER,
         credentials: "include",
@@ -88,6 +88,13 @@ export const api = createApi({
             }),
             providesTags: ['Project']
         }),
+        getProjectList: build.query({
+            query: ({ page = 1, pageSize = 10, leadBy, projectKey, projectName, projectType }) => ({
+                url: `/company/work-space/project-list`,
+                params: { page, pageSize, leadBy, projectKey, projectName, projectType }
+            }),
+            providesTags: ['Project']
+        })
 
     }),
 })
@@ -103,4 +110,5 @@ export const {
     useCreateWorkSpaceMutation,
     useGetProjectByIdQuery,
     useGetAllCompanyProjectQuery,
+    useGetProjectListQuery
 } = api

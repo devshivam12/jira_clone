@@ -39,7 +39,6 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
 
     const navigate = useNavigate()
     const dispatch = useDispatch()
-    const [isOpen, setIsOpen] = useState(false);
 
     const { currentProject, projectSlug, templateSlug, defaultTab } = useProjectData()
     const [createProject, { isLoading }] = useCreateProjectMutation()
@@ -139,6 +138,10 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
         return null;
     }, [selectedMember, leaderValue, localUserData]);
 
+    const showViewAllMember = useMemo(() => {
+        return membersData?.data?.pagination?.totalCount > 10 && members.length < membersData.data.pagination.totalCount
+    }, [membersData, members])
+
     const handleSearchTerm = useCallback((value) => {
         setSearchTerm(value);
     }, []);
@@ -158,7 +161,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                     template: fieldsData?.data,
                     project_key: data.project_key,
                     name: data.name,
-                    project_leader : leaderValue
+                    project_leader: leaderValue
                 }
             }
 
@@ -313,7 +316,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                                         ) : (
                                             "Select member..."
                                         )}
-                                        
+
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[200px] p-0">
@@ -360,13 +363,19 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                                                                         </CommandItem>
                                                                     ))}
                                                                 </CommandGroup>
-                                                                <DottedSeparator className='mb-2' />
-                                                                <CommandItem
-                                                                    className="cursor-pointer"
-                                                                    onSelect={() => setShowAllMembers(true)}
-                                                                >
-                                                                    View All Members
-                                                                </CommandItem>
+                                                                {showViewAllMember && (
+                                                                    <>
+                                                                        <DottedSeparator className='mb-2' />
+                                                                        <CommandItem
+                                                                            className="cursor-pointer"
+                                                                            onSelect={() => setShowAllMembers(true)}
+                                                                        >
+                                                                            View All Members
+                                                                        </CommandItem>
+                                                                    </>
+                                                                )
+
+                                                                }
                                                             </>
                                                         )}
 
