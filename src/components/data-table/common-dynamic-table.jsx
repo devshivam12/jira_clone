@@ -26,44 +26,51 @@ import {
     useReactTable,
 } from "@tanstack/react-table";
 import { Button } from '../ui/button';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Filter, MoreHorizontal, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronLeft, ChevronRight, Filter, MoreHorizontal, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { DottedSeparator } from '../dotted-separator';
+import { Skeleton } from '../ui/skeleton';
 
 
 const CommonDynamicTable = ({
     data,
     columns,
-    defaultSorting = [],
     defaultColumnVisibility = {},
     searchPlaceholder = "Search...",
     searchColumn = "email",
     showColumnVisibility = true,
     showPagination = true,
+    sorting,
+    onSortingChange,
     pagination,
+    searchValue = {},
+    onSearchChange,
     onPaginationChange,
     totalCount = 0,
-    isLoading = false,
+    isLoading,
     pageSizeOptions = [10, 20, 30, 50, 100]
 
 }) => {
-    const [sorting, setSorting] = useState(defaultSorting);
+
     const [columnFilters, setColumnFilters] = useState([]);
     const [columnVisibility, setColumnVisibility] = useState(defaultColumnVisibility);
     const [rowSelection, setRowSelection] = useState({});
-    const [columnSearch, setColumnSearch] = useState({})
+    const [columnSearch, setColumnSearch] = useState(searchValue)
+    const [openDropdowns, setOpenDropdowns] = useState(false)
 
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
-        onSortingChange: setSorting,
+        onSortingChange: onSortingChange,
         getSortedRowModel: getSortedRowModel(),
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
-        // Disable client-side pagination since we're using server-side
+        manualSorting: true,
         manualPagination: true,
+        manualFiltering: true,
         state: {
             sorting,
             columnFilters,
@@ -72,19 +79,60 @@ const CommonDynamicTable = ({
         },
     });
 
-    // column filter with search
+    const handleSorting = (columnId, direction) => {
+        const newSorting = [{ id: columnId, desc: direction === 'desc' }]
+        onSortingChange(newSorting)
+    }
 
+    // Column filter with search
     const handleColumnSearch = (columnId, value) => {
         setColumnSearch(prev => ({
             ...prev,
             [columnId]: value
-        }))
+        }));
+    };
 
-        const column = table.getColumn(columnId)
-        if (column) {
-            column.setFilterValue(value)
-        }
-    }
+    const handleSearchSubmit = (columnId) => {
+        // Create a new search object with only this column's filter
+        const newSearch = { [columnId]: columnSearch[columnId] || '' };
+        onSearchChange(newSearch);
+        onPaginationChange(prev => ({
+            ...prev,
+            pageIndex: 0
+        }));
+        setOpenDropdowns(prev => ({
+            ...prev,
+            [columnId]: false
+        }))
+    };
+
+    const resetColumnSearch = (columnId) => {
+        // Clear the search value for this column
+        setColumnSearch(prev => ({
+            ...prev,
+            [columnId]: ''
+        }));
+
+        // Send empty search to parent component
+        onSearchChange({ [columnId]: '' });
+
+        // Reset to first page
+        onPaginationChange(prev => ({
+            ...prev,
+            pageIndex: 0
+        }));
+        setOpenDropdowns(prev => ({
+            ...prev,
+            [columnId]: false
+        }))
+    };
+
+    // const handleDropdownOpenChange = (columnId, isOpen) => {
+    //     setOpenDropdowns(prev => ({
+    //         ...prev,
+    //         [columnId]: isOpen
+    //     }));
+    // };
 
     // Get all filterable columns
     const filterableColumns = useMemo(() => {
@@ -149,7 +197,7 @@ const CommonDynamicTable = ({
             }));
         }
     };
-
+    console.log("isLoading", isLoading)
     return (
         <div className="space-y-4">
             {/* Search and Column Visibility Controls */}
@@ -213,34 +261,83 @@ const CommonDynamicTable = ({
                                                     header.column.columnDef.header,
                                                     header.getContext()
                                                 )}
-                                            {header.column.getCanSort() && (
-                                                <DropdownMenu>
+                                            {header.column.columnDef.enableFiltering && (
+                                                <DropdownMenu
+                                                    open={openDropdowns[header.column.id] || false}
+                                                    onOpenChange={(isOpen) => setOpenDropdowns(prev => ({
+                                                        ...prev,
+                                                        [header.column.id]: isOpen
+                                                    }))}
+                                                >
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                                             <Filter className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
+                                                    <DropdownMenuContent align="end" className="py-2 ">
                                                         <DropdownMenuLabel>Filter Options</DropdownMenuLabel>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => handleSort(header.column.id, 'asc')}>
-                                                            <ArrowUp className="mr-2 h-4 w-4" />
-                                                            Sort Ascending
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleSort(header.column.id, 'desc')}>
-                                                            <ArrowDown className="mr-2 h-4 w-4" />
-                                                            Sort Descending
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
+                                                        {
+                                                            header.column.columnDef.enableSorting !== false && (
+                                                                <>
+
+                                                                    <DottedSeparator className='my-1' />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleSorting(header.column.id, 'asc')}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <ArrowUp className="mr-2 h-4 w-4" />
+                                                                        ASC
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleSorting(header.column.id, 'desc')}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <ArrowDown className="mr-2 h-4 w-4" />
+                                                                        DSC
+                                                                    </DropdownMenuItem>
+                                                                    <DottedSeparator className='my-1' />
+                                                                </>
+                                                            )
+                                                        }
+
                                                         <div className="relative px-2 py-1">
                                                             <div className="flex items-center">
                                                                 <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
                                                                 <Input
-                                                                    placeholder={`Search ${header.column.id}`}
-                                                                    value={columnSearch[header.column.id] || ''}
-                                                                    onChange={(e) => handleColumnSearch(header.column.id, e.target.value)}
+                                                                    placeholder={`Search ${header.column.columnDef.header}`}
                                                                     className="pl-8 h-8"
+                                                                    value={columnSearch[header.column.id] || ''}
+                                                                    onChange={(event) => {
+                                                                        handleColumnSearch(header.column.id, event.target.value);
+                                                                    }}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            handleSearchSubmit(header.column.id);
+                                                                        }
+                                                                    }}
                                                                 />
+                                                            </div>
+                                                            <div className='float-right flex items-center gap-x-2 mt-2'>
+
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    onClick={() => resetColumnSearch(header.column.id)}
+                                                                    className="text-neutral-500 font-medium"
+                                                                >
+                                                                    Reset
+                                                                </Button>
+
+                                                                <Button
+                                                                    variant="outline"
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    onClick={() => handleSearchSubmit(header.column.id)}
+                                                                >
+                                                                    Search
+                                                                </Button>
+
                                                             </div>
                                                         </div>
                                                     </DropdownMenuContent>
@@ -253,14 +350,24 @@ const CommonDynamicTable = ({
                         ))}
                     </TableHeader>
 
+
                     <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                >
-                                    {row.getVisibleCells().map((cell) => (
+                        {isLoading ? (
+                            // Show loading skeletons when isLoading is true
+                            Array.from({ length: totalCount > 10 ? pageSize : 5 }).map((_, index) => (
+                                <TableRow key={`skeleton-${index}`}>
+                                    {table.getVisibleLeafColumns().map(column => (
+                                        <TableCell key={`skeleton-${column.id}-${index}`}>
+                                            <Skeleton className="h-8 w-full" />
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
+                        ) : table.getRowModel().rows?.length ? (
+                            // Show actual data when not loading and data exists
+                            table.getRowModel().rows.map(row => (
+                                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                                    {row.getVisibleCells().map(cell => (
                                         <TableCell key={cell.id}>
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
@@ -268,6 +375,7 @@ const CommonDynamicTable = ({
                                 </TableRow>
                             ))
                         ) : (
+                            // Show empty state when no data and not loading
                             <TableRow>
                                 <TableCell colSpan={columns.length} className="h-24 text-center">
                                     No results found.

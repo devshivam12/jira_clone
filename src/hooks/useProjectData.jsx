@@ -1,9 +1,10 @@
 import { useSelector } from "react-redux"
 
 export const useProjectData = () => {
-    const { currentProject, loading, error, templateData } = useSelector((state) => state.projectSlice)
+    const { allProjects, currentProject, loading, error, templateData } = useSelector((state) => state.projectSlice)
     
     return {
+        allProjects,
         currentProject,
         projectSlug: currentProject.project_slug,
         templateSlug: currentProject.template?.slug,

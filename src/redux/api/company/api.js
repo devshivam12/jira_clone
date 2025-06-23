@@ -89,9 +89,9 @@ export const api = createApi({
             providesTags: ['Project']
         }),
         getProjectList: build.query({
-            query: ({ page = 1, pageSize = 10, leadBy, projectKey, projectName, projectType }) => ({
+            query: ({ page = 1, pageSize = 10, leaderName, projectKey, projectName, projectType, sortBy, sortOrder='asc' }) => ({
                 url: `/company/work-space/project-list`,
-                params: { page, pageSize, leadBy, projectKey, projectName, projectType }
+                params: { page, pageSize, leaderName, projectKey, projectName, projectType, sortBy, sortOrder }
             }),
             providesTags: ['Project']
         })
