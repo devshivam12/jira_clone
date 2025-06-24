@@ -36,6 +36,7 @@ import AutoLogin from './components/auth/AutoLogin'
 import { loadLastAccessedProject, setLastAccessedProject } from './redux/reducers/dynamicRouting'
 import DashboardRedirect from './components/auth/DashboardRedirect'
 import { Toaster } from 'sonner'
+import ViewProject from './layout/projects/ViewProject'
 
 function App() {
   const accessToken = localStorage.getItem('accessToken')
@@ -142,7 +143,7 @@ function App() {
               <Route path='team/:id' element={<GetTeamDetails />} />
 
               <Route path='projects' element={<Project />} />
-
+              <Route path='projects/:id' element={<ViewProject />} />
               {/* Project routes - Modified to ensure backlog is default */}
               <Route path=":project_slug/:template_slug" element={<ProjectLayout />}>
                 {/* <Route index element={<Backlog />} /> */}

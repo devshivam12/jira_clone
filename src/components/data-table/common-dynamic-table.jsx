@@ -38,7 +38,7 @@ const CommonDynamicTable = ({
     defaultColumnVisibility = {},
     searchPlaceholder = "Search...",
     searchColumn = "email",
-    showColumnVisibility = true,
+    // showColumnVisibility = true,
     showPagination = true,
     sorting,
     onSortingChange,
@@ -135,12 +135,12 @@ const CommonDynamicTable = ({
     // };
 
     // Get all filterable columns
-    const filterableColumns = useMemo(() => {
-        return columns.filter(column => column.enableFiltering !== false);
-    }, [columns]);
+    // const filterableColumns = useMemo(() => {
+    //     return columns.filter(column => column.enableFiltering !== false);
+    // }, [columns]);
 
     // Safely get the search column
-    const searchColumnInstance = table.getColumn(searchColumn);
+    // const searchColumnInstance = table.getColumn(searchColumn);
 
     // Calculate pagination info
     const currentPage = pagination?.pageIndex + 1 || 1;
@@ -201,7 +201,7 @@ const CommonDynamicTable = ({
     return (
         <div className="space-y-4">
             {/* Search and Column Visibility Controls */}
-            <div className="flex items-center justify-between gap-4">
+            {/* <div className="flex items-center justify-between gap-4">
                 {filterableColumns.length > 0 && searchColumnInstance && (
                     <Input
                         placeholder={searchPlaceholder}
@@ -241,7 +241,7 @@ const CommonDynamicTable = ({
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )}
-            </div>
+            </div> */}
 
             {/* Table */}
             <div className="rounded-md border">

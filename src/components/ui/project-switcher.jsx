@@ -26,7 +26,7 @@ const ProjectSwitcher = ({ teams }) => {
     const navigate = useNavigate()
     const location = useLocation()
     const { isMobile } = useSidebar()
-    const [activeTeam, setActiveTeam] = React.useState(teams[0])
+    const [activeTeam, setActiveTeam] = useState(teams[0])
     const [selectedProjectId, setSelectedProjectId] = useState(null)
     const dispatch = useDispatch()
     const { currentProject, allProjects } = useSelector((state) => state.projectSlice)
