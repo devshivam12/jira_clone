@@ -140,7 +140,7 @@ const Project = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40 py-2">
               <DropdownMenuItem
-                // onClick={() => handleProjectSettings(project._id)}
+                onClick={() => handleProjectSettings(project._id)}
                 className="cursor-pointer"
               >
                 <Settings className="mr-2 h-4 w-4" />
@@ -166,6 +166,10 @@ const Project = () => {
       }
     }
   ]
+
+  const handleProjectSettings = (id) => {
+    navigate(`/dashboard/project/${id}`)
+  }
 
   const tableData = useMemo(() => {
     if (!projectData?.data?.projectData) {

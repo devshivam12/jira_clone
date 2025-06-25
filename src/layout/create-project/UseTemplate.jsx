@@ -139,7 +139,8 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
     }, [selectedMember, leaderValue, localUserData]);
 
     const showViewAllMember = useMemo(() => {
-        return membersData?.data?.pagination?.totalCount > 10 && members.length < membersData.data.pagination.totalCount
+        return membersData?.data?.pagination?.totalCount > 2
+        // return membersData?.data?.pagination?.totalCount > 2 && members.length < membersData.data.pagination.totalCount
     }, [membersData, members])
 
     const handleSearchTerm = useCallback((value) => {
@@ -200,6 +201,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
     }
 
     console.log("leaderValue", leaderValue)
+    console.log("showViewAllMember", showViewAllMember)
     return (
         <>
             <DialogHeader className="bg-neutral-100 p-6 text-neutral-500 m-0 ">
@@ -319,7 +321,11 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
 
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[200px] p-0">
+                                <PopoverContent
+                                    side="top"
+                                    align="start" 
+                                    className="w-[200px] p-0"
+                                >
                                     <Command className="py-2" shouldFilter={false}>
                                         <CommandInput
                                             placeholder="Search member..."
