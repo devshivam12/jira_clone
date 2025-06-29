@@ -1,21 +1,38 @@
 import ManageAvatar from '@/components/common/ManageAvatar'
+import ShowToast from '@/components/common/ShowToast'
 import { DottedSeparator } from '@/components/dotted-separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import ButtonLoader from '@/components/ui/buttonLoader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useUpdateProjectByIdMutation } from '@/redux/api/company/api'
 import { useGetAllMemberListQuery } from '@/redux/api/company/team'
-import { Loader2 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import { updateProjectReduxStore } from '@/redux/reducers/projectSlice'
+import { ChevronDown, Info, Loader2, X } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useDispatch } from 'react-redux'
+import { useParams } from 'react-router-dom'
 
 const ProjectDetail = ({ projectDetail }) => {
     console.log("projectDetail", projectDetail)
-    const [addProjectName, setAddProjectName] = useState('')
     const initialProjectName = projectDetail?.data?.name?.charAt(0)?.toUpperCase() ?? '';
 
+    const [updateProject, { isLoading }] = useUpdateProjectByIdMutation()
+
+    const { id } = useParams()
+    const dispatch = useDispatch()
+
+    console.log("params", id)
+    console.log()
+    const [addProjectName, setAddProjectName] = useState('')
+    const [changeProjectLead, setChangeProjectLead] = useState(false)
+    const [openInfo, setOpenInfo] = useState(false)
+    const [open, setOpen] = useState(false)
+    const [leaderValue, setLeaderValue] = useState(null)
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
@@ -34,6 +51,14 @@ const ProjectDetail = ({ projectDetail }) => {
     })
 
     useEffect(() => {
+
+        if (projectDetail?.data.name) {
+            setAddProjectName(projectDetail?.data.name)
+        }
+
+        if (projectDetail?.data?.projectLeaderDetail?._id) {
+            setLeaderValue(projectDetail.data.projectLeaderDetail._id);
+        }
         let searchTimer;
 
         // Handle search term debouncing
@@ -48,7 +73,89 @@ const ProjectDetail = ({ projectDetail }) => {
                 clearTimeout(searchTimer);
             }
         };
-    }, [searchTerm, debouncedSearchTerm, projectName]);
+    }, [searchTerm, debouncedSearchTerm, projectDetail]);
+
+    const members = membersData?.data?.members || []
+
+    const selectedMember = useMemo(() => {
+        console.log("leaderValue", leaderValue)
+        if (leaderValue) {
+            // First check current members list
+            const found = members.find((member) => member._id === leaderValue);
+            if (found) return found;
+
+
+        }
+        // If not found, use the project leader detail from props
+        if (projectDetail?.data?.projectLeaderDetail?._id) {
+            return projectDetail?.data?.projectLeaderDetail;
+        }
+        return null;
+    }, [members, leaderValue, projectDetail]);
+
+
+
+    const showViewAllMember = useMemo(() => {
+        return membersData?.data?.pagination?.totalCount > 2
+        // return membersData?.data?.pagination?.totalCount > 2 && members.length < membersData.data.pagination.totalCount
+    }, [membersData, members])
+
+    const handleSearchTerm = useCallback((value) => {
+        setSearchTerm(value);
+    }, []);
+
+    const handleLeaderChange = (newLeaderId) => {
+        setLeaderValue(newLeaderId);
+        setChangeProjectLead(false);
+        setOpen(false);
+    };
+
+    const handleSubmitForm = async (e) => {
+        e.preventDefault()
+
+        try {
+            const result = await updateProject({
+                id,
+                body: {
+                    name: addProjectName,
+                    project_leader: leaderValue
+                }
+            }).unwrap()
+            console.log("result", result)
+            console.log("result.status", result.status)
+            if (result.status === 201) {
+                console.log("this is working ")
+
+                dispatch(updateProjectReduxStore({
+                    _id: id,
+                    name: addProjectName,
+                }))
+                console.log("result.message", result.message)
+                ShowToast.success(result.message)
+            }
+            else if (result.status === 404) {
+                ShowToast.info('Please check the error', {
+                    description: result.message,
+                    useCustom: true,
+                    duration: 5000
+                })
+            }
+            else {
+                ShowToast.error("Please check the error", {
+                    description: result?.message,
+                    useCustom: true,
+                    duration: 3000
+                })
+            }
+        } catch (error) {
+            console.log("error", error)
+            ShowToast.error("Please check the error", {
+                description: error?.data?.message,
+                useCustom: true,
+                duration: 5000
+            })
+        }
+    }
 
     return (
 
@@ -96,23 +203,56 @@ const ProjectDetail = ({ projectDetail }) => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className='p-0 mt-3 w-80'>
-                    <div className='space-y-5'>
+                    <form className='space-y-5' onSubmit={handleSubmitForm}>
                         <div className='space-y-1'>
                             <Label className="flex items-center gap-x-1 text-neutral-500 font-semibold">
                                 Name
                                 <span className='text-red-500 '>*</span>
                             </Label>
                             <Input
-                                value={projectDetail?.data?.name}
+                                value={addProjectName}
                                 className="focus:ring-none text-neutral-500 border border-neutral-300 hover:bg-neutral-200/30"
-                                onChange={(e) => setAddProjectName(e.traget.value)}
+                                onChange={(e) => setAddProjectName(e.target.value)}
                             />
                         </div>
 
                         <div className='space-y-1'>
-                            <Label className="flex items-center gap-x-1 text-neutral-500 font-semibold">
+                            <Label className="flex items-center gap-x-1 text-neutral-500 font-semibold relative">
                                 Project key
                                 <span className='text-red-500 '>*</span>
+                                <Button
+                                    variant='default'
+                                    size="size"
+                                    type='button'
+                                    onClick={(e) => {
+                                        e.preventDefault();    // Prevent form submission
+                                        e.stopPropagation();   // Stop event bubbling
+                                        setOpenInfo(prev => !prev); // Toggle instead of always setting to false
+                                    }}
+                                >
+                                    <Info className='text-neutral-500 hover:text-neutral-600 cursor-pointer' size={14} />
+                                </Button>
+
+                                {
+                                    openInfo && (
+                                        <Card className="p-0 w-60 absolute z-50 right-0 left-32 bg-neutral-50 ">
+                                            <X
+                                                size={15}
+                                                className="absolute top-2 right-2 text-neutral-500 hover:text-neutral-700 cursor-pointer z-10"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setOpenInfo(false);
+                                                }}
+                                            />
+                                            <CardContent className='px-4 py-4 pt-6'>
+                                                <span className='text-neutral-500 text-wrap font-medium text-sm'>
+                                                    Project keys serve as distinct, unchangeable identifiers for projects and are assigned only once during creation.
+                                                </span>
+                                            </CardContent>
+                                        </Card>
+                                    )
+                                }
                             </Label>
                             <Input
                                 value={projectDetail?.data?.project_key}
@@ -128,128 +268,88 @@ const ProjectDetail = ({ projectDetail }) => {
                                     Project lead
                                     <span className='text-red-500 '>*</span>
                                 </Label>
-                                <Button
-                                    variant='outline'
-                                    size='xs'
-                                >
-                                    Change project lead
-                                </Button>
                             </div>
-                            <Input
-                                value={projectDetail?.data?.projectLeaderDetail
-                                    ?.first_name + " " + projectDetail?.data?.projectLeaderDetail
-                                        ?.last_name}
-                                className="focus:ring-none text-neutral-500 border border-neutral-300 hover:bg-neutral-200/30"
-                                onChange={(e) => setProjectName(e.traget.value)}
-                            />
-                            <div className='text-justify'>
-                                <span className='text-neutral-500 font-normal text-xs'>Make sure your project lead has a permission for create an project.</span>
-                            </div>
-
-                            <div>
-                                <Popover open={open} onOpenChange={setOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={open}
-                                            className="w-72 justify-between"
-                                        >
-                                            {selectedMemberDisplay ? (
-                                                <div className='flex items-center gap-x-3'>
-                                                    <ManageAvatar
-                                                        firstName={selectedMemberDisplay.first_name}
-                                                        lastName={selectedMemberDisplay.last_name}
-                                                        image={selectedMemberDisplay.image}
-                                                    />
-                                                    <span>
-                                                        {selectedMemberDisplay.name}
-                                                        {selectedMemberDisplay.isCurrentUser && (
-                                                            <span className="text-xs text-neutral-500 ml-1">(You)</span>
-                                                        )}
-                                                    </span>
+                            <Popover open={open} onOpenChange={setOpen}>
+                                <PopoverTrigger asChild>
+                                    <div className="w-full min-h-[40px] px-3 py-2 border border-neutral-300 rounded-md cursor-pointer hover:bg-neutral-200/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-between">
+                                        {selectedMember ? (
+                                            <div className='flex items-center gap-x-2'>
+                                                <ManageAvatar
+                                                    firstName={selectedMember.first_name}
+                                                    lastName={selectedMember.last_name}
+                                                    image={selectedMember.image}
+                                                />
+                                                <span className="text-neutral-700">
+                                                    {selectedMember.first_name} {selectedMember.last_name}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-neutral-500">Select project leader...</span>
+                                        )}
+                                        <ChevronDown className="h-4 w-4 text-neutral-500" />
+                                    </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                    <Command shouldFilter={false}>
+                                        <CommandInput
+                                            placeholder="Search team members..."
+                                            value={searchTerm}
+                                            onValueChange={handleSearchTerm}
+                                        />
+                                        <DottedSeparator />
+                                        <CommandList>
+                                            {isMembersLoading ? (
+                                                <div className="flex items-center justify-center py-4">
+                                                    <Loader2 className="animate-spin h-5 w-5 text-neutral-500" />
                                                 </div>
                                             ) : (
-                                                "Select member..."
-                                            )}
-
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                        side="top"
-                                        align="start"
-                                        className="w-[200px] p-0"
-                                    >
-                                        <Command className="py-2" shouldFilter={false}>
-                                            <CommandInput
-                                                placeholder="Search member..."
-                                                className="h-9"
-                                                value={searchTerm}
-                                                onValueChange={handleSearchTerm}
-                                            />
-                                            <DottedSeparator />
-                                            <CommandList>
-                                                {
-                                                    isMembersLoading ? (
-                                                        <div className="flex items-center justify-center py-4">
-                                                            <Loader2 className="animate-spin h-5 w-5 text-neutral-500" />
-                                                        </div>
-                                                    ) : (
+                                                <>
+                                                    <CommandEmpty>No members found</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {members.map((member) => (
+                                                            <CommandItem
+                                                                key={member._id}
+                                                                value={member._id}
+                                                                onSelect={() => handleLeaderChange(member._id)}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <ManageAvatar
+                                                                        firstName={member.first_name}
+                                                                        lastName={member.last_name}
+                                                                        image={member.image}
+                                                                    />
+                                                                    <span>
+                                                                        {member.first_name} {member.last_name}
+                                                                    </span>
+                                                                </div>
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                    {showViewAllMember && (
                                                         <>
-                                                            {members.length === 0 ? (
-                                                                <CommandEmpty>No members found</CommandEmpty>
-                                                            ) : (
-                                                                <>
-                                                                    <CommandGroup>
-                                                                        {members.map((member, index) => (
-                                                                            <CommandItem
-                                                                                className="cursor-pointer"
-                                                                                key={index}
-                                                                                value={member._id}
-                                                                                onSelect={(currentValue) => {
-                                                                                    setLeaderValue(currentValue === leaderValue ? "" : currentValue);
-                                                                                    setOpen(false);
-                                                                                }}
-                                                                            >
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <ManageAvatar
-                                                                                        firstName={member.first_name}
-                                                                                        lastName={member.last_name}
-                                                                                        image={member.image}
-                                                                                    />
-                                                                                    <span>{member.first_name} {member.last_name}</span>
-                                                                                </div>
-
-                                                                            </CommandItem>
-                                                                        ))}
-                                                                    </CommandGroup>
-                                                                    {showViewAllMember && (
-                                                                        <>
-                                                                            <DottedSeparator className='mb-2' />
-                                                                            <CommandItem
-                                                                                className="cursor-pointer"
-                                                                                onSelect={() => setShowAllMembers(true)}
-                                                                            >
-                                                                                View All Members
-                                                                            </CommandItem>
-                                                                        </>
-                                                                    )
-
-                                                                    }
-                                                                </>
-                                                            )}
-
+                                                            <DottedSeparator />
+                                                            <CommandItem className="text-center justify-center cursor-pointer">
+                                                                View All Members
+                                                            </CommandItem>
                                                         </>
-                                                    )
-                                                }
-
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                         </div>
-                    </div>
+
+                        <ButtonLoader
+                            variant="teritary"
+                            size="sm"
+                            isLoading={isLoading}
+                        >
+                            Save
+                        </ButtonLoader>
+                    </form>
                 </CardContent>
             </Card>
         </section>

@@ -15,12 +15,13 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { Archive, ChevronsUpDown, FolderOpenDot, MoreHorizontal, Plus, Settings, Trash2 } from "lucide-react"
+import { Archive, ChevronsUpDown, FolderOpenDot, MoreHorizontal, Plus, Settings, Trash2, UserPlus } from "lucide-react"
 import { useDispatch, useSelector } from 'react-redux'
 import { switchProject } from '@/redux/reducers/projectSlice'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { DottedSeparator } from '../dotted-separator'
 import TooltipWrapper from '../common/TooltipWrapper'
+import { RiTeamFill, RiTeamLine } from 'react-icons/ri'
 
 const ProjectSwitcher = ({ teams }) => {
     const navigate = useNavigate()
@@ -144,8 +145,8 @@ const ProjectSwitcher = ({ teams }) => {
 
 
 
-                        <DropdownMenu model={false}>
-                            <DropdownMenuTrigger asChild>
+                        <DropdownMenu model={false} className="z-50">
+                            <DropdownMenuTrigger asChild className="z-50">
                                 <button
                                     className="flex items-center justify-center w-7 h-7 rounded-md hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-0"
                                 >
@@ -155,7 +156,7 @@ const ProjectSwitcher = ({ teams }) => {
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
-                                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg py-2 px-2"
+                                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg py-2 px-2 z-50"
                                 align="start"
                                 side={isMobile ? "bottom" : "right"}
                                 sideOffset={13}
@@ -167,6 +168,15 @@ const ProjectSwitcher = ({ teams }) => {
                                 <DropdownMenuItem className="gap-2 py-2 px-2 cursor-pointer">
                                     <Settings className="size-4" />
                                     <span>Project Settings</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="gap-2 py-2 px-2 cursor-pointer">
+                                    <UserPlus className="size-4" />
+                                    <span>Add team</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="gap-2 py-2 px-2 cursor-pointer">
+                                    {/* <RiTeamFill className="size-4" /> */}
+                                    <RiTeamLine className="size-4" />
+                                    <span>Create team</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="gap-2 py-2 px-2 cursor-pointer">
                                     <Plus className="size-4" />

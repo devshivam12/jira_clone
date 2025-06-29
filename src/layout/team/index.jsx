@@ -71,7 +71,7 @@ const Team = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 py-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-500">Team</h1>

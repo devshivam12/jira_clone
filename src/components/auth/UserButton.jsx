@@ -73,15 +73,15 @@ const UserButton = () => {
     }
 
     return (
-        <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className='outline-none relative'>
+        <DropdownMenu modal={false} className="z-50">
+            <DropdownMenuTrigger className='outline-none relative z-50'>
                 <Avatar className="size-10 hover:opacity-75 transition border border-neutral-300 ">
                     <AvatarFallback className="bg-neutral-200 font-medium text-neutral-500 flex items-center ">
                         {name}
                     </AvatarFallback>
                 </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="bottom" className="w-70" sideOffset={10}>
+            <DropdownMenuContent align="end" side="bottom" className="w-70 z-50" sideOffset={10}>
                 <div className='flex items-center gap-2 px-3 py-4'>
                     <Avatar className="size-[48px] border border-neutral-200 ">
                         <AvatarFallback className="bg-neutral-200 text-xl font-medium text-neutral-500 flex items-center ">

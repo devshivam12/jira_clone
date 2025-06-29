@@ -49,25 +49,10 @@ export const team = createApi({
             invalidatesTags: ['Team']
         }),
         getTeamDetails: build.query({
-            query: (args) => {
-                // args can be either member_id or an object { member_id, role }
-                const params = {};
-
-                // If args is an object with role property
-                if (args?.member_id) {
-                    params.member_id = args.member_id;
-                }
-
-                if (args?.role === 'Admin') {
-                    params.role = args.role;
-                }
-
-                return {
-                    url: '/company/team/get-team-details',
-                    method: 'GET',
-                    params: params
-                };
-            },
+            query: () => ({
+                url: '/company/team/get-team-details',
+                method : 'GET' 
+            }),
             providesTags: ['Team']
         })
     }),

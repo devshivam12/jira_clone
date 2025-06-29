@@ -141,10 +141,10 @@ function App() {
               {/* Static routes */}
               {/* <Route index element={<Navigate to="team" replace />} /> */}
               <Route path="team" element={<Team />} />
-              <Route path='team/:id' element={<GetTeamDetails />} />
+              <Route path='team/edit/:id' element={<GetTeamDetails />} />
 
               <Route path='projects' element={<Project />} />
-              <Route path='project/:id' element={<ProjectTab />} />
+              <Route path='project/edit/:id' element={<ProjectTab />} />
               {/* Project routes - Modified to ensure backlog is default */}
               <Route path=":project_slug/:template_slug" element={<ProjectLayout />}>
                 {/* <Route index element={<Backlog />} /> */}

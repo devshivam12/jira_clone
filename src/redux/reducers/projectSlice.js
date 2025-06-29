@@ -61,6 +61,31 @@ const projectSlice = createSlice({
         //         state.currentProject = action.payload;
         //     }
         // },
+
+        updateProjectReduxStore: (state, action) => {
+            const updatedProject = action.payload;
+
+            // Update in allProjects array
+            const projectIndex = state.allProjects.findIndex(p => p._id === updatedProject._id);
+            if (projectIndex !== -1) {
+                state.allProjects[projectIndex] = {
+                    ...state.allProjects[projectIndex],
+                    ...updatedProject
+                };
+            } else {
+                // If not found, add it (optional - depends on your use case)
+                state.allProjects.push(updatedProject);
+                state.allProjectsId.push(updatedProject._id);
+            }
+
+            // Update currentProject if it's the one being updated
+            if (state.currentProject?._id === updatedProject._id) {
+                state.currentProject = {
+                    ...state.currentProject,
+                    ...updatedProject
+                };
+            }
+        },
         switchProject: (state, action) => {
             const projectId = action.payload
             const project = state.allProjects.find(p => p._id === projectId)
@@ -106,7 +131,7 @@ export const {
     addProject,
     switchProject,
     initializeWithDefaultProject,
-    // updateProject,
+    updateProjectReduxStore,
     setTemplates,
     setLoading,
     setError,

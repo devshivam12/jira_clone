@@ -82,6 +82,14 @@ export const api = createApi({
             }),
             providesTags: ['Project']
         }),
+        updateProjectById: build.mutation({
+            query : ({id, body}) => ({
+                url : `/company/work-space/update-project/${id}`,
+                method : 'PUT',
+                body
+            }),
+            invalidatesTags: ['Project', 'Template']
+        }),
         getAllCompanyProject: build.query({
             query: () => ({
                 url: `/company/work-space/get-companyProject`,
@@ -108,6 +116,7 @@ export const {
     useGetClientWiseProjectQuery,
     useGetWorkSpaceDataQuery,
     useCreateWorkSpaceMutation,
+    useUpdateProjectByIdMutation,
     useGetProjectByIdQuery,
     useGetAllCompanyProjectQuery,
     useGetProjectListQuery

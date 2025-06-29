@@ -17,14 +17,11 @@ const TeamCard = () => {
         }
     })
     // console.log("userData", userData)
-    const isAdmin = userData?.role === 'Admin' ? 'Admin' : undefined;
+    // const isAdmin = userData?.role === 'Admin' ? 'Admin' : undefined;
     // console.log('isAdmin', isAdmin)
     // console.log("userData?.member_id", userData?.member_id)
-    
-    const { data, isLoading } = useGetTeamDetailsQuery({
-        member_id: userData?.member_id,
-        role: isAdmin
-    });
+
+    const { data, isLoading } = useGetTeamDetailsQuery();
     console.log("data", data)
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -36,7 +33,7 @@ const TeamCard = () => {
                 const remainingCount = memberCount > 4 ? memberCount - 4 : 0
 
                 return (
-                    <Card key={team._id} onClick={() => navigate(`${team._id}`)} className="rounded-md cursor-pointer px-2 py-2 bg-transparent ease-in-out duration-200 hover:bg-neutral-100/80 shadow-none border transition-all border-neutral-200 hover:border-neutral-300">
+                    <Card key={team._id} onClick={() => navigate(`edit/${team._id}`)} className="rounded-md cursor-pointer px-2 py-2 bg-transparent ease-in-out duration-200 hover:bg-neutral-100/80 shadow-none border transition-all border-neutral-200 hover:border-neutral-300">
                         <CardHeader className="px-2 py-2">
                             <CardTitle className="flex items-center justify-between gap-2 ">
                                 <div className='flex items-center justify-center p-[10px] rounded-md h-9 w-9 bg-blue-300'>
@@ -44,7 +41,7 @@ const TeamCard = () => {
                                 </div>
                                 <div className='flex items-center'>
                                     {membersToShow.map((member) => (
-                                        <Avatar key={member._id} className="h-9 p-1 w-9 border border-neutral-300 bg-transparent -ml-3">
+                                        <Avatar key={member._id} className="h-9 p-1 w-9 bg-neutral-200 text-neutral-600 text-xs font-medium -ml-1">
                                             <AvatarImage src={member?.image} /> {/* Add avatar URL if available */}
                                             <AvatarFallback className="text-sm font-normal bg-transparent">
                                                 {member?.first_name?.charAt(0)}{member?.last_name?.charAt(0)}

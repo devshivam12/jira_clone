@@ -189,7 +189,7 @@ export const EmailMultiSelect = ({
         const payload = {
           team_name: teamName,
           member_ids: memberIds,
-          created_by: userData._id
+          created_by: userData.member_id
         };
 
         const response = await addTeam(payload).unwrap();

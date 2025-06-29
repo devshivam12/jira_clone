@@ -168,7 +168,7 @@ const Project = () => {
   ]
 
   const handleProjectSettings = (id) => {
-    navigate(`/dashboard/project/${id}`)
+    navigate(`/dashboard/project/edit/${id}`)
   }
 
   const tableData = useMemo(() => {

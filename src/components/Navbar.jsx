@@ -88,7 +88,7 @@ const Navbar = () => {
                         </NavigationMenuItem>
 
                         {/* Your Work Dropdown */}
-                        <NavigationMenuItem>
+                        <NavigationMenuItem className='z-50'>
                             <DropdownMenu onOpenChange={setIsWork}>
                                 <DropdownMenuTrigger asChild>
                                     <Button
@@ -124,7 +124,7 @@ const Navbar = () => {
                                             </TabsTrigger>
                                         </TabsList>
 
-                                        <div className="p-4">
+                                        <div className="p-4 z-50">
                                             <TabsContent value='assigned'>
                                                 <Card className="border-0 shadow-none">
                                                     <CardHeader className="p-0 pb-4">
@@ -161,7 +161,7 @@ const Navbar = () => {
                                             </TabsContent>
                                         </div>
                                     </Tabs>
-                                    <DropdownMenuGroup className='p-0'>
+                                    <DropdownMenuGroup className='p-0 z-50'>
                                         <DropdownMenuItem
                                             className="cursor-pointer text-sm"
                                         >
@@ -177,9 +177,9 @@ const Navbar = () => {
                         </NavigationMenuItem>
 
                         {/* Regular navigation items */}
-                        <NavigationMenuItem>
-                            <NavigationMenuLink>
-                                <DropdownMenu onOpenChange={setIsTeam}>
+                        <NavigationMenuItem className='z-50'>
+                            <NavigationMenuLink className='z-50'>
+                                <DropdownMenu onOpenChange={setIsTeam} >
                                     <DropdownMenuTrigger asChild>
                                         <Button
                                             variant="ghost"
@@ -189,8 +189,7 @@ const Navbar = () => {
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent
-                                        className="w-80 py-2"
-                                        align="left"
+                                        className="z-50 w-80 py-2"
                                     >
                                         <DropdownMenuLabel className="my-2 text-neutral-600 font-semibold text-md">
                                             Your Teams
