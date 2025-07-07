@@ -1,21 +1,23 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { baseQueryWithReauth } from '../baseQuery'
 
 export const api = createApi({
     reducerPath: 'companyApi',
-    baseQuery: fetchBaseQuery({
-        baseUrl: import.meta.env.VITE_SERVER,
-        credentials: "include",
-        prepareHeaders: (headers) => {
-            const token = localStorage.getItem("accessToken")
-            const userData = JSON.parse(localStorage.getItem('userData'));
-            console.log("userData", userData)
-            if (token && userData) {
-                headers.set('Authorization', token)
-                headers.set('x-clientId', userData.clientId)
-            }
-            return headers
-        }
-    }),
+    baseQuery: baseQueryWithReauth,
+    // fetchBaseQuery({
+    //     baseUrl: import.meta.env.VITE_SERVER,
+    //     credentials: "include",
+    //     prepareHeaders: (headers) => {
+    //         const token = localStorage.getItem("accessToken")
+    //         const userData = JSON.parse(localStorage.getItem('userData'));
+    //         console.log("userData", userData)
+    //         if (token && userData) {
+    //             headers.set('Authorization', token)
+    //             headers.set('x-clientId', userData.clientId)
+    //         }
+    //         return headers
+    //     }
+    // }),
     tagTypes: ["Template", "WorkSpace", "Project"],
     endpoints: (build) => ({
         getProject: build.query({

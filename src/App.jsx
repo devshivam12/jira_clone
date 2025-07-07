@@ -26,7 +26,7 @@ import Forms from './layout/forms/index'
 import Team from './layout/team/index'
 import PublicRoute from './components/auth/PublicRoute'
 import SetPassword from './components/auth/SetPassword'
-import GetTeamDetails from './layout/team/GetTeamDetails'
+import EditTeam from './layout/team/EditTeam'
 // import ProjectLayout from './layout/ProjectLayout'
 import Project from './layout/projects'
 import ProjectLayout from './layout/ProjectLayout'
@@ -141,7 +141,7 @@ function App() {
               {/* Static routes */}
               {/* <Route index element={<Navigate to="team" replace />} /> */}
               <Route path="team" element={<Team />} />
-              <Route path='team/edit/:id' element={<GetTeamDetails />} />
+              <Route path='team/edit/:id' element={<EditTeam />} />
 
               <Route path='projects' element={<Project />} />
               <Route path='project/edit/:id' element={<ProjectTab />} />

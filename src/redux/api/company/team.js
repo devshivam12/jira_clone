@@ -1,20 +1,22 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { baseQueryWithReauth } from '../baseQuery'
 
 export const team = createApi({
-    baseQuery: fetchBaseQuery({
-        baseUrl: import.meta.env.VITE_SERVER,
-        credentials: "include",
-        prepareHeaders: (headers) => {
-            const token = localStorage.getItem("accessToken")
-            const userData = JSON.parse(localStorage.getItem('userData'));
-            console.log("userData", userData)
-            if (token && userData) {
-                headers.set('Authorization', token)
-                headers.set('x-clientId', userData.clientId)
-            }
-            return headers
-        }
-    }),
+    baseQuery: baseQueryWithReauth, 
+    // fetchBaseQuery({
+    //     baseUrl: import.meta.env.VITE_SERVER,
+    //     credentials: "include",
+    //     prepareHeaders: (headers) => {
+    //         const token = localStorage.getItem("accessToken")
+    //         const userData = JSON.parse(localStorage.getItem('userData'));
+    //         console.log("userData", userData)
+    //         if (token && userData) {
+    //             headers.set('Authorization', token)
+    //             headers.set('x-clientId', userData.clientId)
+    //         }
+    //         return headers
+    //     }
+    // }),
     tagTypes: ["People", "Team"],
     endpoints: (build) => ({
 
@@ -54,6 +56,21 @@ export const team = createApi({
                 method : 'GET' 
             }),
             providesTags: ['Team']
+        }),
+        getTeamDetailWithId : build.query({
+            query : (id) => ({
+                url : `company/team/get-team-detailById/${id}`,
+                method : 'GET'
+            }),
+            providesTags : ['Team']
+        }),
+        updateTeam : build.mutation({
+            query : ({id, data}) => ({
+                url : `company/team/update-team/${id}`,
+                method : 'PUT',
+                body : {data}
+            }),
+            invalidatesTags: ['Team']
         })
     }),
 })
@@ -63,5 +80,7 @@ export const {
     useGetAllMemberListQuery,
     useSearchMemberQuery,
     useCreateTeamMutation,
-    useGetTeamDetailsQuery
+    useGetTeamDetailsQuery,
+    useGetTeamDetailWithIdQuery,
+    useUpdateTeamMutation
 } = team

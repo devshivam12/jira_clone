@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useProjectData } from '@/hooks/useProjectData'
 import { useGetTeamDetailsQuery } from '@/redux/api/company/team'
 import { Users } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
@@ -7,6 +8,9 @@ import { useNavigate } from 'react-router-dom'
 
 const TeamCard = () => {
     const navigate = useNavigate()
+    const { currentProject } = useProjectData()
+    const [getColor, setGetColor] = useState([])
+
     const [userData] = useState(() => {
         try {
             const storeData = localStorage.getItem("userData")
@@ -23,21 +27,35 @@ const TeamCard = () => {
 
     const { data, isLoading } = useGetTeamDetailsQuery();
     console.log("data", data)
+
+    const defaultColors = useMemo(() => {
+        if (currentProject?.template?.fields?.work_type) {
+            return currentProject?.template?.fields?.work_type.map(workType => workType.color)
+        }
+    }, [currentProject])
+
+    console.log("defaultColor", defaultColors)
+
+    const getTeamColor = (index) => {
+        return defaultColors[index % defaultColors.length] || 'bg-blue-300'
+    }
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {data?.data?.map((team) => {
+            {data?.data?.map((team, teamIndex) => {
                 // Filter out empty member objects and get the count
                 // const validMembers = team.members.filter(member => member?._id)
                 const memberCount = team.members.length
                 const membersToShow = team.members.slice(0, 4)
                 const remainingCount = memberCount > 4 ? memberCount - 4 : 0
 
+
                 return (
                     <Card key={team._id} onClick={() => navigate(`edit/${team._id}`)} className="rounded-md cursor-pointer px-2 py-2 bg-transparent ease-in-out duration-200 hover:bg-neutral-100/80 shadow-none border transition-all border-neutral-200 hover:border-neutral-300">
                         <CardHeader className="px-2 py-2">
                             <CardTitle className="flex items-center justify-between gap-2 ">
-                                <div className='flex items-center justify-center p-[10px] rounded-md h-9 w-9 bg-blue-300'>
-                                    <Users className="h-10 w-10 text-neutral-700" />
+                                <div className={`flex items-center justify-center p-[10px] rounded-md h-9 w-9 ${getTeamColor(teamIndex)}`}>
+                                    <Users className="h-10 w-10 text-white" />
                                 </div>
                                 <div className='flex items-center'>
                                     {membersToShow.map((member) => (
