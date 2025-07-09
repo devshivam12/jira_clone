@@ -16,6 +16,7 @@ export const EmailMultiSelectInput = ({
     isOpen,
     onOpenChange,
     placeholder = "Add team members...",
+    isLoading=false,
     disabled = false,
 }) => {
 
@@ -93,15 +94,19 @@ export const EmailMultiSelectInput = ({
     const resetForm = () => {
         setTeamMembers([]);
         setInputValue("");
+        onOpenChange(false);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             if (teamMembers.length === 0) return;
-
-            onSuccess?.(teamMembers);
-            resetForm();
+            const memberIds = teamMembers.map(member => member.value)
+            const data = await onSuccess?.(memberIds);
+            console.log("data", data)
+            if(data.status === 200){
+                resetForm();
+            }
         } catch (error) {
             ShowToast.error('Operation failed', {
                 description: error.message,
@@ -197,7 +202,7 @@ export const EmailMultiSelectInput = ({
                     <Button
                         variant="default"
                         onClick={resetForm}
-                    // disabled={isForPeople ? isAddingPeople : isCreatingTeam}
+                        disabled={isLoading}
                     >
                         Cancel
                     </Button>
@@ -205,7 +210,7 @@ export const EmailMultiSelectInput = ({
                         variant="teritary"
                         className="py-0 px-6"
                         onClick={handleSubmit}
-                    // isLoading={isForPeople ? isAddingPeople : isCreatingTeam}
+                        isLoading={isLoading}
                     >
                         Add
                     </ButtonLoader>

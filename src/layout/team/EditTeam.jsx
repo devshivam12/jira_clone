@@ -28,7 +28,7 @@ import { useParams } from 'react-router-dom'
 
 const EditTeam = () => {
   const { id } = useParams()
-  const [updateTeam] = useUpdateTeamMutation()
+  const [updateTeam, { isLoading: isTeamUpdate }] = useUpdateTeamMutation()
   const userData = JSON.parse(localStorage.getItem('userData'))
 
   console.log("userData", userData)
@@ -53,6 +53,7 @@ const EditTeam = () => {
   const [isEditingName, setIsEditingName] = useState(false)
   const [isDescriptionEdit, setIsDescriptionEdit] = useState(false)
   const [displaySearchInput, setDisplaySearchInput] = useState(false)
+  const [isCurrentUserMemeber, setIsCurrentUserMemeber] = useState(false)
 
   const [teamName, setTeamName] = useState(teamData?.data?.team_name || '')
   const [teamDescription, setTeamDescription] = useState(teamData?.data?.team_description || 'There is no team like a team with a description')
@@ -82,54 +83,139 @@ const EditTeam = () => {
     setIsDescriptionEdit(false)
   }
 
+  useEffect(() => {
+    if (teamData?.data?.membersList && userData?.memberId) {
+      const isMember = teamData.data.membersList.some(
+        member => member.memberId === userData.memberId
+      );
+      setIsCurrentUserMemeber(isMember);
+    }
+  }, [teamData, userData]);
+
   const handleUpdateTeam = async (actionType, payload) => {
     try {
-      if(!actionType){
-        const data = {...payload}
+      if (!actionType) {
+        const data = { ...payload }
         const result = await updateTeam({ id, data }).unwrap()
 
         console.log("result=========", result)
-        if(result.status === 200){
+        if (result.status === 200) {
           ShowToast.success(result.message)
         }
+        else if (result.status === 404) {
+          ShowToast.error(result.message)
+        }
+        else if (result.status === 400) {
+          ShowToast.error(result.message)
+        }
+        else {
+          ShowToast.error(result.message)
+        }
+        return result
       }
       else {
         const data = {
           action: actionType,
           ...payload
         }
-       const response = await updateTeam({ id, data }).unwrap()
+        const response = await updateTeam({ id, data }).unwrap()
 
-       console.log("response-----------", response)
-       if(response.status === 200){
-        ShowToast.success(response.message)
-       }
+        console.log("response-----------", response)
+        if (response.status === 200) {
+          ShowToast.success(response.message)
+        }
+        return response
       }
-      
+
     } catch (error) {
       console.log("error", error)
+      ShowToast.error(error.error)
     }
   }
 
   const handleSaveTeamName = handleSubmit(async (formData) => {
     // console.log('Saving new team name:', teamName)
-    await handleUpdateTeam(null, {
-      team_name: formData.teamName
-    })
+
+    await ShowToast.promise(
+      handleUpdateTeam(null, {
+        team_name: formData.teamName
+      }),
+      {
+        loading: `Updating team name....`,
+        position: 'bottom-right',
+        duration: 4000
+      }
+    )
     setIsEditingName(false)
   })
 
   const handleSaveDescription = handleSubmit(async (formData) => {
-    await handleUpdateTeam(null, {
-      team_description : formData.teamDescription
-    })
+    await ShowToast.promise(
+      handleUpdateTeam(null, {
+        team_description: formData.teamDescription
+      }),
+      {
+        loading: `Updating team description...`,
+        position: 'bottom-right',
+        duration: 4000
+      }
+    )
     setIsDescriptionEdit(false)
   })
-  
-  const handleRemoveMember = async(memberId) => {
-    await handleUpdateTeam('remove_member', {
-      member_id : memberId
+
+  const handleAddMembers = async (memberId) => {
+    try {
+      const data = await handleUpdateTeam('add_member', {
+        members: memberId
+      })
+      return data
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
+
+  const handleRemoveMember = async (memberId, memberName) => {
+    return ShowToast.promise(
+      handleUpdateTeam('remove_member', { member_id: memberId }),
+      {
+        loading: `Removing ${memberName} from team...`,
+        position: 'bottom-right',
+        duration: 4000
+      }
+    );
+  };
+
+  const handleDeleteTeam = async (teamId) => {
+    await handleUpdateTeam('delete_team', {
+
     })
+  }
+
+  const handleLeaveTeam = async (memberId) => {
+    return ShowToast.promise(
+      handleUpdateTeam('leave', {
+        member_id: memberId
+      }),
+      {
+        loading: 'Procession please wait....',
+        position: 'bottom-right',
+        duration: 4000
+      }
+    )
+
+  }
+
+  const handleChangeLeader = async (memberId) => {
+    return ShowToast.promise(
+      handleUpdateTeam('change_leader', {
+        member_id: memberId
+      }),
+      {
+        loading: 'Procession please wait....',
+        position: 'bottom-right',
+        duration: 4000
+      }
+    )
   }
 
   // Handle blur with timeout to allow button clicks
@@ -148,7 +234,7 @@ const EditTeam = () => {
     if (isEditingName && e.key === 'Enter') {
       handleSaveTeamName()
     }
-    else if (isDescriptionEdit && e.key === 'Enter' ) {
+    else if (isDescriptionEdit && e.key === 'Enter') {
       handleSaveDescription()
     }
     else if (e.key === 'Escape') {
@@ -378,26 +464,53 @@ const EditTeam = () => {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 py-2">
-                          {/* Show "Leave" if the current member is the logged-in user */}
-                          {(item.memberId === userData?.memberId && item._id === userData.member_id) && (
-                            <DropdownMenuItem className="text-red-500">
-                              <UserX className="mr-2 h-4 w-4" />
-                              Leave
-                            </DropdownMenuItem>
-                          )}
+                        {
+                          userData?.role === 'Admin' && (
+                            <DropdownMenuContent align="end" className="w-40 py-2">
 
-                          {/* Show "Remove" if the current user is admin and it's not themselves */}
-                          {(userData?.role === 'Admin' && item.memberId !== userData?.memberId) && (
-                            <DropdownMenuItem 
-                            className="text-red-500" 
-                            onClick={() => handleRemoveMember(item.member_id)} 
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Remove
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
+                              {item.isLeader && item.memberId !== userData?.memberId && (
+                                // <DropdownMenuItem className="text-red-500" onClick={() => handleLeaveTeam(item.member_id)}>
+                                //   <UserX className="mr-2 h-4 w-4" />
+                                //   Leave Team
+                                // </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                  className="text-red-500"
+                                  onClick={() => handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Remove
+                                </DropdownMenuItem>
+
+                              )}
+
+                              {((!item.isLeader && item.memberId === userData?.memberId) || (item.isLeader && item.memberId === userData?.memberId)) && userData.role === 'Admin' && (
+                                <DropdownMenuItem className="text-red-500" onClick={() => handleLeaveTeam(item.member_id)}>
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Leave Team
+                                </DropdownMenuItem>
+                              )}
+
+                              {!item.isLeader && item.memberId !== userData?.memberId && (
+                                <DropdownMenuItem
+                                  className="text-red-500"
+                                  onClick={() => handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Remove
+                                </DropdownMenuItem>
+                              )}
+                              {!item.isLeader && userData?.role === 'Admin' && (
+                                <DropdownMenuItem
+                                  onClick={() => handleChangeLeader(item.member_id)}
+                                >
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Make Leader
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          )
+                        }
                       </DropdownMenu>
                     </div>
                   </div>
@@ -428,7 +541,16 @@ const EditTeam = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="py-2 w-36" align="end" side="bottom" sideOffset="1">
                 <DropdownMenuItem className="cursor-pointer text-neutral-500 font-medium">Leave team</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer text-neutral-500 font-medium">Delete team</DropdownMenuItem>
+                {
+                  userData?.role === 'Admin' && (
+                    <DropdownMenuItem
+                      className="cursor-pointer text-neutral-500 font-medium"
+                      onClick={() => handleDeleteTeam(id)}
+                    >
+                      Delete team
+                    </DropdownMenuItem>
+                  )
+                }
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -478,6 +600,8 @@ const EditTeam = () => {
       <EmailMultiSelectInput
         isOpen={dialogState}
         onOpenChange={() => setDialogState(prev => !prev)}
+        onSuccess={handleAddMembers}
+        isLoading={isTeamUpdate}
       />
     </div >
   )

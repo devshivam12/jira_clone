@@ -1,179 +1,3 @@
-// import { CheckCircleIcon } from "lucide-react";
-
-// const { toast } = require("sonner");
-
-// const ShowToast = {
-//     success: (message, options = {}) => {
-//         if (options.custom) {
-//             return toast.custom(options.custom, {
-//                 duration: options.duration || 3000,
-//                 position: options.position || 'bottom-right',
-//                 ...options
-//             });
-//         }
-//         return toast.success(message, {
-//             description: options.description || '',
-//             duration: options.duration || 3000,
-//             position: options.position || 'bottom-right',
-//             ...options
-//         });
-//     },
-//     error: (message, options = {}) => {
-//         if (options.custom) {
-//             return toast.custom(options.custom, {
-//                 duration: options.duration || 3000,
-//                 position: options.position || 'bottom-right',
-//                 ...options
-//             });
-//         }
-//         return toast.error(message, {
-//             description: options.description || '',
-//             duration: options.duration || 3000,
-//             position: options.position || 'bottom-right',
-//             ...options
-//         });
-//     },
-//     info: (message, options = {}) => {
-//         if (options.custom) {
-//             return toast.custom(options.custom, {
-//                 duration: options.duration || 3000,
-//                 position: options.position || 'bottom-right',
-//                 ...options
-//             });
-//         }
-//         return toast.info(message, {
-//             description: options.description || '',
-//             duration: options.duration || 3000,
-//             position: options.position || 'bottom-right',
-//             ...options
-//         });
-//     },
-//     warning: (message, options = {}) => {
-//         if (options.custom) {
-//             return toast.custom(options.custom, {
-//                 duration: options.duration || 3000,
-//                 position: options.position || 'bottom-right',
-//                 ...options
-//             });
-//         }
-//         return toast.warning(message, {
-//             description: options.description || '',
-//             duration: options.duration || 3000,
-//             position: options.position || 'bottom-right',
-//             ...options
-//         });
-//     },
-//     loading: (message, options = {}) => {
-//         if (options.custom) {
-//             return toast.custom(options.custom, {
-//                 duration: options.duration || 3000,
-//                 position: options.position || 'bottom-right',
-//                 ...options
-//             });
-//         }
-//         return toast.loading(message, {
-//             description: options.description || '',
-//             duration: options.duration || 3000,
-//             position: options.position || 'bottom-right',
-//             ...options
-//         });
-//     },
-//     custom: (component, options = {}) => toast.custom(component, {
-//         duration: options.duration || 3000,
-//         position: options.position || 'bottom-right',
-//         ...options
-//     }),
-//     dismissAll: () => toast.dismiss()
-
-// }
-
-// export default ShowToast
-
-
-// const { toast } = require("sonner");
-
-// // Predefined custom templates
-// const ToastTemplates = {
-//     success: (t, { title, description }) => (
-//         <div className="custom-toast success">
-//             <CheckCircleIcon />
-//             <div className="content">
-//                 {title && <h4>{title}</h4>}
-//                 {description && <p>{description}</p>}
-//             </div>
-//             <button className="close-btn" onClick={() => toast.dismiss(t)}>×</button>
-//         </div>
-//     ),
-//     error: (t, { title, description }) => (
-//         <div className="custom-toast error">
-//             <ErrorIcon />
-//             <div className="content">
-//                 {title && <h4>{title}</h4>}
-//                 {description && <p>{description}</p>}
-//             </div>
-//             <button className="close-btn" onClick={() => toast.dismiss(t)}>×</button>
-//         </div>
-//     ),
-//     info: (t, { title, description }) => (
-//         <div className="custom-toast error">
-//             <ErrorIcon />
-//             <div className="content">
-//                 {title && <h4>{title}</h4>}
-//                 {description && <p>{description}</p>}
-//             </div>
-//             <button className="close-btn" onClick={() => toast.dismiss(t)}>×</button>
-//         </div>
-//     ),
-//     // Add more templates for info, warning, etc.
-// };
-
-// const ShowToast = {
-//     success: (message, options = {}) => {
-//         if (options.useCustom) {
-//             return toast.custom((t) => ToastTemplates.success(t, {
-//                 title: message,
-//                 description: options.description
-//             }), {
-//                 duration: options.duration || 3000,
-//                 position: options.position || 'bottom-right',
-//                 ...options
-//             });
-//         }
-//         return toast.success(message, {
-//             description: options.description || '',
-//             duration: options.duration || 3000,
-//             position: options.position || 'bottom-right',
-//             ...options
-//         });
-//     },
-//     error: (message, options = {}) => {
-//         if (options.useCustom) {
-//             return toast.custom((t) => ToastTemplates.error(t, {
-//                 title: message,
-//                 description: options.description
-//             }), {
-//                 duration: options.duration || 3000,
-//                 position: options.position || 'bottom-right',
-//                 ...options
-//             });
-//         }
-//         return toast.error(message, {
-//             description: options.description || '',
-//             duration: options.duration || 3000,
-//             position: options.position || 'bottom-right',
-//             ...options
-//         });
-//     },
-//     // ... (similar for other types)
-//     custom: (component, options = {}) => toast.custom(component, {
-//         duration: options.duration || 3000,
-//         position: options.position || 'bottom-right',
-//         ...options
-//     }),
-//     dismissAll: () => toast.dismiss()
-// };
-
-// export default ShowToast;
 
 import { toast } from "sonner";
 import { CheckCircle2, XCircle, Info, AlertCircle, Loader2, X } from "lucide-react";
@@ -191,7 +15,9 @@ const ToastTemplate = ({ t, title, description, icon, type, options }) => {
             case "warning":
                 return "border-yellow-200 bg-yellow-50 text-yellow-800";
             case "loading":
-                return "border-gray-200 bg-white text-gray-800";
+                return "border-yellow-200 bg-yellow-50 text-yellow-800";
+            case "promise":
+                return "border-yellow-200 bg-yellow-50 text-yellow-800"
             default:
                 return "border-gray-200 bg-white text-gray-800";
         }
@@ -208,7 +34,7 @@ const ToastTemplate = ({ t, title, description, icon, type, options }) => {
             case "warning":
                 return "text-yellow-600";
             case "loading":
-                return "text-gray-600";
+                return "text-yellow-600";
             default:
                 return "text-gray-600";
         }
@@ -236,7 +62,7 @@ const ToastTemplate = ({ t, title, description, icon, type, options }) => {
                     </>
                 )}
             </div>
-            
+
             {/* Content */}
             <div className="flex-1 min-w-0">
                 {title && (
@@ -250,7 +76,7 @@ const ToastTemplate = ({ t, title, description, icon, type, options }) => {
                     </p>
                 )}
             </div>
-            
+
             {/* Close Button */}
             <button
                 className="flex-shrink-0 ml-2 p-1 rounded-md hover:bg-black/10 transition-colors duration-150 opacity-60 hover:opacity-100"
@@ -340,51 +166,43 @@ const ShowToast = {
             ...options,
         }),
     dismissAll: () => toast.dismiss(),
-    promise: toast.promise,
+    promise: (promise, options) => {
+        const loadingToast = ShowToast.loading(options?.loading || 'Processing...', {
+            description: options?.loadingDescription,
+            useCustom: true,
+            duration: 0
+        });
+
+        return promise
+            .then(data => {
+                toast.dismiss(loadingToast);
+                if (options?.success) {
+                    ShowToast.success(
+                        typeof options?.success === 'function' ? options.success(data) : (options?.success || 'Success!'),
+                        {
+                            description: options?.successDescription,
+                            useCustom: true
+                        }
+                    );
+                }
+                return data;
+            })
+            .catch(error => {
+                toast.dismiss(loadingToast);
+                if (options?.error) {
+                    ShowToast.error(
+                        typeof options?.error === 'function' ? options.error(error) : (options?.error || 'Error occurred'),
+                        {
+                            description: error.message || options?.errorDescription,
+                            useCustom: true
+                        }
+                    );
+                }
+                throw error;
+            });
+    }
 };
 
 export default ShowToast;
 
 
-
-
-// // Normal toast
-// ShowToast.success("Success!", {
-//     description: "Your action was completed successfully"
-//   });
-  
-//   // Custom styled toast
-//   ShowToast.error("Error occurred!", {
-//     description: "Please try again later",
-//     useCustom: true
-//   });
-  
-//   // Loading toast with longer duration
-//   ShowToast.loading("Processing...", {
-//     description: "This may take a few seconds",
-//     useCustom: true,
-//     duration: 10000
-//   });
-  
-//   // Fully custom toast
-//   ShowToast.custom(
-//     (t) => (
-//       <div className="special-toast">
-//         <CustomIcon />
-//         <div>Special notification</div>
-//         <button onClick={() => toast.dismiss(t)}>Close</button>
-//       </div>
-//     ),
-//     { position: "top-center" }
-//   );
-  
-//   // Promise toast
-//   ShowToast.promise(
-//     fetchData(),
-//     {
-//       loading: "Loading data...",
-//       success: (data) => `Data loaded: ${data.message}`,
-//       error: "Failed to load data",
-//     },
-//     { useCustom: true }
-//   );
