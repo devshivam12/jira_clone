@@ -93,8 +93,9 @@ export const api = createApi({
             invalidatesTags: ['Project', 'Template']
         }),
         getAllCompanyProject: build.query({
-            query: () => ({
+            query: ({allData, search}) => ({
                 url: `/company/work-space/get-companyProject`,
+                params : {allData, search}
             }),
             providesTags: ['Project']
         }),

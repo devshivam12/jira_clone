@@ -5,6 +5,7 @@ import { DottedSeparator } from '@/components/dotted-separator'
 import { EmailMultiSelect } from '@/components/ui/EmailMultiSelect'
 import { EmailMultiSelectInput } from '@/components/ui/EmailMultiSelectInput'
 import { AlertDialogHeader } from '@/components/ui/alert-dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -20,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import useDateFormatter from '@/hooks/useDateFormatter'
 import { useProjectData } from '@/hooks/useProjectData'
+import { useGetAllCompanyProjectQuery } from '@/redux/api/company/api'
 import { useGetTeamDetailWithIdQuery, useUpdateTeamMutation } from '@/redux/api/company/team'
 import { Check, Edit3, ImagePlus, MoreHorizontal, Plus, Search, Trash2, UserX, Users, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
@@ -29,6 +31,7 @@ import { useParams } from 'react-router-dom'
 const EditTeam = () => {
   const { id } = useParams()
   const [updateTeam, { isLoading: isTeamUpdate }] = useUpdateTeamMutation()
+
   const userData = JSON.parse(localStorage.getItem('userData'))
 
   console.log("userData", userData)
@@ -58,12 +61,10 @@ const EditTeam = () => {
   const [teamName, setTeamName] = useState(teamData?.data?.team_name || '')
   const [teamDescription, setTeamDescription] = useState(teamData?.data?.team_description || 'There is no team like a team with a description')
 
-  const [dialogState, setDialogState] = useState(false);
-
-
-  const openDialog = () => {
-    setDialogState(true)
-  };
+  const [dialogState, setDialogState] = useState({
+    isOpen: false,
+    slug: null
+  });
 
   const handleStartEdit = () => {
     setIsEditingName(true)
@@ -123,6 +124,9 @@ const EditTeam = () => {
         console.log("response-----------", response)
         if (response.status === 200) {
           ShowToast.success(response.message)
+        }
+        else if(response.status === 400){
+          ShowToast.error(response.message)
         }
         return response
       }
@@ -413,7 +417,10 @@ const EditTeam = () => {
                     <TooltipWrapper content={'Add member'}>
                       <div
                         className='border border-neutral-300 text-neutral-500 rounded-sm p-1 cursor-pointer hover:bg-neutral-100'
-                        onClick={() => setDialogState(true)}
+                        onClick={() => setDialogState({
+                          isOpen: true,
+                          slug: 'add_member'
+                        })}
                       >
                         <Plus size={17} />
                       </div>
@@ -528,7 +535,10 @@ const EditTeam = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setDialogState(true)}
+              onClick={() => setDialogState({
+                isOpen: true,
+                slug: 'add_member'
+              })}
             >
               Add Member
             </Button>
@@ -554,40 +564,106 @@ const EditTeam = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <Card className="p-6 shadow-none border border-neutral-300">
-            <h2 className="text-xl font-semibold text-neutral-500 mb-4">Team Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-neutral-500">Created At</h4>
-                <p className="mt-1 text-neutral-500 font-normal text-base">{formattedDate}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-neutral-500">Team Lead</h4>
-                <p className="mt-1 text-neutral-500 font-normal text-base">{teamData?.data?.createdBy.first_name + " " + teamData?.data?.createdBy.last_name}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-neutral-500">Projects</h4>
-                <p className="mt-1 text-neutral-500 font-normal text-base">3 Active</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-neutral-500">Members</h4>
-                <p className="mt-1 text-neutral-500 font-normal text-base">8 People</p>
-              </div>
+          <Card className="shadow-none border-none">
+            <div className='flex items-center justify-between'>
+              <h2 className="text-xl font-semibold text-neutral-500 mb-4">Team Projects</h2>
+              <TooltipWrapper content={'Add project'} direction="left">
+                <div
+                  className='border border-neutral-300 text-neutral-500 rounded-sm p-1 cursor-pointer hover:bg-neutral-100'
+                  onClick={() => setDialogState({
+                    isOpen: true,
+                    slug: 'add_project'
+                  })}
+                >
+                  <Plus size={17} />
+                </div>
+              </TooltipWrapper>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {
+                teamData?.data?.projectDetails.map((project, index) => (
+                  <CardContent
+                    key={index}
+                    className="p-4 shadow-none rounded-lg bg-neutral-100/50 cursor-pointer border border-neutral-300 hover:bg-transparent"
+                  >
+
+                    <div className='flex items-center gap-x-4'>
+                      <Avatar className="w-8 h-8 rounded-none ">
+                        {project?.project_icon ? (
+                          <AvatarImage
+                            src={project?.project_icon}
+                            alt={`${project?.name}`}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <AvatarFallback className='rounded-sm text-base font-semibold text-neutral-500 bg-neutral-200'>
+                            {project?.name?.charAt(0)?.toUpperCase() ?? ''}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+
+                      <p className="mt-1 text-neutral-500 font-normal text-base">{project.name}</p>
+                    </div>
+
+                  </CardContent>
+                ))
+              }
+              <CardContent
+
+                className="p-4 shadow-none rounded-lg bg-neutral-100/50 cursor-pointer border-2 border-dotted border-neutral-300 hover:bg-transparent"
+              >
+                <div className='flex items-center gap-x-4'>
+                  <Avatar className="w-8 h-8 rounded-none ">
+
+                    <AvatarFallback className='rounded-sm text-base font-semibold text-neutral-500 bg-neutral-200'>
+                      <Plus />
+                    </AvatarFallback>
+
+                  </Avatar>
+
+                  <p className="mt-1 text-neutral-500 font-normal text-base">Add Project</p>
+                </div>
+
+              </CardContent>
             </div>
           </Card>
-
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
-            {/* Activity feed would go here */}
-            <div className="space-y-4">
-              <div className="flex gap-3">
-                <div className="h-10 w-10 rounded-full bg-neutral-100"></div>
+          <Card className="shadow-none border-none">
+            <h2 className="text-xl font-semibold text-neutral-500 mb-4">Team Details</h2>
+            <CardContent className="p-6 shadow-none rounded-md border border-neutral-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm"><span className="font-medium">Sarah</span> completed a task</p>
-                  <p className="text-xs text-neutral-500">2 hours ago</p>
+                  <h4 className="text-sm font-medium text-neutral-500">Created At</h4>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">{formattedDate}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500">Team Lead</h4>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">{teamData?.data?.createdBy.first_name + " " + teamData?.data?.createdBy.last_name}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500">Projects</h4>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">3 Active</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500">Members</h4>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">8 People</p>
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none border-none">
+            <h2 className="text-xl font-semibold text-neutral-500 mb-4">Recent Activity</h2>
+            <CardContent className="p-6 shadow-none rounded-md border border-neutral-300">
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="h-10 w-10 rounded-full bg-neutral-100"></div>
+                  <div>
+                    <p className="text-sm"><span className="font-medium">Sarah</span> completed a task</p>
+                    <p className="text-xs text-neutral-500">2 hours ago</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
           </Card>
         </div>
       </div>
@@ -598,7 +674,8 @@ const EditTeam = () => {
         onOpenChange={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
       /> */}
       <EmailMultiSelectInput
-        isOpen={dialogState}
+        isOpen={dialogState.isOpen}
+        slug={dialogState.slug}
         onOpenChange={() => setDialogState(prev => !prev)}
         onSuccess={handleAddMembers}
         isLoading={isTeamUpdate}
