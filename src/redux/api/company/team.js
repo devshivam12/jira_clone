@@ -58,9 +58,9 @@ export const team = createApi({
             providesTags: ['Team']
         }),
         getTeamDetailWithId : build.query({
-            query : (id) => ({
-                url : `company/team/get-team-detailById/${id}`,
-                method : 'GET'
+            query : ({team_id, page=1, pageSize=10, search=''}) => ({
+                url : `company/team/get-team-detailById`,
+                params : {team_id, page, pageSize, search},
             }),
             providesTags : ['Team']
         }),

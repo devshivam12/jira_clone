@@ -19,11 +19,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import useDateFormatter from '@/hooks/useDateFormatter'
 import { useProjectData } from '@/hooks/useProjectData'
 import { useGetAllCompanyProjectQuery } from '@/redux/api/company/api'
 import { useGetTeamDetailWithIdQuery, useUpdateTeamMutation } from '@/redux/api/company/team'
-import { Check, Edit3, ImagePlus, MoreHorizontal, Plus, Search, Trash2, UserX, Users, X } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Edit3, ImagePlus, Loader2, MoreHorizontal, Plus, Search, Trash2, UserX, Users, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useParams } from 'react-router-dom'
@@ -36,7 +37,21 @@ const EditTeam = () => {
 
   console.log("userData", userData)
 
-  const { data: teamData, isLoading: teamLoading } = useGetTeamDetailWithIdQuery(id)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    perPage: 10,
+    search: ''
+  })
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const { data: teamData, isLoading: teamLoading, isFetching: teamFetching } = useGetTeamDetailWithIdQuery({
+    team_id: id,
+    page: pagination.page,
+    perPage: pagination.perPage,
+    search: debouncedSearch
+  })
+
   const formattedDate = useDateFormatter(teamData?.data?.createdAt)
 
   const {
@@ -52,7 +67,6 @@ const EditTeam = () => {
 
   const { currentProject } = useProjectData()
 
-
   const [isEditingName, setIsEditingName] = useState(false)
   const [isDescriptionEdit, setIsDescriptionEdit] = useState(false)
   const [displaySearchInput, setDisplaySearchInput] = useState(false)
@@ -66,6 +80,38 @@ const EditTeam = () => {
     slug: null
   });
 
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({
+      ...prev,
+      page: newPage
+    }))
+  }
+
+  const totalPages = Math.ceil(teamData?.data?.pagination?.totalCount / pagination.pageSize) || 1;
+
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setPagination(prev => ({
+        ...prev,
+        page: 1,
+        search: searchTerm
+      }))
+      setDebouncedSearch(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timerId);
+  }, [searchTerm])
+
+  const handleSearch = (searchTerm) => {
+    setSearchTerm(searchTerm)
+  }
+  const clearSearch = () => {
+    setDisplaySearchInput(false)
+    setPagination(prev => ({
+      ...prev,
+      search: setSearchTerm('')
+    }))
+  }
   const handleStartEdit = () => {
     setIsEditingName(true)
   }
@@ -125,10 +171,10 @@ const EditTeam = () => {
         if (response.status === 200) {
           ShowToast.success(response.message)
         }
-        else if(response.status === 400){
+        else if (response.status === 400) {
           ShowToast.error(response.message)
         }
-        else if(response.status === 404){
+        else if (response.status === 404) {
           ShowToast.error(response.message)
         }
         return response
@@ -181,10 +227,10 @@ const EditTeam = () => {
     }
   }
 
-  const handleAddProjects = async(projectId) => {
+  const handleAddProjects = async (projectId) => {
     try {
       const data = await handleUpdateTeam('add_project', {
-        project_id : projectId
+        project_id: projectId
       })
       return data
     } catch (error) {
@@ -409,11 +455,14 @@ const EditTeam = () => {
                     <Input
                       className="h-8 p-1 w-full"
                       autoFocus
+                      onChange={(e) => handleSearch(e.target.value)}
+                      value={searchTerm}
+                      placeholder="Search members..."
                     />
                   </div>
                   <div
                     className='border border-neutral-300 text-neutral-500 rounded-sm p-1 cursor-pointer hover:bg-neutral-100'
-                    onClick={() => setDisplaySearchInput(false)}
+                    onClick={clearSearch}
                   >
                     <X size={17} />
                   </div>
@@ -454,91 +503,124 @@ const EditTeam = () => {
 
             <CardContent className="p-0 my-2">
               {/* Team members list would go here */}
-              <div className="space-y-2">
-                {teamData?.data?.membersList?.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 hover:bg-neutral-100 rounded cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-x-4">
-                      <ManageAvatar
-                        firstName={item.first_name}
-                        lastName={item.last_name}
-                        image={item.image}
-                      />
-                      <span className="text-sm text-neutral-500 font-medium">
-                        {item.first_name + " " + item.last_name}
-                      </span>
-                    </div>
-
-                    {/* Action button that appears on hover */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="muted"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        {
-                          userData?.role === 'Admin' && (
-                            <DropdownMenuContent align="end" className="w-40 py-2">
-
-                              {item.isLeader && item.memberId !== userData?.memberId && (
-                                // <DropdownMenuItem className="text-red-500" onClick={() => handleLeaveTeam(item.member_id)}>
-                                //   <UserX className="mr-2 h-4 w-4" />
-                                //   Leave Team
-                                // </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                  className="text-red-500"
-                                  onClick={() => handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove
-                                </DropdownMenuItem>
-
-                              )}
-
-                              {((!item.isLeader && item.memberId === userData?.memberId) || (item.isLeader && item.memberId === userData?.memberId)) && userData.role === 'Admin' && (
-                                <DropdownMenuItem className="text-red-500" onClick={() => handleLeaveTeam(item.member_id)}>
-                                  <UserX className="mr-2 h-4 w-4" />
-                                  Leave Team
-                                </DropdownMenuItem>
-                              )}
-
-                              {!item.isLeader && item.memberId !== userData?.memberId && (
-                                <DropdownMenuItem
-                                  className="text-red-500"
-                                  onClick={() => handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove
-                                </DropdownMenuItem>
-                              )}
-                              {!item.isLeader && userData?.role === 'Admin' && (
-                                <DropdownMenuItem
-                                  onClick={() => handleChangeLeader(item.member_id)}
-                                >
-                                  <UserX className="mr-2 h-4 w-4" />
-                                  Make Leader
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          )
-                        }
-                      </DropdownMenu>
-                    </div>
+              {
+                teamFetching ? (
+                  <div className="space-y-1">
+                    {[...Array(5)].map((_, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 rounded">
+                        <div className="flex items-center gap-x-2 w-full">
+                          <Skeleton className="h-10 w-10 rounded-full" />
+                          <Skeleton className="h-4 w-[120px]" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
+                ) : (
+                  <div className="space-y-1">
+                    {teamData?.data?.membersList?.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 hover:bg-neutral-100 rounded cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-x-4">
+                          <ManageAvatar
+                            firstName={item.first_name}
+                            lastName={item.last_name}
+                            image={item.image}
+                          />
+                          <span className="text-sm text-neutral-500 font-medium">
+                            {item.first_name + " " + item.last_name}
+                          </span>
+                        </div>
 
+                        {/* Action button that appears on hover */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="muted"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            {
+                              userData?.role === 'Admin' && (
+                                <DropdownMenuContent align="end" className="w-40 py-2">
+
+                                  {item.isLeader && item.memberId !== userData?.memberId && (
+                                    // <DropdownMenuItem className="text-red-500" onClick={() => handleLeaveTeam(item.member_id)}>
+                                    //   <UserX className="mr-2 h-4 w-4" />
+                                    //   Leave Team
+                                    // </DropdownMenuItem>
+
+                                    <DropdownMenuItem
+                                      className="text-red-500"
+                                      onClick={() => handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Remove
+                                    </DropdownMenuItem>
+
+                                  )}
+
+                                  {((!item.isLeader && item.memberId === userData?.memberId) || (item.isLeader && item.memberId === userData?.memberId)) && userData.role === 'Admin' && (
+                                    <DropdownMenuItem className="text-red-500" onClick={() => handleLeaveTeam(item.member_id)}>
+                                      <UserX className="mr-2 h-4 w-4" />
+                                      Leave Team
+                                    </DropdownMenuItem>
+                                  )}
+
+                                  {!item.isLeader && item.memberId !== userData?.memberId && (
+                                    <DropdownMenuItem
+                                      className="text-red-500"
+                                      onClick={() => handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Remove
+                                    </DropdownMenuItem>
+                                  )}
+                                  {!item.isLeader && userData?.role === 'Admin' && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleChangeLeader(item.member_id)}
+                                    >
+                                      <UserX className="mr-2 h-4 w-4" />
+                                      Make Leader
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              )
+                            }
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+
+            </CardContent>
           </Card>
+          <div className='flex items-center justify-end gap-x-2'>
+            <Button
+              size="icon"
+              variant="default"
+              disabled={pagination.page === 1 || teamFetching}
+              onClick={() => handlePageChange(pagination.page - 1)}
+            >
+              <ChevronLeft className='' />
+            </Button>
+            <Button
+              size="icon"
+              variant="default"
+              disabled={pagination.page >= totalPages || teamFetching}
+              onClick={() => handlePageChange(pagination.page + 1)}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
 
         </div>
 
@@ -693,7 +775,7 @@ const EditTeam = () => {
         isOpen={dialogState.isOpen}
         slug={dialogState.slug}
         onOpenChange={() => setDialogState(prev => !prev)}
-        onSuccess={dialogState.slug === 'add_project' ? handleAddProjects :  handleAddMembers}
+        onSuccess={dialogState.slug === 'add_project' ? handleAddProjects : handleAddMembers}
         isLoading={isTeamUpdate}
       />
     </div >
