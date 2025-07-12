@@ -128,6 +128,9 @@ const EditTeam = () => {
         else if(response.status === 400){
           ShowToast.error(response.message)
         }
+        else if(response.status === 404){
+          ShowToast.error(response.message)
+        }
         return response
       }
 
@@ -171,6 +174,17 @@ const EditTeam = () => {
     try {
       const data = await handleUpdateTeam('add_member', {
         members: memberId
+      })
+      return data
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
+
+  const handleAddProjects = async(projectId) => {
+    try {
+      const data = await handleUpdateTeam('add_project', {
+        project_id : projectId
       })
       return data
     } catch (error) {
@@ -246,7 +260,6 @@ const EditTeam = () => {
       handleCancelDescription()
     }
   }
-
   // alert(dialogState)
   return (
     <div className='py-5 space-y-5'>
@@ -442,7 +455,7 @@ const EditTeam = () => {
             <CardContent className="p-0 my-2">
               {/* Team members list would go here */}
               <div className="space-y-2">
-                {teamData?.data?.membersList.map((item, index) => (
+                {teamData?.data?.membersList?.map((item, index) => (
                   <div
                     key={index}
                     className="flex items-center justify-between p-2 hover:bg-neutral-100 rounded cursor-pointer group"
@@ -609,8 +622,11 @@ const EditTeam = () => {
                 ))
               }
               <CardContent
-
                 className="p-4 shadow-none rounded-lg bg-neutral-100/50 cursor-pointer border-2 border-dotted border-neutral-300 hover:bg-transparent"
+                onClick={() => setDialogState({
+                  isOpen: true,
+                  slug: 'add_project'
+                })}
               >
                 <div className='flex items-center gap-x-4'>
                   <Avatar className="w-8 h-8 rounded-none ">
@@ -677,7 +693,7 @@ const EditTeam = () => {
         isOpen={dialogState.isOpen}
         slug={dialogState.slug}
         onOpenChange={() => setDialogState(prev => !prev)}
-        onSuccess={handleAddMembers}
+        onSuccess={dialogState.slug === 'add_project' ? handleAddProjects :  handleAddMembers}
         isLoading={isTeamUpdate}
       />
     </div >
