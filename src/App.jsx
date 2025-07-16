@@ -24,6 +24,7 @@ import Board from './layout/board-layout/index'
 import Timeline from './layout/timeline-layout/index'
 import Forms from './layout/forms/index'
 import Team from './layout/team/index'
+import People from './layout/people/index'
 import PublicRoute from './components/auth/PublicRoute'
 import SetPassword from './components/auth/SetPassword'
 import EditTeam from './layout/team/EditTeam'
@@ -37,6 +38,7 @@ import { loadLastAccessedProject, setLastAccessedProject } from './redux/reducer
 import DashboardRedirect from './components/auth/DashboardRedirect'
 import { Toaster } from 'sonner'
 import ProjectTab from './layout/projects/ProjectTab'
+import EditPeople from './layout/people/EditPeople'
 
 
 function App() {
@@ -142,6 +144,9 @@ function App() {
               {/* <Route index element={<Navigate to="team" replace />} /> */}
               <Route path="team" element={<Team />} />
               <Route path='team/edit/:id' element={<EditTeam />} />
+
+              <Route path="peoples" element={<People />} />
+              <Route path="people/edit/:id" element={<EditPeople />} />
 
               <Route path='projects' element={<Project />} />
               <Route path='project/edit/:id' element={<ProjectTab />} />

@@ -207,7 +207,7 @@ const AppSidebar = ({
             },
             {
                 name: "Peoples",
-                url: "/dashboard/people",
+                url: "/dashboard/peoples",
                 icon: User,
             },
             {

@@ -4,9 +4,10 @@ import TooltipWrapper from '@/components/common/TooltipWrapper'
 import { DottedSeparator } from '@/components/dotted-separator'
 import { EmailMultiSelect } from '@/components/ui/EmailMultiSelect'
 import { EmailMultiSelectInput } from '@/components/ui/EmailMultiSelectInput'
-import { AlertDialogHeader } from '@/components/ui/alert-dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import ButtonLoader from '@/components/ui/buttonLoader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 import {
@@ -24,13 +25,18 @@ import useDateFormatter from '@/hooks/useDateFormatter'
 import { useProjectData } from '@/hooks/useProjectData'
 import { useGetAllCompanyProjectQuery } from '@/redux/api/company/api'
 import { useGetTeamDetailWithIdQuery, useUpdateTeamMutation } from '@/redux/api/company/team'
-import { Check, ChevronLeft, ChevronRight, Edit3, ImagePlus, Loader2, MoreHorizontal, Plus, Search, Trash2, UserX, Users, X } from 'lucide-react'
+import { switchProject } from '@/redux/reducers/projectSlice'
+import { Check, ChevronLeft, ChevronRight, Edit3, ImagePlus, Loader2, LogOut, LucideAirVent, MoreHorizontal, Plus, Search, ShieldAlert, Trash2, UserX, Users, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useParams } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { useNavigate, useParams } from 'react-router-dom'
 
 const EditTeam = () => {
   const { id } = useParams()
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+
   const [updateTeam, { isLoading: isTeamUpdate }] = useUpdateTeamMutation()
 
   const userData = JSON.parse(localStorage.getItem('userData'))
@@ -65,15 +71,21 @@ const EditTeam = () => {
     }
   })
 
-  const { currentProject } = useProjectData()
+  const { allProjects, currentProject } = useProjectData()
+  console.log("allProjects", allProjects)
 
   const [isEditingName, setIsEditingName] = useState(false)
   const [isDescriptionEdit, setIsDescriptionEdit] = useState(false)
   const [displaySearchInput, setDisplaySearchInput] = useState(false)
-  const [isCurrentUserMemeber, setIsCurrentUserMemeber] = useState(false)
+  const [isLeaveTeamVisible, setIsLeaveTeamVisible] = useState(false)
 
-  const [teamName, setTeamName] = useState(teamData?.data?.team_name || '')
-  const [teamDescription, setTeamDescription] = useState(teamData?.data?.team_description || 'There is no team like a team with a description')
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    id: null,
+    name: "",
+    actionType: null,
+    actionHandler: null
+  })
 
   const [dialogState, setDialogState] = useState({
     isOpen: false,
@@ -89,6 +101,14 @@ const EditTeam = () => {
 
   const totalPages = Math.ceil(teamData?.data?.pagination?.totalCount / pagination.pageSize) || 1;
 
+  useEffect(() => {
+    const getLeaderId = teamData?.data?.teamLeader?.member_id
+    const loginUserId = userData?.member_id
+    if (getLeaderId === loginUserId) {
+      setIsLeaveTeamVisible(true)
+    }
+  }, [userData, isLeaveTeamVisible])
+  // alert(isLeaveTeamVisible)
   useEffect(() => {
     const timerId = setTimeout(() => {
       setPagination(prev => ({
@@ -121,23 +141,13 @@ const EditTeam = () => {
   }
 
   const handleCancel = () => {
-    // setTeamName(teamData?.data?.team_name || '')
     setIsEditingName(false)
   }
 
   const handleCancelDescription = () => {
-    // setTeamDescription(teamData?.data?.team_description || 'There is no team like a team with a description')
     setIsDescriptionEdit(false)
   }
 
-  useEffect(() => {
-    if (teamData?.data?.membersList && userData?.memberId) {
-      const isMember = teamData.data.membersList.some(
-        member => member.memberId === userData.memberId
-      );
-      setIsCurrentUserMemeber(isMember);
-    }
-  }, [teamData, userData]);
 
   const handleUpdateTeam = async (actionType, payload) => {
     try {
@@ -238,6 +248,28 @@ const EditTeam = () => {
     }
   }
 
+  const handleSwitchProject = (projectId) => {
+    console.log("projectId", projectId)
+    dispatch(switchProject(projectId))
+    const findProject = allProjects.find(p => p._id === projectId)
+    console.log("findProject", findProject)
+    const getProjectSlug = findProject?.project_slug
+    const getTemplateSlug = findProject?.template.slug
+    const getDefaultNavigation = findProject?.template.fields?.tabs.find(tab => tab.isDefault === true)
+    window.location.href = `/dashboard/${getProjectSlug}/${getTemplateSlug}/${getDefaultNavigation.url}`
+  }
+
+  const handleRemoveProject = async (projectId) => {
+    try {
+      const data = await handleUpdateTeam('remove_project', {
+        project_id: projectId
+      })
+      return data;
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
+
   const handleRemoveMember = async (memberId, memberName) => {
     return ShowToast.promise(
       handleUpdateTeam('remove_member', { member_id: memberId }),
@@ -249,10 +281,18 @@ const EditTeam = () => {
     );
   };
 
-  const handleDeleteTeam = async (teamId) => {
-    await handleUpdateTeam('delete_team', {
-
-    })
+  const handleDeleteTeam = async () => {
+    try {
+      const data = await handleUpdateTeam('delete_team', {});
+      if (data?.status === 204 || data?.status === 204) {
+        ShowToast.info(data.message);
+        navigate('/dashboard/team');
+      }
+      return data;
+    } catch (error) {
+      ShowToast.error('Failed to delete team');
+      console.error("Delete team error:", error);
+    }
   }
 
   const handleLeaveTeam = async (memberId) => {
@@ -346,102 +386,133 @@ const EditTeam = () => {
         {/* Left column (smaller width) */}
         <div className="md:col-span-1 space-y-5">
           <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-x-2 w-full'>
-              <div className='flex items-center bg-blue-500 justify-center p-[10px] rounded-md h-9 w-9'>
-                <Users className="h-10 w-10 text-white" />
-              </div>
-              <div className='relative w-full'>
-                {!isEditingName ? (
-                  <div
-                    className='flex items-center justify-between gap-2 px-3 py-2 w-full hover:bg-neutral-100 rounded-md cursor-pointer group hover:border hover:border-neutral-300'
-                    onClick={handleStartEdit}
-                  >
-                    <span className='text-sm text-neutral-500 font-semibold'>{teamData?.data?.team_name}</span>
-                  </div>
-                ) : (
-                  <>
-                    <Input
-                      {...register('teamName')}
-                      // onChange={(e) => setTeamName(e.target.value)}
-                      className='border-none outline-none bg-neutral-100 hover:bg-neutral-200/50 w-full'
-                      onBlur={handleBlurTeamName}
-                      onKeyDown={handleKeyDown}
-                      autoFocus
-                    />
-                    <div className='absolute flex items-center justify-end gap-x-2 top-full mt-1 right-0'>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        className="h-8 px-2"
-                        onClick={handleSaveTeamName}
-                        onMouseDown={(e) => e.preventDefault()}
-                      >
-                        <Check size={12} />
-                      </Button>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        className="h-8 px-2"
-                        onClick={handleCancel}
-                        onMouseDown={(e) => e.preventDefault()}
-                      >
-                        <X size={12} />
-                      </Button>
+            {
+              teamFetching ? (
+                <div className='w-full'>
+                  {[...Array(1)].map((_, index) => (
+                    <div key={index} className="w-full">
+                      <div className="flex items-center gap-x-2 w-full">
+                        <Skeleton className="h-10 w-full" />
+                      </div>
                     </div>
-                  </>
-                )}
-              </div>
-            </div>
+                  ))}
+                </div>
+              ) : (
+                <div className='flex items-center gap-x-2 w-full'>
+                  <div className='flex items-center bg-blue-500 justify-center p-[10px] rounded-md h-9 w-9'>
+                    <Users className="h-10 w-10 text-white" />
+                  </div>
+                  <div className='relative w-full'>
+                    {!isEditingName ? (
+                      <div
+                        className='flex items-center justify-between gap-2 px-3 py-2 w-full hover:bg-neutral-100 rounded-md cursor-pointer group hover:border hover:border-neutral-300 min-h-[40px]'
+                        onClick={handleStartEdit}
+                      >
+                        <span className='text-sm text-neutral-500 font-semibold'>{teamData?.data?.team_name}</span>
+                      </div>
+                    ) : (
+                      <div className='relative'>
+                        <Input
+                          {...register('teamName')}
+                          // onChange={(e) => setTeamName(e.target.value)}
+                          className='border-none outline-none bg-neutral-100 hover:bg-neutral-200/50 w-full pr-20'
+                          onBlur={handleBlurTeamName}
+                          onKeyDown={handleKeyDown}
+                          autoFocus
+                        />
+                        <div className='absolute flex items-center justify-end gap-x-2 top-full mt-1 right-0'>
+                          <Button
+                            variant='outline'
+                            size='icon'
+                            className="h-8 px-2"
+                            onClick={handleSaveTeamName}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            <Check size={12} />
+                          </Button>
+                          <Button
+                            variant='outline'
+                            size='icon'
+                            className="h-8 px-2"
+                            onClick={handleCancel}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            <X size={12} />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            }
 
 
           </div>
 
           {/* about us details */}
 
-          <div className=''>
+          <div className='relative'>
 
             <span className='text-neutral-500 font-semibold '>About </span>
 
             <div className='relative'>
-              {!isDescriptionEdit ? (
-                <div
-                  className='flex items-center justify-between gap-2 px-3 py-2 w-full hover:bg-neutral-100 rounded-md cursor-pointer group hover:border hover:border-neutral-300'
-                  onClick={handleDescriptionEdit}
-                >
-                  <span className='text-sm text-neutral-500 font-medium'>{teamData?.data?.team_description || 'There is no team like a team with a description'}</span>
-                </div>
-              ) : (
-                <>
-                  <Input
-                    {...register('teamDescription')}
-                    // onChange={(e) => setTeamDescription(e.target.value)}
-                    className='border-none outline-none bg-neutral-100 hover:bg-neutral-200/50 w-full'
-                    onBlur={handleBlurTeamDescription}
-                    onKeyDown={handleKeyDown}
-                    autoFocus
-                  />
-                  <div className='absolute flex items-center justify-end gap-x-2 top-full mt-1 right-0'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className="h-8 px-2"
-                      onClick={handleSaveDescription}
-                      onMouseDown={(e) => e.preventDefault()}
-                    >
-                      <Check size={12} />
-                    </Button>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className="h-8 px-2"
-                      onClick={handleCancelDescription}
-                      onMouseDown={(e) => e.preventDefault()}
-                    >
-                      <X size={12} />
-                    </Button>
+              {
+                teamFetching ? (
+                  <div className='w-full'>
+                    {[...Array(1)].map((_, index) => (
+                      <div key={index} className="w-full">
+                        <div className="flex items-center gap-x-2 w-full">
+                          <Skeleton className="h-20 w-full" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </>
-              )}
+                ) : (
+                  <>
+
+                    {!isDescriptionEdit ? (
+                      <div
+                        className='flex items-center justify-between gap-2 px-3 py-2 w-full hover:bg-neutral-100 rounded-md cursor-pointer group hover:border hover:border-neutral-300 min-h-[40px]'
+                        onClick={handleDescriptionEdit}
+                      >
+                        <span className='text-sm text-neutral-500 font-medium'>{teamData?.data?.team_description || 'There is no team like a team with a description'}</span>
+                      </div>
+                    ) : (
+                      <div className='relative'>
+                        <Input
+                          {...register('teamDescription')}
+                          // onChange={(e) => setTeamDescription(e.target.value)}
+                          className='border-none outline-none text-start bg-neutral-100 hover:bg-neutral-200/50 w-full '
+                          onBlur={handleBlurTeamDescription}
+                          onKeyDown={handleKeyDown}
+                          autoFocus
+                        />
+                        <div className='absolute flex items-center justify-end gap-x-2 top-full mt-1 right-0'>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            className="h-8 px-2"
+                            onClick={handleSaveDescription}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            <Check size={12} />
+                          </Button>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            className="h-8 px-2"
+                            onClick={handleCancelDescription}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            <X size={12} />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )
+              }
             </div>
           </div>
 
@@ -521,6 +592,7 @@ const EditTeam = () => {
                       <div
                         key={index}
                         className="flex items-center justify-between p-2 hover:bg-neutral-100 rounded cursor-pointer group"
+                        onClick={() => navigate(`/dashboard/peoples/${item.member_id}`)}
                       >
                         <div className="flex items-center gap-x-4">
                           <ManageAvatar
@@ -627,18 +699,65 @@ const EditTeam = () => {
         {/* Right column (larger width) */}
         <div className="md:col-span-3 space-y-5">
           <div className='flex items-center justify-end gap-x-2'>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setDialogState({
-                isOpen: true,
-                slug: 'add_member'
-              })}
-            >
-              Add Member
-            </Button>
 
-            <DropdownMenu>
+            {
+              userData?.role === "Admin" && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDialogState({
+                      isOpen: true,
+                      slug: 'add_member'
+                    })}
+                  >
+                    Add Member
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDialog({
+                        isOpen: true,
+                        id: id,
+                        name: teamData?.data?.team_name,
+                        actionType: "delete_team",
+                        actionHandler: handleDeleteTeam
+                      }
+                      )
+                    }}
+                  >
+                    Delete team
+                  </Button>
+                </>
+              )
+            }
+            {
+              isLeaveTeamVisible && (
+                <TooltipWrapper
+                  content={'Leave team'}
+                  direction='left'
+                >
+                  <Button
+                    size='icon'
+                    variant="outline"
+                    onClick={() => {
+                      setConfirmDialog({
+                        isOpen: true,
+                        id: userData?.member_id,
+                        name: teamData?.data?.team_name,
+                        actionType: "leave",
+                        actionHandler: handleLeaveTeam
+                      })
+                    }}
+                  >
+                    <LogOut size={17} />
+                  </Button>
+                </TooltipWrapper>
+              )
+            }
+            {/* <DropdownMenu>
               <DropdownMenuTrigger>
                 <Button size="sm" variant="outline">
                   <MoreHorizontal size={15} />
@@ -657,94 +776,154 @@ const EditTeam = () => {
                   )
                 }
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu> */}
           </div>
-          <Card className="shadow-none border-none">
-            <div className='flex items-center justify-between'>
-              <h2 className="text-xl font-semibold text-neutral-500 mb-4">Team Projects</h2>
-              <TooltipWrapper content={'Add project'} direction="left">
-                <div
-                  className='border border-neutral-300 text-neutral-500 rounded-sm p-1 cursor-pointer hover:bg-neutral-100'
-                  onClick={() => setDialogState({
-                    isOpen: true,
-                    slug: 'add_project'
-                  })}
-                >
-                  <Plus size={17} />
-                </div>
-              </TooltipWrapper>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {
-                teamData?.data?.projectDetails.map((project, index) => (
-                  <CardContent
-                    key={index}
-                    className="p-4 shadow-none rounded-lg bg-neutral-100/50 cursor-pointer border border-neutral-300 hover:bg-transparent"
-                  >
 
+          {
+
+            teamFetching ? (
+              <div className='flex items-center gap-x-4 '>
+                {[...Array(2)].map((_, index) => (
+                  <Card key={index} className="p-2 w-full bg-neutral-50 rounded-md shadow-none flex justify-center flex-col">
+                    <CardContent className="gap-x-4 flex items-center justify-center p-4">
+                      <Skeleton className="h-10 w-12 bg-gray-200" />
+                      <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="shadow-none border-none">
+                <div className='flex items-center justify-between'>
+                  <h2 className="text-xl font-semibold text-neutral-500 mb-4">Team Projects</h2>
+                  <TooltipWrapper content={'Add project'} direction="left">
+                    <div
+                      className='border border-neutral-300 text-neutral-500 rounded-sm p-1 cursor-pointer hover:bg-neutral-100'
+                      onClick={() => setDialogState({
+                        isOpen: true,
+                        slug: 'add_project'
+                      })}
+                    >
+                      <Plus size={17} />
+                    </div>
+                  </TooltipWrapper>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {
+                    teamData?.data?.projectDetails.map((project, index) => (
+                      <div className='relative group'>
+                        <CardContent
+                          key={index}
+                          className="p-4 shadow-none rounded-lg bg-neutral-100/50 cursor-pointer border border-neutral-300 hover:bg-transparent"
+                          onClick={() => handleSwitchProject(project._id)}
+                        >
+
+                          <div className='flex items-center gap-x-4'>
+                            <Avatar className="w-8 h-8 rounded-none ">
+                              {project?.project_icon ? (
+                                <AvatarImage
+                                  src={project?.project_icon}
+                                  alt={`${project?.name}`}
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <AvatarFallback className='rounded-sm text-base font-semibold text-neutral-500 bg-neutral-200'>
+                                  {project?.name?.charAt(0)?.toUpperCase() ?? ''}
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+
+                            <p className="mt-1 text-neutral-500 font-normal text-base">{project.name}</p>
+                          </div>
+
+                        </CardContent>
+                        {
+                          userData?.role === "Admin" && (
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 p-0 text-red-500 hover:bg-red-100"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDialog({
+                                    isOpen: true,
+                                    id: project._id,
+                                    name: project.name,
+                                    actionType: "remove_project",
+                                    actionHandler: handleRemoveProject
+                                  });
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )
+                        }
+                      </div>
+                    ))
+                  }
+                  <CardContent
+                    className="p-4 shadow-none rounded-lg bg-neutral-100/50 cursor-pointer border-2 border-dotted border-neutral-300 hover:bg-transparent"
+                    onClick={() => setDialogState({
+                      isOpen: true,
+                      slug: 'add_project'
+                    })}
+                  >
                     <div className='flex items-center gap-x-4'>
                       <Avatar className="w-8 h-8 rounded-none ">
-                        {project?.project_icon ? (
-                          <AvatarImage
-                            src={project?.project_icon}
-                            alt={`${project?.name}`}
-                            className="object-cover"
-                          />
-                        ) : (
-                          <AvatarFallback className='rounded-sm text-base font-semibold text-neutral-500 bg-neutral-200'>
-                            {project?.name?.charAt(0)?.toUpperCase() ?? ''}
-                          </AvatarFallback>
-                        )}
+
+                        <AvatarFallback className='rounded-sm text-base font-semibold text-neutral-500 bg-neutral-200'>
+                          <Plus />
+                        </AvatarFallback>
+
                       </Avatar>
 
-                      <p className="mt-1 text-neutral-500 font-normal text-base">{project.name}</p>
+                      <p className="mt-1 text-neutral-500 font-normal text-base">Add Project</p>
                     </div>
 
                   </CardContent>
-                ))
-              }
-              <CardContent
-                className="p-4 shadow-none rounded-lg bg-neutral-100/50 cursor-pointer border-2 border-dotted border-neutral-300 hover:bg-transparent"
-                onClick={() => setDialogState({
-                  isOpen: true,
-                  slug: 'add_project'
-                })}
-              >
-                <div className='flex items-center gap-x-4'>
-                  <Avatar className="w-8 h-8 rounded-none ">
-
-                    <AvatarFallback className='rounded-sm text-base font-semibold text-neutral-500 bg-neutral-200'>
-                      <Plus />
-                    </AvatarFallback>
-
-                  </Avatar>
-
-                  <p className="mt-1 text-neutral-500 font-normal text-base">Add Project</p>
                 </div>
+              </Card>
+            )
+          }
 
-              </CardContent>
-            </div>
-          </Card>
           <Card className="shadow-none border-none">
             <h2 className="text-xl font-semibold text-neutral-500 mb-4">Team Details</h2>
             <CardContent className="p-6 shadow-none rounded-md border border-neutral-300">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <h4 className="text-sm font-medium text-neutral-500">Team Lead</h4>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">{teamData?.data?.teamLeader?.first_name + " " + teamData?.data?.teamLeader.last_name}</p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500">Projects</h4>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">
+                    {teamData?.data?.projectDetails.length} Active
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500">Members</h4>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">
+                    {
+                      teamData?.data?.totalMembersCount
+                    } People
+                  </p>
+                </div>
+
+                <div>
                   <h4 className="text-sm font-medium text-neutral-500">Created At</h4>
                   <p className="mt-1 text-neutral-500 font-normal text-base">{formattedDate}</p>
                 </div>
+
                 <div>
-                  <h4 className="text-sm font-medium text-neutral-500">Team Lead</h4>
-                  <p className="mt-1 text-neutral-500 font-normal text-base">{teamData?.data?.createdBy.first_name + " " + teamData?.data?.createdBy.last_name}</p>
+                  <h4 className="text-sm font-medium text-neutral-500">Created By</h4>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">{teamData?.data?.createdBy?.first_name + " " + teamData?.data?.createdBy?.last_name}</p>
                 </div>
-                <div>
-                  <h4 className="text-sm font-medium text-neutral-500">Projects</h4>
-                  <p className="mt-1 text-neutral-500 font-normal text-base">3 Active</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-neutral-500">Members</h4>
-                  <p className="mt-1 text-neutral-500 font-normal text-base">8 People</p>
-                </div>
+
               </div>
             </CardContent>
           </Card>
@@ -764,20 +943,90 @@ const EditTeam = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </div >
 
       {/* <EmailMultiSelect
         slug={dialogState.slug}
         isOpen={dialogState.isOpen}
         onOpenChange={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
       /> */}
-      <EmailMultiSelectInput
+      < EmailMultiSelectInput
         isOpen={dialogState.isOpen}
         slug={dialogState.slug}
         onOpenChange={() => setDialogState(prev => !prev)}
         onSuccess={dialogState.slug === 'add_project' ? handleAddProjects : handleAddMembers}
         isLoading={isTeamUpdate}
       />
+
+      {/* Confirmation Dialog for Project Removal */}
+      <AlertDialog open={confirmDialog.isOpen} onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, isOpen: open }))}>
+        <AlertDialogContent className="w-96">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-neutral-500 flex items-center gap-x-4">
+              <div className='bg-yellow-300 rounded-md h-6 w-6 p-0 text-yellow-900 flex items-center justify-center'>
+                <ShieldAlert className='h-4 w-4' />
+              </div>
+              {confirmDialog.actionType === 'remove_project'
+                ? 'Remove Project'
+                : confirmDialog.actionType === 'delete_team'
+                  ? 'Delete Team'
+                  : `You're about to leave team ${teamData?.data?.team_name}`}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-justify">
+              {confirmDialog.actionType === 'remove_project'
+                ? `This team will no longer be connected to the ${confirmDialog.name}.`
+                : confirmDialog.actionType === 'delete_team'
+                  ? `Are you sure you want to delete the team "${confirmDialog.name}"? This action cannot be undone.`
+                  : `Are you sure you want to leave ${teamData?.data?.team_name}?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+              disabled={isTeamUpdate}
+            >
+              Cancel
+            </Button>
+            <ButtonLoader
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                if (confirmDialog.id && confirmDialog.actionHandler) {
+                  try {
+                    // Handle different action types
+                    if (confirmDialog.actionType === 'remove_project') {
+                      await confirmDialog.actionHandler(confirmDialog.id);
+                    } else if (confirmDialog.actionType === 'leave') {
+                      await confirmDialog.actionHandler(confirmDialog.id);
+                    } else if (confirmDialog.actionType === 'delete_team') {
+                      await confirmDialog.actionHandler();
+                      // Don't close dialog here - navigation will happen in handleDeleteTeam
+                      return;
+                    }
+
+                    // Close dialog for all actions except delete_team
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                  } catch (error) {
+                    console.error("Action failed:", error);
+                    ShowToast.error('Action failed. Please try again.');
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                  }
+                }
+              }}
+              isLoading={isTeamUpdate}
+            >
+              {confirmDialog.actionType === 'remove_project'
+                ? 'Remove'
+                : confirmDialog.actionType === 'delete_team'
+                  ? 'Delete'
+                  : 'Leave Team'}
+            </ButtonLoader>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog >
+
     </div >
   )
 }
