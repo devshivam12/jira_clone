@@ -146,7 +146,7 @@ function App() {
               <Route path='team/edit/:id' element={<EditTeam />} />
 
               <Route path="peoples" element={<People />} />
-              <Route path="people/edit/:id" element={<EditPeople />} />
+              <Route path="peoples/edit/:id" element={<EditPeople />} />
 
               <Route path='projects' element={<Project />} />
               <Route path='project/edit/:id' element={<ProjectTab />} />

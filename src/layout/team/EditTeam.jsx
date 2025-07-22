@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react'
 import ManageAvatar from '@/components/common/ManageAvatar'
 import ShowToast from '@/components/common/ShowToast'
 import TooltipWrapper from '@/components/common/TooltipWrapper'
@@ -27,7 +28,7 @@ import { useGetAllCompanyProjectQuery } from '@/redux/api/company/api'
 import { useGetTeamDetailWithIdQuery, useUpdateTeamMutation } from '@/redux/api/company/team'
 import { switchProject } from '@/redux/reducers/projectSlice'
 import { Check, ChevronLeft, ChevronRight, Edit3, ImagePlus, Loader2, LogOut, LucideAirVent, MoreHorizontal, Plus, Search, ShieldAlert, Trash2, UserX, Users, X } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+
 import { useForm } from 'react-hook-form'
 import { useDispatch } from 'react-redux'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -415,7 +416,7 @@ const EditTeam = () => {
                         <Input
                           {...register('teamName')}
                           // onChange={(e) => setTeamName(e.target.value)}
-                          className='border-none outline-none bg-neutral-100 hover:bg-neutral-200/50 w-full pr-20'
+                          className='border-none outline-none bg-neutral-100 hover:bg-neutral-200/20 w-full pr-20'
                           onBlur={handleBlurTeamName}
                           onKeyDown={handleKeyDown}
                           autoFocus
@@ -592,7 +593,7 @@ const EditTeam = () => {
                       <div
                         key={index}
                         className="flex items-center justify-between p-2 hover:bg-neutral-100 rounded cursor-pointer group"
-                        onClick={() => navigate(`/dashboard/peoples/${item.member_id}`)}
+                        onClick={() => navigate(`/dashboard/peoples/edit/${item.member_id}`)}
                       >
                         <div className="flex items-center gap-x-4">
                           <ManageAvatar
@@ -630,7 +631,10 @@ const EditTeam = () => {
 
                                     <DropdownMenuItem
                                       className="text-red-500"
-                                      onClick={() => handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)
+                                      }}
                                     >
                                       <Trash2 className="mr-2 h-4 w-4" />
                                       Remove
@@ -639,7 +643,13 @@ const EditTeam = () => {
                                   )}
 
                                   {((!item.isLeader && item.memberId === userData?.memberId) || (item.isLeader && item.memberId === userData?.memberId)) && userData.role === 'Admin' && (
-                                    <DropdownMenuItem className="text-red-500" onClick={() => handleLeaveTeam(item.member_id)}>
+                                    <DropdownMenuItem
+                                      className="text-red-500"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleLeaveTeam(item.member_id)
+                                      }}
+                                    >
                                       <UserX className="mr-2 h-4 w-4" />
                                       Leave Team
                                     </DropdownMenuItem>
@@ -648,7 +658,10 @@ const EditTeam = () => {
                                   {!item.isLeader && item.memberId !== userData?.memberId && (
                                     <DropdownMenuItem
                                       className="text-red-500"
-                                      onClick={() => handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleRemoveMember(item.member_id, item.first_name + " " + item.last_name)
+                                      }}
                                     >
                                       <Trash2 className="mr-2 h-4 w-4" />
                                       Remove
@@ -656,7 +669,10 @@ const EditTeam = () => {
                                   )}
                                   {!item.isLeader && userData?.role === 'Admin' && (
                                     <DropdownMenuItem
-                                      onClick={() => handleChangeLeader(item.member_id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleChangeLeader(item.member_id)
+                                      }}
                                     >
                                       <UserX className="mr-2 h-4 w-4" />
                                       Make Leader

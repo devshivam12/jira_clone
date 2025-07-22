@@ -64,6 +64,13 @@ export const team = createApi({
             }),
             providesTags : ['Team']
         }),
+        getMemberDetailWithId : build.query({
+            query : ({member_id}) => ({
+                url : `company/team/get-member-detailById`,
+                params : {member_id} 
+            }),
+            providedTags : ['People']
+        }),
         updateTeam : build.mutation({
             query : ({id, data}) => ({
                 url : `company/team/update-team/${id}`,
@@ -82,5 +89,6 @@ export const {
     useCreateTeamMutation,
     useGetTeamDetailsQuery,
     useGetTeamDetailWithIdQuery,
+    useGetMemberDetailWithIdQuery,
     useUpdateTeamMutation
 } = team

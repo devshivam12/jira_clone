@@ -12,15 +12,18 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { useSearchMemberQuery } from '@/redux/api/company/team'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import TeamCard from './TeamCard'
+import { useNavigate } from 'react-router-dom'
 
 const Team = () => {
   const [dialogState, setDialogState] = useState({
     isOpen: false,
     slug: null
   })
+  const navigate = useNavigate()
+
   const [userData] = useState(() => {
     try {
       const storeData = localStorage.getItem("userData")
@@ -67,6 +70,7 @@ const Team = () => {
   const handleSelectMember = (memberId) => {
     const selected = memberSuggestions.find(m => m.value === memberId)
     console.log('Selected member:', selected)
+    navigate(`/dashboard/peoples/edit/${selected.value}`)
     // Handle selection logic here
   }
 
@@ -91,14 +95,30 @@ const Team = () => {
         <Command className="rounded-md border border-neutral-300 shadow-none w-full bg-transparent" shouldFilter={false}>
           {/* <div className="flex items-center px-3 w-full"> */}
           {/* <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" /> */}
-          <CommandInput
-            placeholder="Search teams and members..."
-            className="w-full py-6 border-none outline-none border-0"
-            value={searchValue}
-            onValueChange={setSearchValue}
-            onFocus={() => searchValue && setIsCommandOpen(true)}
-            onBlur={() => setTimeout(() => setIsCommandOpen(false), 200)}
-          />
+          <div className="relative w-full">
+            <CommandInput
+              placeholder="Search teams and members..."
+              className="w-full py-6 border-none outline-none border-0 pr-10" // Added pr-10 for padding on right
+              value={searchValue}
+              onValueChange={setSearchValue}
+              onFocus={() => searchValue && setIsCommandOpen(true)}
+              onBlur={() => setTimeout(() => setIsCommandOpen(false), 200)}
+            />
+            {searchValue && (
+              <Button
+                type="button"
+                variant='muted'
+                size="icon"
+                onClick={() => {
+                  setSearchValue("");
+                  setDebouncedSearch("");
+                }}
+                className="absolute rounded-full p-1 right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 h-7 w-7"
+              >
+                <X size={16} />
+              </Button>
+            )}
+          </div>
           {/* </div> */}
 
           {isCommandOpen && (
