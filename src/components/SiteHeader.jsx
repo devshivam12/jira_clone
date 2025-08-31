@@ -24,7 +24,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, PanelRightOpen, Plus, Search, SidebarIcon } from "lucide-react"
+import { ChevronDown, FolderOpenDot, ListPlus, PanelRightOpen, Plus, Search, SidebarIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Link, useNavigate } from 'react-router-dom'
 import { Input } from './ui/input'
@@ -40,8 +40,8 @@ import { DottedSeparator } from './dotted-separator'
 import { Select, SelectContent, SelectGroup, SelectTrigger, SelectValue, SelectItem } from './ui/select'
 import { useGetRolesQuery } from '@/redux/api/authApi'
 import { useSidebar } from './ui/sidebar'
-
-
+import { useProjectData } from '@/hooks/useProjectData'
+import CreateEpic from '@/layout/backlog-layout/common-component/CreateEpic'
 
 
 const options = [
@@ -56,8 +56,19 @@ const options = [
 const SiteHeader = () => {
     const [isWorked, setIsWork] = useState(false)
     const [isTeam, setIsTeam] = useState(false)
+    const [createButton, setCreateButton] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
 
     const { toggleSidebar } = useSidebar()
+    const { currentProject, templateData, workType } = useProjectData()
+    console.log("currentPropject", currentProject)
+    console.log("templateData", templateData)
+    console.log("workType", workType)
+
+    const epicIcon = workType.find(icon => icon.slug === 'epic')?.icon || "";
+    const epicColor = workType.find(icon => icon.slug === 'epic')?.color || "";
+    const taskColor = workType.find(icon => icon.slug === 'task')?.color || ""
+    const taskIcon = workType.find(icon => icon.slug === 'task')?.icon || ""
 
     const [dialogState, setDialogState] = useState({
         isOpen: false,
@@ -278,11 +289,90 @@ const SiteHeader = () => {
                     </NavigationMenuList>
                 </NavigationMenu>
             </div>
-            <div className='w-full px-4'>
+            <div className='w-full px-4 flex items-center gap-2'>
                 <Input
                     placeholder="Search"
                     className="hover:bg-neutral-100"
                 />
+                <div>
+                    <DropdownMenu onOpenChange={setCreateButton}>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="flex items-center gap-x-2"
+                            >
+                                Create <Plus />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            className="py-2"
+                            align="end"
+                        >
+
+                            <DropdownMenuGroup className='p-0 '>
+                                <DropdownMenuItem
+                                    className="p-0 hover:bg-neutral-200/40"
+                                >
+                                    <div className='w-full cursor-pointer text-sm py-2 px-2 flex items-center gap-x-4 '>
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center ${epicColor}`}>
+                                            <img
+                                                src={epicIcon}
+                                                className="w-4 h-4 filter brightness-0 invert"
+                                            />
+                                        </div>
+                                        <span className='text-base text-neutral-500 font-medium'>
+                                            Epic
+                                        </span>
+                                    </div>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    className="p-0 hover:bg-neutral-200/40"
+                                    onClick={() => setIsOpen(true)}
+                                >
+                                    <div className='w-full cursor-pointer text-sm py-2 px-2 flex items-center gap-5'>
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center bg-green-500`}>
+                                            <ListPlus size={18} className='text-white' />
+                                        </div>
+
+                                        <span className='text-base text-neutral-500 font-medium'>
+                                            Sprint
+                                        </span>
+                                    </div>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    className="p-0 hover:bg-neutral-200/40"
+                                >
+                                    <div className='w-full cursor-pointer text-sm py-2 px-2 flex items-center gap-5'>
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center bg-orange-500`}>
+                                            <FolderOpenDot size={18} className='text-white' />
+                                        </div>
+                                        <span className='text-base text-neutral-500 font-medium'>
+                                            Project
+                                        </span>
+                                    </div>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    className="p-0 hover:bg-neutral-200/40"
+                                >
+                                    <div className='w-full cursor-pointer text-sm py-2 px-2 flex items-center gap-5'>
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center ${taskColor}`}>
+                                            <img
+                                                src={taskIcon}
+                                                className="w-4 h-4 filter brightness-0 invert"
+                                            />
+                                        </div>
+                                        <span className='text-base text-neutral-500 font-medium'>
+                                            Task
+                                        </span>
+                                    </div>
+                                </DropdownMenuItem>
+
+                            </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
 
             <div className='pr-4'>
@@ -295,6 +385,7 @@ const SiteHeader = () => {
                 onOpenChange={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
                 userData={userData}
             />
+            <CreateEpic isOpen={isOpen} onClose={() => setIsOpen(false)} />
         </header>
     )
 }

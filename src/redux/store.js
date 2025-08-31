@@ -7,6 +7,7 @@ import projectSlice from "./reducers/projectSlice"
 import storage from "redux-persist/lib/storage"
 import { persistReducer, persistStore } from "redux-persist"
 import { team } from "./api/company/team"
+import { sprintApi } from "./graphql_api/sprint"
 
 const projectPersistConfig = {
     key: 'root',
@@ -22,7 +23,8 @@ const store = configureStore({
         projectSlice: persistedProjectReducer,
         [apiAuth.reducerPath]: apiAuth.reducer,
         [api.reducerPath]: api.reducer,
-        [team.reducerPath]: team.reducer
+        [team.reducerPath]: team.reducer,
+        [sprintApi.reducerPath] : sprintApi.reducer
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
@@ -30,7 +32,7 @@ const store = configureStore({
                 // Ignore redux-persist action types
                 ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
             },
-        }).concat(api.middleware, apiAuth.middleware, team.middleware)
+        }).concat(api.middleware, apiAuth.middleware, team.middleware, sprintApi.middleware)
 
 })
 

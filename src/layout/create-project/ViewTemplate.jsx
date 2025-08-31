@@ -147,7 +147,7 @@ const ViewTemplate = ({ openTemplate, onClose, templateSlug, projectSlug }) => {
                                                     <div className="space-y-2">
                                                         <p className="text-neutral-500 text-sm font-medium">Work Type</p>
                                                         <ul className="list-disc space-y-1">
-                                                            {fieldsData.data.fields.work_type.map((item, index) => (
+                                                            {fieldsData?.data?.fields?.work_type.map((item, index) => (
                                                                 <li key={index} className="flex items-center gap-x-6 gap-y-6">
                                                                     <div className={`w-7 h-7 rounded-md flex items-center justify-center ${item.color}`}>
                                                                         <img

@@ -600,6 +600,7 @@ const EditTeam = () => {
                             firstName={item.first_name}
                             lastName={item.last_name}
                             image={item.image}
+                            size="sm"
                           />
                           <span className="text-sm text-neutral-500 font-medium">
                             {item.first_name + " " + item.last_name}

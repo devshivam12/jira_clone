@@ -69,7 +69,7 @@ export const team = createApi({
                 url : `company/team/get-member-detailById`,
                 params : {member_id} 
             }),
-            providedTags : ['People']
+            providesTags : ['People']
         }),
         updateTeam : build.mutation({
             query : ({id, data}) => ({
@@ -78,6 +78,16 @@ export const team = createApi({
                 body : {data}
             }),
             invalidatesTags: ['Team']
+        }),
+        uploadMemberImage: build.mutation({
+            query : ({memberId, action, file}) => ({
+                url : `company/team/update-member-image`,
+                params : {memberId, action},
+                method: 'PUT',
+                body : file,
+                formData : true
+            }),
+            invalidatesTags: ['People']
         })
     }),
 })
@@ -90,5 +100,6 @@ export const {
     useGetTeamDetailsQuery,
     useGetTeamDetailWithIdQuery,
     useGetMemberDetailWithIdQuery,
-    useUpdateTeamMutation
+    useUpdateTeamMutation,
+    useUploadMemberImageMutation
 } = team

@@ -15,13 +15,14 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { DottedSeparator } from '@/components/dotted-separator';
-import SprintManagement from '@/components/data-table/create-sprint-data-table';
+
 import SprintManagementTwo from '@/components/data-table/create-sprint-data-table-1';
 
 
 
 import { MoreHorizontal } from "lucide-react"
 import { Checkbox } from '@/components/ui/checkbox';
+import SprintTable from '@/components/data-table/create-sprint-data-table';
 
 
 
@@ -118,7 +119,7 @@ const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedI
     <Card className="w-full border-0 bg-none bg-card-none shadow-none border-bg-0 outline-none p-4 min-h-[100px] transition-all duration-300 rounded-none ">
       {/* Header */}
       <SprintManagementTwo/>
-      <SprintManagement />
+      <SprintTable />
       <div className="flex items-center justify-between">
         <CardHeader
           onClick={() => {

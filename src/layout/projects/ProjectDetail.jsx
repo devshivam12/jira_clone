@@ -47,7 +47,7 @@ const ProjectDetail = ({ projectDetail }) => {
     }, {
         refetchOnFocus: true,
         refetchOnReconnect: true,
-        // skip: !open
+        skip: !open
     })
 
     useEffect(() => {

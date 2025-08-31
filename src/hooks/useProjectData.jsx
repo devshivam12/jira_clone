@@ -6,11 +6,13 @@ export const useProjectData = () => {
     return {
         allProjects,
         currentProject,
-        projectSlug: currentProject.project_slug,
+        projectSlug: currentProject?.project_slug,
         templateSlug: currentProject.template?.slug,
         defaultTab: currentProject.template?.fields?.tabs.find(tab => tab.isDefault === true) || [],
         loading,
-        error,
-        templateData : currentProject.template
+        error, 
+        templateData : currentProject?.template,
+        workType : currentProject?.template?.fields?.work_type,
+        workFlow : currentProject?.template?.fields?.work_flow
     }
 }
