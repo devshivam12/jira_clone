@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Check, ChevronDownIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -28,21 +28,41 @@ export default function AutoComplete({
   onChange,
   buttonClassName,
   contentClassName,
-  width = "250px"
+  width = "250px",
 }) {
   const [open, setOpen] = useState(false)
   const selectedOption = options.find((opt) => opt.value === value)
   const defaultOption = options.find((opt) => opt?.isDefault)
-  // alert(defaultOption)
-  console.log("defaultOption", defaultOption)
+  // console.log("defaultOPp", defaultOption)
+  // console.log("defaultOption.value", defaultOption.value)
   const [searchValue, setSearchValue] = useState("")
 
   // reset search when opening
   useEffect(() => {
-    if (open) {
-      setSearchValue("")
-    }
+    if (open) setSearchValue("")
   }, [open])
+  const effectiveValue = value || (defaultOption ? defaultOption.value : null)
+  // console.log("effectiveValue", effectiveValue)
+  // 🔹 Utility to render any option consistently
+  const renderOption = (opt) => (
+    opt.hasOwnProperty('icon') ? (
+      <div className="flex items-center gap-x-2">
+        <ManageAvatar firstName={opt.label} image={opt.icon} size="sm" />
+        {opt.label}
+      </div>
+    ) : (
+      opt.label
+    )
+  );
+  // 🔹 Decide what to show in button
+  let displayValue
+  if (selectedOption) {
+    displayValue = renderOption(selectedOption)
+  } else if (defaultOption) {
+    displayValue = renderOption(defaultOption)
+  } else {
+    displayValue = placeholder
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -57,52 +77,15 @@ export default function AutoComplete({
           )}
           style={{ width }}
         >
-          <div className="flex items-center gap-2">
-            {/* Selected option with icon */}
-            {selectedOption ? (
-              <>
-                {selectedOption.icon && (
-                  <ManageAvatar
-                    firstName={selectedOption.label}
-                    image={defaultOption.icon}
-                    size="sm"
-                  />
-                )}
-                <div className="flex items-center gap-x-2">
-                  <ManageAvatar
-                    firstName={selectedOption.label}
-                    image={defaultOption.icon}
-                    size="sm"
-                  />
-                  {selectedOption.label}
-                </div>
-
-              </>
-            ) : defaultOption ? (
-              // Default option as fallback
-              <>
-                {defaultOption.icon && (
-                  <ManageAvatar
-                    image={defaultOption.icon}
-                  />
-                )}
-                {defaultOption.label}
-              </>
-            ) : (
-              <ManageAvatar
-                firstName={selectedOption.label}
-              />
-            )}
-          </div>
+          {displayValue}
           <ChevronDownIcon className="opacity-50 ml-2 h-4 w-4 shrink-0" />
         </Button>
       </PopoverTrigger>
+
       <PopoverContent
-        className={cn("p-0 ", contentClassName)}
+        className={cn("p-0", contentClassName)}
         style={{ width }}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault() // stop auto-focus on input
-        }}
+        onOpenAutoFocus={(e) => e.preventDefault()} // stop auto-focus on input
       >
         <Command
           value={searchValue}
@@ -111,7 +94,8 @@ export default function AutoComplete({
         >
           <CommandInput placeholder={searchPlaceholder} className="h-9" />
           <DottedSeparator />
-          {/* 👇 key makes CommandList reset when dropdown opens */}
+
+          {/* 👇 key ensures fresh list when dropdown opens */}
           <CommandList key={open ? "open" : "closed"}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
@@ -127,23 +111,14 @@ export default function AutoComplete({
                   }}
                   className={cn(
                     "gap-2 py-2 px-2 cursor-pointer my-2 relative",
-                    value === opt.value &&
+                    effectiveValue === opt.value &&
                     "bg-neutral-200/30 before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-neutral-400 before:rounded-full border"
                   )}
                 >
-                  {opt.icon && (
-                    <img
-                      src={opt.icon}
-                      alt=""
-                      className="w-4 h-4 rounded-sm"
-                    />
-                  )}
-                  <ManageAvatar
-                    firstName={opt.label}
-                    image={opt.icon}
-                  />
-                  {opt.label}
-
+                  {renderOption(opt)}
+                  {/* {opt.value === value && (
+                    <Check className="ml-auto h-4 w-4 opacity-60" />
+                  )} */}
                 </CommandItem>
               ))}
             </CommandGroup>

@@ -39,6 +39,7 @@ import ButtonLoader from './ui/buttonLoader'
 import { DottedSeparator } from './dotted-separator'
 import { Select, SelectContent, SelectGroup, SelectTrigger, SelectValue, SelectItem } from './ui/select'
 import { useGetRolesQuery } from '@/redux/api/authApi'
+import { useUserData } from '@/hooks/useUserData'
 
 
 
@@ -70,10 +71,12 @@ const Navbar = () => {
 
     const navigate = useNavigate()
 
-    const [userData, setUserData] = useState(() => {
-        const storeData = localStorage.getItem("userData");
-        return storeData ? JSON.parse(storeData) : null
-    })
+    const { userData } = useUserData()
+
+    // const [userData, setUserData] = useState(() => {
+    //     const storeData = localStorage.getItem("userData");
+    //     return storeData ? JSON.parse(storeData) : null
+    // })
 
     return (
         <nav className='pr-4 flex items-center justify-between'>

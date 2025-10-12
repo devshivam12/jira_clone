@@ -24,7 +24,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, FolderOpenDot, ListPlus, PanelRightOpen, Plus, Search, SidebarIcon } from "lucide-react"
+import { ChevronDown, ClipboardList, FolderOpenDot, ListPlus, PanelRightOpen, Plus, Search, SidebarIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Link, useNavigate } from 'react-router-dom'
 import { Input } from './ui/input'
@@ -41,7 +41,8 @@ import { Select, SelectContent, SelectGroup, SelectTrigger, SelectValue, SelectI
 import { useGetRolesQuery } from '@/redux/api/authApi'
 import { useSidebar } from './ui/sidebar'
 import { useProjectData } from '@/hooks/useProjectData'
-import CreateEpic from '@/layout/backlog-layout/common-component/CreateEpic'
+import CreateSprint from '@/layout/backlog-layout/common-component/CreateSprint'
+import { useUserData } from '@/hooks/useUserData'
 
 
 const options = [
@@ -57,7 +58,11 @@ const SiteHeader = () => {
     const [isWorked, setIsWork] = useState(false)
     const [isTeam, setIsTeam] = useState(false)
     const [createButton, setCreateButton] = useState(false)
-    const [isOpen, setIsOpen] = useState(false)
+    // const [isOpen, setIsOpen] = useState(false)
+    // const [isOpen,setIsOpen ] = useState({
+    //     key : '',
+    //     value : false
+    // })
 
     const { toggleSidebar } = useSidebar()
     const { currentProject, templateData, workType } = useProjectData()
@@ -65,10 +70,10 @@ const SiteHeader = () => {
     console.log("templateData", templateData)
     console.log("workType", workType)
 
-    const epicIcon = workType.find(icon => icon.slug === 'epic')?.icon || "";
-    const epicColor = workType.find(icon => icon.slug === 'epic')?.color || "";
-    const taskColor = workType.find(icon => icon.slug === 'task')?.color || ""
-    const taskIcon = workType.find(icon => icon.slug === 'task')?.icon || ""
+    // const epicIcon = workType.find(icon => icon.slug === 'epic')?.icon || "";
+    // const epicColor = workType.find(icon => icon.slug === 'epic')?.color || "";
+    // const taskColor = workType.find(icon => icon.slug === 'task')?.color || ""
+    // const taskIcon = workType.find(icon => icon.slug === 'task')?.icon || ""
 
     const [dialogState, setDialogState] = useState({
         isOpen: false,
@@ -83,12 +88,12 @@ const SiteHeader = () => {
     };
 
     const navigate = useNavigate()
-
-    const [userData, setUserData] = useState(() => {
-        const storeData = localStorage.getItem("userData");
-        return storeData ? JSON.parse(storeData) : null
-    })
-
+    const { userData } = useUserData()
+    // const [userData, setUserData] = useState(() => {
+    //     const storeData = localStorage.getItem("userData");
+    //     return storeData ? JSON.parse(storeData) : null
+    // })
+    console.log("dialogState", dialogState)
     return (
         <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background ">
             <div className="flex h-[--header-height] items-center gap-2 px-4">
@@ -314,20 +319,29 @@ const SiteHeader = () => {
                                     className="p-0 hover:bg-neutral-200/40"
                                 >
                                     <div className='w-full cursor-pointer text-sm py-2 px-2 flex items-center gap-x-4 '>
-                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center ${epicColor}`}>
+                                        {/* <div className={`w-7 h-7 rounded-md flex items-center justify-center ${epicColor}`}>
                                             <img
                                                 src={epicIcon}
                                                 className="w-4 h-4 filter brightness-0 invert"
                                             />
+                                        </div> */}
+
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center bg-indigo-500`}>
+                                            <ClipboardList size={18} className='text-white' />
                                         </div>
+
                                         <span className='text-base text-neutral-500 font-medium'>
-                                            Epic
+                                            Issue
                                         </span>
                                     </div>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     className="p-0 hover:bg-neutral-200/40"
-                                    onClick={() => setIsOpen(true)}
+                                    onSelect={(e) => {
+                                        e.preventDefault();
+                                        openDialog('sprint');
+                                    }}
+
                                 >
                                     <div className='w-full cursor-pointer text-sm py-2 px-2 flex items-center gap-5'>
                                         <div className={`w-7 h-7 rounded-md flex items-center justify-center bg-green-500`}>
@@ -353,7 +367,7 @@ const SiteHeader = () => {
                                     </div>
                                 </DropdownMenuItem>
 
-                                <DropdownMenuItem
+                                {/* <DropdownMenuItem
                                     className="p-0 hover:bg-neutral-200/40"
                                 >
                                     <div className='w-full cursor-pointer text-sm py-2 px-2 flex items-center gap-5'>
@@ -367,7 +381,7 @@ const SiteHeader = () => {
                                             Task
                                         </span>
                                     </div>
-                                </DropdownMenuItem>
+                                </DropdownMenuItem> */}
 
                             </DropdownMenuGroup>
                         </DropdownMenuContent>
@@ -381,11 +395,11 @@ const SiteHeader = () => {
 
             <EmailMultiSelect
                 slug={dialogState.slug}
-                isOpen={dialogState.isOpen}
+                isOpen={dialogState.isOpen && ['for_team', 'for_people'].includes(dialogState.slug)}
                 onOpenChange={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
                 userData={userData}
             />
-            <CreateEpic isOpen={isOpen} onClose={() => setIsOpen(false)} />
+            <CreateSprint isOpen={dialogState.isOpen && dialogState.slug === 'sprint'} onClose={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))} />
         </header>
     )
 }

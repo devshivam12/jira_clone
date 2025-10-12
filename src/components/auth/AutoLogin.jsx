@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { useDispatch } from 'react-redux';
-import { userExist, setClientId } from '@/redux/reducers/auth';
+import { userExist, setClientId, setUserData, setAccessToken } from '@/redux/reducers/auth';
 import axios from 'axios';
 import { Loader2 } from 'lucide-react';
 import { setLastAccessedProject } from '@/redux/reducers/dynamicRouting';
@@ -62,6 +62,8 @@ const AutoLogin = () => {
 
                 if (authResponse.data.status === 200) {
                     const { project_details, ...userData } = authResponse.data.user;
+                    dispatch(setUserData(userData))
+                    dispatch(setAccessToken(userData.token))
                     localStorage.setItem('accessToken', authResponse.data.user.token);
                     localStorage.setItem('userData', JSON.stringify(userData))
                     localStorage.setItem('projectDetails', JSON.stringify(project_details))
@@ -103,7 +105,7 @@ const AutoLogin = () => {
                         const defaultRouting = defaultTab ? defaultTab.url : 'backlog';
 
                         navigate(`/dashboard/${projects[0].project_slug}/${projects[0].template.slug}/${defaultRouting}`);
-                        
+
                     } else {
                         navigate('/dashboard'); // Fallback if no projects
                         ShowToast.info('No projects found');

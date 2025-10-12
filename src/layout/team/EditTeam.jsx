@@ -59,7 +59,7 @@ const EditTeam = () => {
     search: debouncedSearch
   })
 
-  const formattedDate = useDateFormatter(teamData?.data?.createdAt)
+  // const formattedDate = useDateFormatter(teamData?.data?.createdAt)
 
   const {
     register,
@@ -933,7 +933,10 @@ const EditTeam = () => {
 
                 <div>
                   <h4 className="text-sm font-medium text-neutral-500">Created At</h4>
-                  <p className="mt-1 text-neutral-500 font-normal text-base">{formattedDate}</p>
+                  <p className="mt-1 text-neutral-500 font-normal text-base">
+                    {/* {formattedDate} */}
+                    Please add date here
+                    </p>
                 </div>
 
                 <div>

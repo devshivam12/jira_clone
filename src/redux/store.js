@@ -10,15 +10,22 @@ import { team } from "./api/company/team"
 import { sprintApi } from "./graphql_api/sprint"
 
 const projectPersistConfig = {
-    key: 'root',
+    key: 'project',
+    storage
+}
+
+const userPersistConfig = {
+    key : 'auth',
     storage
 }
 
 const persistedProjectReducer = persistReducer(projectPersistConfig, projectSlice)
 
+const userReducer = persistReducer(userPersistConfig, authReducer)
+
 const store = configureStore({
     reducer: {
-        auth: authReducer,
+        auth: userReducer,
         dynamicRouting: dynamicRoutingReducer,
         projectSlice: persistedProjectReducer,
         [apiAuth.reducerPath]: apiAuth.reducer,

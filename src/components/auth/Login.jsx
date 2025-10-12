@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { DottedSeparator } from '../dotted-separator'
 import { Input } from '../ui/input'
@@ -10,22 +10,23 @@ import { useDispatch } from 'react-redux'
 
 
 import { useLoginMutation } from '@/redux/api/authApi'
-import { setClientId, userExist } from '@/redux/reducers/auth'
+import { setAccessToken, setClientId, setUserData, userExist } from '@/redux/reducers/auth'
 import { Eye, EyeClosed, EyeOff } from 'lucide-react'
 import { Label } from '../ui/label'
 import { setLastAccessedProject } from '@/redux/reducers/dynamicRouting'
 import ShowToast from '../common/ShowToast'
 import ButtonLoader from '../ui/buttonLoader'
-import { initializeWithDefaultProject, setAllProjects, setCurrentProject } from '@/redux/reducers/projectSlice'
+import { setAllProjects, setCurrentProject } from '@/redux/reducers/projectSlice'
 import { useGetAllCompanyProjectQuery, useGetProjectByIdQuery } from '@/redux/api/company/api'
 
 const Login = () => {
   const dispatch = useDispatch()
   const { handleSubmit, register, reset, formState: { errors } } = useForm()
   const [projectId, setProjectId] = useState(null)
-  const [shouldNavigate, setShouldNavigate] = useState(false)
-  const { data: project } = useGetAllCompanyProjectQuery({
-    skip: !shouldNavigate
+  const shouldNavigate = useRef(false)
+  // const [shouldNavigate, setShouldNavigate] = useState(false)
+  const { data: project, isSuccess } = useGetAllCompanyProjectQuery({
+    skip: !shouldNavigate.current
   })
 
   // const { data: project } = useGetProjectByIdQuery(projectId, {
@@ -42,24 +43,41 @@ const Login = () => {
     return emailRegex.test(input);
   }
 
+  // useEffect(() => {
+  //   if (!shouldNavigate || !project || project.status !== 200) return;
+  //   if (!isSuccess) return;
+  //   if (project && project.status === 200 && shouldNavigate) {
+  //     // dispatch(setCurrentProject(project.data))
+  //     console.log("this is working")
+  //     console.log("project------------", project)
+  //     dispatch(setAllProjects(project.data))
+
+  //     dispatch(setCurrentProject(project.data[0]))
+
+  //     const defaultTab = project.data[0].template.fields.tabs.find(tab => tab.isDefault === true)
+
+  //     const defaultRouting = defaultTab ? defaultTab.url : 'backlog'
+
+  //     navigate(`/dashboard/${project.data[0].project_slug}/${project.data[0].template.slug}/${defaultRouting}`)
+  //     ShowToast.success('Login successful')
+  //     setShouldNavigate(false) // Reset flag
+  //   }
+  // }, [project, navigate, shouldNavigate, dispatch])
+
   useEffect(() => {
-    if (project && project.status === 200 && shouldNavigate) {
-      // dispatch(setCurrentProject(project.data))
-      console.log("this is working")
-      console.log("project------------", project)
-      dispatch(setAllProjects(project.data))
-
-      dispatch(setCurrentProject(project.data[0]))
-      
-      const defaultTab = project.data[0].template.fields.tabs.find(tab => tab.isDefault === true)
-      
-      const defaultRouting = defaultTab ? defaultTab.url : 'backlog'
-
-      navigate(`/dashboard/${project.data[0].project_slug}/${project.data[0].template.slug}/${defaultRouting}`)
-      ShowToast.success('Login successful')
-      setShouldNavigate(false) // Reset flag
-    }
-  }, [project, navigate, shouldNavigate, dispatch])
+    if (!shouldNavigate.current || !isSuccess) return;
+  
+    shouldNavigate.current = false; // consume flag ✅
+  
+    dispatch(setAllProjects(project.data));
+    dispatch(setCurrentProject(project.data[0]));
+  
+    const defaultTab = project.data[0].template.fields.tabs.find(tab => tab.isDefault);
+    const defaultRouting = defaultTab ? defaultTab.url : 'backlog';
+  
+    navigate(`/dashboard/${project.data[0].project_slug}/${project.data[0].template.slug}/${defaultRouting}`);
+    ShowToast.success('Login successful');
+  }, [isSuccess, project, dispatch, navigate]);
 
   const handleLogin = async (formData) => {
     try {
@@ -69,6 +87,8 @@ const Login = () => {
 
       if (response.status === 200) {
         const { project_details, ...userData } = response.user;
+        dispatch(setUserData(userData))
+        dispatch(setAccessToken(userData.token))
         localStorage.setItem('userData', JSON.stringify(userData))
         localStorage.setItem('accessToken', userData.token)
         localStorage.setItem('projectDetails', JSON.stringify(project_details))
@@ -85,7 +105,8 @@ const Login = () => {
           const userProjectId = response.user.project_id[0]
           // setProjectId(userProjectId)
 
-          setShouldNavigate(true)
+          // setShouldNavigate(true)
+          shouldNavigate.current = true
         }
 
         // let project_slug = response.user.project_details.project_slug

@@ -44,7 +44,7 @@ export const EmailMultiSelect = ({
   const [teamMembers, setTeamMembers] = useState([]);
 
   const shouldFetchRole = isOpen && isForPeople
-
+  console.log("shouldFetchRole", shouldFetchRole)
   // API hooks
   const [addPeople, { isLoading: isAddingPeople }] = useAddPeopleMutation();
   const [addTeam, { isLoading: isCreatingTeam }] = useCreateTeamMutation();
@@ -59,9 +59,9 @@ export const EmailMultiSelect = ({
 
   // Role options
   const roleOptions = useMemo(() => {
-    return roleData?.data[0].roles?.map(role => ({
-      value: role.slug,
-      label: role.role
+    return roleData?.data[0]?.roles?.map(role => ({
+      value: role?.slug,
+      label: role?.role
     })) || [];
   }, [roleData]);
 

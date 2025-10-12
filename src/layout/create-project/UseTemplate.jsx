@@ -307,6 +307,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                                                     firstName={selectedMemberDisplay.first_name}
                                                     lastName={selectedMemberDisplay.last_name}
                                                     image={selectedMemberDisplay.image}
+                                                    size={"sm"}
                                                 />
                                                 <span>
                                                     {selectedMemberDisplay.name}
@@ -323,7 +324,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                                 </PopoverTrigger>
                                 <PopoverContent
                                     side="top"
-                                    align="start" 
+                                    align="start"
                                     className="w-[200px] p-0"
                                 >
                                     <Command className="py-2" shouldFilter={false}>
@@ -362,6 +363,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                                                                                     firstName={member.first_name}
                                                                                     lastName={member.last_name}
                                                                                     image={member.image}
+                                                                                    size={"sm"}
                                                                                 />
                                                                                 <span>{member.first_name} {member.last_name}</span>
                                                                             </div>

@@ -30,7 +30,6 @@ import { ChevronDown, ChevronRight, ChevronUp, Cog, Ellipsis, Eye, Info, LockKey
 // import MultiSelect from '@/components/ui/MultiSelect'
 import SelectTeam from './common-component/SelectTeam'
 import TooltipWrapper from '@/components/common/TooltipWrapper'
-import CreateEpic from './common-component/CreateEpic'
 
 const assingUser = [
     {
@@ -132,11 +131,6 @@ const EditIssue = ({ issue, onClose }) => {
                                         Add epic
                                     </span>
                                 </p>
-                            </div>
-                            <div>
-                                {
-                                    isEpicOpen && <CreateEpic />
-                                }
                             </div>
                             <div className='flex items-center'>
                                 <div className='flex items-center justify-center w-9 h-9 py-0  rounded-sm hover:bg-neutral-200 font-normal text-neutral-500 cursor-pointer'>
@@ -415,7 +409,6 @@ const EditIssue = ({ issue, onClose }) => {
                     }
                 </Card>
             </CardContent >
-            <CreateEpic isOpen={isEpicOpen} onClose={() => setIsEpicOpen(false)} />
         </Card >
         // <div>
         //     <Input value={editedText} onChange={(e) => setEditedText(e.target.value)} />
