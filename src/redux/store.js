@@ -8,6 +8,8 @@ import storage from "redux-persist/lib/storage"
 import { persistReducer, persistStore } from "redux-persist"
 import { team } from "./api/company/team"
 import { sprintApi } from "./graphql_api/sprint"
+import { taskApi } from "./graphql_api/task"
+import { miscDataApi } from "./graphql_api/miscData"
 
 const projectPersistConfig = {
     key: 'project',
@@ -15,7 +17,7 @@ const projectPersistConfig = {
 }
 
 const userPersistConfig = {
-    key : 'auth',
+    key: 'auth',
     storage
 }
 
@@ -31,7 +33,9 @@ const store = configureStore({
         [apiAuth.reducerPath]: apiAuth.reducer,
         [api.reducerPath]: api.reducer,
         [team.reducerPath]: team.reducer,
-        [sprintApi.reducerPath] : sprintApi.reducer
+        [sprintApi.reducerPath]: sprintApi.reducer,
+        [taskApi.reducerPath] : taskApi.reducer,
+        [miscDataApi.reducerPath] : miscDataApi.reducer     
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
@@ -39,7 +43,7 @@ const store = configureStore({
                 // Ignore redux-persist action types
                 ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
             },
-        }).concat(api.middleware, apiAuth.middleware, team.middleware, sprintApi.middleware)
+        }).concat(api.middleware, apiAuth.middleware, team.middleware, sprintApi.middleware, taskApi.middleware, miscDataApi.middleware)
 
 })
 

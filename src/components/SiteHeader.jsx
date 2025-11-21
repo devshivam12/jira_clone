@@ -43,15 +43,7 @@ import { useSidebar } from './ui/sidebar'
 import { useProjectData } from '@/hooks/useProjectData'
 import CreateSprint from '@/layout/backlog-layout/common-component/CreateSprint'
 import { useUserData } from '@/hooks/useUserData'
-
-
-const options = [
-    { label: "React", value: "react" },
-    { label: "JavaScript", value: "javascript" },
-    { label: "TypeScript", value: "typescript" },
-    { label: "HTML", value: "html" },
-    { label: "CSS", value: "css" },
-];
+import CreateTask from '@/layout/backlog-layout/common-component/CreateTask'
 
 
 const SiteHeader = () => {
@@ -65,7 +57,8 @@ const SiteHeader = () => {
     // })
 
     const { toggleSidebar } = useSidebar()
-    const { currentProject, templateData, workType } = useProjectData()
+    const { allProjects, currentProject, workType, workFlow, templateData } = useProjectData()
+    const { userData } = useUserData()
     console.log("currentPropject", currentProject)
     console.log("templateData", templateData)
     console.log("workType", workType)
@@ -88,11 +81,6 @@ const SiteHeader = () => {
     };
 
     const navigate = useNavigate()
-    const { userData } = useUserData()
-    // const [userData, setUserData] = useState(() => {
-    //     const storeData = localStorage.getItem("userData");
-    //     return storeData ? JSON.parse(storeData) : null
-    // })
     console.log("dialogState", dialogState)
     return (
         <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background ">
@@ -317,6 +305,10 @@ const SiteHeader = () => {
                             <DropdownMenuGroup className='p-0 '>
                                 <DropdownMenuItem
                                     className="p-0 hover:bg-neutral-200/40"
+                                    onSelect={(e) => {
+                                        e.preventDefault();
+                                        openDialog('issue');
+                                    }}
                                 >
                                     <div className='w-full cursor-pointer text-sm py-2 px-2 flex items-center gap-x-4 '>
                                         {/* <div className={`w-7 h-7 rounded-md flex items-center justify-center ${epicColor}`}>
@@ -400,6 +392,17 @@ const SiteHeader = () => {
                 userData={userData}
             />
             <CreateSprint isOpen={dialogState.isOpen && dialogState.slug === 'sprint'} onClose={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))} />
+
+            <CreateTask
+                isOpen={dialogState.isOpen && dialogState.slug === 'issue'}
+                onClose={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
+                userData={userData}
+                allProjects={allProjects}
+                currentProject={currentProject}
+                workType={workType}
+                workFlow={workFlow}
+                templateData={templateData}
+            />
         </header>
     )
 }

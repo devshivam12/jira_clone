@@ -187,7 +187,7 @@ export const EmailMultiSelectInput = ({
                     <span className="text-neutral-500 font-normal text-sm">
                         {isForPeople
                             ? 'Grow your team and work better together.'
-                            : 'Select a project to add to this team.'}
+                            : 'Select a project to add in this team.'}
                     </span>
                 </div>
 

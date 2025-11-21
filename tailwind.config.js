@@ -4,7 +4,7 @@ export default {
 	content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
 	safelist: [
 		{
-		  pattern: /bg-(red|green|blue|purple|neutral|yellow)-(400|500|100)/,
+		  pattern: /bg-(red|amber|green|blue|purple|neutral|yellow)-(400|500|300|100)/,
 		},
 	  ],
 	theme: {

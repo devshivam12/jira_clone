@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { EmailMultiSelect } from '@/components/ui/EmailMultiSelect';
-import { EmailMultiSelectInput } from '@/components/ui/EmailMultiSelectInput';
 import { Info, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 import TooltipWrapper from '@/components/common/TooltipWrapper';
 import ShowToast from '@/components/common/ShowToast';
@@ -15,24 +14,8 @@ import { useDispatch } from 'react-redux';
 import { addProject } from '@/redux/reducers/projectSlice';
 import { useProjectData } from '@/hooks/useProjectData';
 import { useNavigate } from 'react-router-dom';
-import { cn } from "@/lib/utils"
 
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import { useGetAllMemberListQuery } from '@/redux/api/company/team';
-import { DottedSeparator } from '@/components/dotted-separator';
-import ManageAvatar from '@/components/common/ManageAvatar';
+import DynamicDropdownSelector from '@/components/common/DynamicDropdownSelector';
 
 const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
     const { handleSubmit, register, reset, setValue, watch, formState: { errors } } = useForm()
@@ -44,108 +27,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
     const [createProject, { isLoading }] = useCreateProjectMutation()
     const projectName = watch('name');
     const projectKey = watch('project_key');
-
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-    const [localUserData, setLocalUserData] = useState(null);
-
-    const [open, setOpen] = useState(false)
     const [leaderValue, setLeaderValue] = useState(null)
-
-    const {
-        data: membersData,
-        isLoading: isMembersLoading,
-        isError: isMembersError
-    } = useGetAllMemberListQuery({
-        search: debouncedSearchTerm,
-        page: 1,
-        pageSize: 10
-    }, {
-        refetchOnFocus: true,
-        refetchOnReconnect: true,
-        // skip: !open
-    })
-
-    useEffect(() => {
-        let searchTimer;
-        let userData;
-
-        // Initialize user data and set default leader (only once)
-        if (!localUserData) {
-            try {
-                userData = JSON.parse(localStorage.getItem('userData'));
-                setLocalUserData(userData);
-                if (userData?.member_id) {
-                    setLeaderValue(userData.member_id);
-                }
-            } catch (error) {
-                console.error('Error parsing user data:', error);
-            }
-        }
-
-        // Handle search term debouncing
-        if (searchTerm !== debouncedSearchTerm) {
-            searchTimer = setTimeout(() => {
-                setDebouncedSearchTerm(searchTerm);
-            }, 200);
-        }
-
-        // Handle project key generation from project name
-        if (projectName) {
-            const key = projectName
-                .split(' ')
-                .map(word => word.charAt(0).toUpperCase())
-                .join('');
-            setValue('project_key', key);
-        }
-
-        // Cleanup timer
-        return () => {
-            if (searchTimer) {
-                clearTimeout(searchTimer);
-            }
-        };
-    }, [searchTerm, debouncedSearchTerm, projectName, setValue, localUserData]);
-
-    const members = membersData?.data?.members || []
-
-    // Memoized selected member to avoid unnecessary re-renders
-    const selectedMember = useMemo(() => {
-        return members.find((member) => member._id === leaderValue);
-    }, [members, leaderValue]);
-
-    // Memoized display for selected member (handles cases where member is not in current search)
-    const selectedMemberDisplay = useMemo(() => {
-        if (selectedMember) {
-            return {
-                name: `${selectedMember.first_name} ${selectedMember.last_name}`,
-                isCurrentUser: leaderValue === localUserData?.member_id,
-                ...selectedMember
-            };
-        }
-
-        // If we have a leaderValue but member is not in current search results
-        if (leaderValue && localUserData?.member_id === leaderValue) {
-            return {
-                name: `${localUserData.first_name || 'Current'} ${localUserData.last_name || 'User'}`,
-                isCurrentUser: true,
-                first_name: localUserData.first_name,
-                last_name: localUserData.last_name,
-                image: localUserData.image
-            };
-        }
-
-        return null;
-    }, [selectedMember, leaderValue, localUserData]);
-
-    const showViewAllMember = useMemo(() => {
-        return membersData?.data?.pagination?.totalCount > 2
-        // return membersData?.data?.pagination?.totalCount > 2 && members.length < membersData.data.pagination.totalCount
-    }, [membersData, members])
-
-    const handleSearchTerm = useCallback((value) => {
-        setSearchTerm(value);
-    }, []);
 
     const handleKeyChange = useCallback((e) => {
         const value = e.target.value
@@ -165,7 +47,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                     project_leader: leaderValue
                 }
             }
-
+            console.log("payload", payload)
             const response = await createProject(payload).unwrap()
             console.log("response", response)
             if (response.status === 200) {
@@ -199,9 +81,6 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
     const onSubmit = (data) => {
         handleCreateProject(data)
     }
-
-    console.log("leaderValue", leaderValue)
-    console.log("showViewAllMember", showViewAllMember)
     return (
         <>
             <DialogHeader className="bg-neutral-100 p-6 text-neutral-500 m-0 ">
@@ -279,7 +158,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                     <div className='space-y-1'>
                         <div className='flex items-center gap-x-2'>
                             <Label className="felx items-center font-semibold text-neutral-500 text-sm ">
-                                Project Leader
+                                Project leader
                                 <span className='text-red-300'>*</span>
                             </Label>
                             <div>
@@ -293,108 +172,11 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                             </div>
                         </div>
                         <div>
-                            <Popover open={open} onOpenChange={setOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        aria-expanded={open}
-                                        className="w-72 justify-between"
-                                    >
-                                        {selectedMemberDisplay ? (
-                                            <div className='flex items-center gap-x-3'>
-                                                <ManageAvatar
-                                                    firstName={selectedMemberDisplay.first_name}
-                                                    lastName={selectedMemberDisplay.last_name}
-                                                    image={selectedMemberDisplay.image}
-                                                    size={"sm"}
-                                                />
-                                                <span>
-                                                    {selectedMemberDisplay.name}
-                                                    {selectedMemberDisplay.isCurrentUser && (
-                                                        <span className="text-xs text-neutral-500 ml-1">(You)</span>
-                                                    )}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            "Select member..."
-                                        )}
 
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    side="top"
-                                    align="start"
-                                    className="w-[200px] p-0"
-                                >
-                                    <Command className="py-2" shouldFilter={false}>
-                                        <CommandInput
-                                            placeholder="Search member..."
-                                            className="h-9"
-                                            value={searchTerm}
-                                            onValueChange={handleSearchTerm}
-                                        />
-                                        <DottedSeparator />
-                                        <CommandList>
-                                            {
-                                                isMembersLoading ? (
-                                                    <div className="flex items-center justify-center py-4">
-                                                        <Loader2 className="animate-spin h-5 w-5 text-neutral-500" />
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        {members.length === 0 ? (
-                                                            <CommandEmpty>No members found</CommandEmpty>
-                                                        ) : (
-                                                            <>
-                                                                <CommandGroup>
-                                                                    {members.map((member, index) => (
-                                                                        <CommandItem
-                                                                            className="cursor-pointer"
-                                                                            key={index}
-                                                                            value={member._id}
-                                                                            onSelect={(currentValue) => {
-                                                                                setLeaderValue(currentValue === leaderValue ? "" : currentValue);
-                                                                                setOpen(false);
-                                                                            }}
-                                                                        >
-                                                                            <div className="flex items-center gap-2">
-                                                                                <ManageAvatar
-                                                                                    firstName={member.first_name}
-                                                                                    lastName={member.last_name}
-                                                                                    image={member.image}
-                                                                                    size={"sm"}
-                                                                                />
-                                                                                <span>{member.first_name} {member.last_name}</span>
-                                                                            </div>
-
-                                                                        </CommandItem>
-                                                                    ))}
-                                                                </CommandGroup>
-                                                                {showViewAllMember && (
-                                                                    <>
-                                                                        <DottedSeparator className='mb-2' />
-                                                                        <CommandItem
-                                                                            className="cursor-pointer"
-                                                                            onSelect={() => setShowAllMembers(true)}
-                                                                        >
-                                                                            View All Members
-                                                                        </CommandItem>
-                                                                    </>
-                                                                )
-
-                                                                }
-                                                            </>
-                                                        )}
-
-                                                    </>
-                                                )
-                                            }
-
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
+                            <DynamicDropdownSelector
+                                onChange={setLeaderValue}
+                                label="Select project leader..."
+                            />
                         </div>
 
                     </div>

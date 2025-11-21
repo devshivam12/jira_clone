@@ -1,4 +1,5 @@
 import ManageAvatar from '@/components/common/ManageAvatar'
+import DynamicDropdownSelector from '@/components/common/DynamicDropdownSelector'
 import ShowToast from '@/components/common/ShowToast'
 import { DottedSeparator } from '@/components/dotted-separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -29,98 +30,23 @@ const ProjectDetail = ({ projectDetail }) => {
     console.log("params", id)
     console.log()
     const [addProjectName, setAddProjectName] = useState('')
-    const [changeProjectLead, setChangeProjectLead] = useState(false)
     const [openInfo, setOpenInfo] = useState(false)
-    const [open, setOpen] = useState(false)
     const [leaderValue, setLeaderValue] = useState(null)
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-    const {
-        data: membersData,
-        isLoading: isMembersLoading,
-        isError: isMembersError
-    } = useGetAllMemberListQuery({
-        search: debouncedSearchTerm,
-        page: 1,
-        pageSize: 10
-    }, {
-        refetchOnFocus: true,
-        refetchOnReconnect: true,
-        skip: !open
-    })
-
-    useEffect(() => {
-
-        if (projectDetail?.data.name) {
-            setAddProjectName(projectDetail?.data.name)
-        }
-
-        if (projectDetail?.data?.projectLeaderDetail?._id) {
-            setLeaderValue(projectDetail.data.projectLeaderDetail._id);
-        }
-        let searchTimer;
-
-        // Handle search term debouncing
-        if (searchTerm !== debouncedSearchTerm) {
-            searchTimer = setTimeout(() => {
-                setDebouncedSearchTerm(searchTerm);
-            }, 200);
-        }
-        // Cleanup timer
-        return () => {
-            if (searchTimer) {
-                clearTimeout(searchTimer);
-            }
-        };
-    }, [searchTerm, debouncedSearchTerm, projectDetail]);
-
-    const members = membersData?.data?.members || []
-
-    const selectedMember = useMemo(() => {
-        console.log("leaderValue", leaderValue)
-        if (leaderValue) {
-            // First check current members list
-            const found = members.find((member) => member._id === leaderValue);
-            if (found) return found;
-
-
-        }
-        // If not found, use the project leader detail from props
-        if (projectDetail?.data?.projectLeaderDetail?._id) {
-            return projectDetail?.data?.projectLeaderDetail;
-        }
-        return null;
-    }, [members, leaderValue, projectDetail]);
-
-
-
-    const showViewAllMember = useMemo(() => {
-        return membersData?.data?.pagination?.totalCount > 2
-        // return membersData?.data?.pagination?.totalCount > 2 && members.length < membersData.data.pagination.totalCount
-    }, [membersData, members])
-
-    const handleSearchTerm = useCallback((value) => {
-        setSearchTerm(value);
-    }, []);
-
-    const handleLeaderChange = (newLeaderId) => {
-        setLeaderValue(newLeaderId);
-        setChangeProjectLead(false);
-        setOpen(false);
-    };
 
     const handleSubmitForm = async (e) => {
         e.preventDefault()
 
         try {
-            const result = await updateProject({
+            const payload = {
                 id,
                 body: {
                     name: addProjectName,
                     project_leader: leaderValue
                 }
-            }).unwrap()
+            }
+            console.log("payload", payload)
+            const result = await updateProject(payload).unwrap()
             console.log("result", result)
             console.log("result.status", result.status)
             if (result.status === 201) {
@@ -269,77 +195,9 @@ const ProjectDetail = ({ projectDetail }) => {
                                     <span className='text-red-500 '>*</span>
                                 </Label>
                             </div>
-                            <Popover open={open} onOpenChange={setOpen}>
-                                <PopoverTrigger asChild>
-                                    <div className="w-full min-h-[40px] px-3 py-2 border border-neutral-300 rounded-md cursor-pointer hover:bg-neutral-200/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-between">
-                                        {selectedMember ? (
-                                            <div className='flex items-center gap-x-2'>
-                                                <ManageAvatar
-                                                    firstName={selectedMember.first_name}
-                                                    lastName={selectedMember.last_name}
-                                                    image={selectedMember.image}
-                                                />
-                                                <span className="text-neutral-700">
-                                                    {selectedMember.first_name} {selectedMember.last_name}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-neutral-500">Select project leader...</span>
-                                        )}
-                                        <ChevronDown className="h-4 w-4 text-neutral-500" />
-                                    </div>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                    <Command shouldFilter={false}>
-                                        <CommandInput
-                                            placeholder="Search team members..."
-                                            value={searchTerm}
-                                            onValueChange={handleSearchTerm}
-                                        />
-                                        <DottedSeparator />
-                                        <CommandList>
-                                            {isMembersLoading ? (
-                                                <div className="flex items-center justify-center py-4">
-                                                    <Loader2 className="animate-spin h-5 w-5 text-neutral-500" />
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <CommandEmpty>No members found</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {members.map((member) => (
-                                                            <CommandItem
-                                                                key={member._id}
-                                                                value={member._id}
-                                                                onSelect={() => handleLeaderChange(member._id)}
-                                                                className="cursor-pointer"
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <ManageAvatar
-                                                                        firstName={member.first_name}
-                                                                        lastName={member.last_name}
-                                                                        image={member.image}
-                                                                    />
-                                                                    <span>
-                                                                        {member.first_name} {member.last_name}
-                                                                    </span>
-                                                                </div>
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                    {showViewAllMember && (
-                                                        <>
-                                                            <DottedSeparator />
-                                                            <CommandItem className="text-center justify-center cursor-pointer">
-                                                                View All Members
-                                                            </CommandItem>
-                                                        </>
-                                                    )}
-                                                </>
-                                            )}
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
+                            <DynamicDropdownSelector
+                                onChange={setLeaderValue}
+                            />
                         </div>
 
                         <ButtonLoader

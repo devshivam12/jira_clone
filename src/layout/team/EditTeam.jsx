@@ -970,7 +970,7 @@ const EditTeam = () => {
         isOpen={dialogState.isOpen}
         onOpenChange={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
       /> */}
-      < EmailMultiSelectInput
+      <EmailMultiSelectInput
         isOpen={dialogState.isOpen}
         slug={dialogState.slug}
         onOpenChange={() => setDialogState(prev => !prev)}
