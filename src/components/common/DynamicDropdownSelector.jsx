@@ -63,7 +63,8 @@ const DynamicDropdownSelector = ({
   slug = null,
   onChange,
   label,
-  projectId = null
+  projectId = null,
+  showDropdown = false
 }) => {
   // Validate and normalize slug
   const selectType =
@@ -114,6 +115,8 @@ const DynamicDropdownSelector = ({
     page,
     pageSize: COMPONENT_CONFIG.pageSize,
   }), [debouncedSearch, page]);
+
+  const shouldFetch = isOpen || showDropdown
   // API queries
   const {
     data: memberData,
@@ -122,7 +125,7 @@ const DynamicDropdownSelector = ({
   } = useGetMemberDropdownQuery(queryParams, {
     refetchOnMountOrArgChange: false,
     refetchOnReconnect: true,
-    skip: !(isOpen && selectType === SELECT_TYPES.MEMBER),
+    skip: !(shouldFetch && selectType === SELECT_TYPES.MEMBER),
   });
 
   const {
@@ -132,21 +135,21 @@ const DynamicDropdownSelector = ({
   } = useGetTeamDropdownQuery(queryParams, {
     refetchOnMountOrArgChange: false,
     refetchOnReconnect: true,
-    skip: !(isOpen && selectType === SELECT_TYPES.TEAM),
+    skip: !(shouldFetch && selectType === SELECT_TYPES.TEAM),
   });
   console.log("memberData", memberData)
 
   const { data: sprintData, isFetching: sprintFetching, error: sprintError } = useGetSprintDropdownQuery(queryParams, {
     refetchOnMountOrArgChange: false,
     refetchOnReconnect: true,
-    skip: !(isOpen && selectType === SELECT_TYPES.SPRINT)
+    skip: !(shouldFetch && selectType === SELECT_TYPES.SPRINT)
   })
   console.log("sprintData", sprintData)
 
   const { data: parentData, isFetching: parentFetching, error: parentError } = useGetParentDropdownQuery(queryParams, {
     refetchOnMountOrArgChange: false,
     refetchOnReconnect: true,
-    skip: !(isOpen && selectType === SELECT_TYPES.PARENT)
+    skip: !(isOpen && selectType === SELECT_TYPES.PARENT && showDropdown === false)
   })
   console.log("parentData", parentData)
 
@@ -172,7 +175,7 @@ const DynamicDropdownSelector = ({
         totalPages: sprintData?.data?.sprintDropdown?.total || 1,
         isFetching: sprintFetching,
         apiError: sprintError
-      } 
+      }
     } else if (selectType === SELECT_TYPES.PARENT) {
       return {
         items: parentData?.data?.parentDropdown?.parents || [],
@@ -184,7 +187,7 @@ const DynamicDropdownSelector = ({
   }, [selectType, memberData, teamData, sprintData, memberFetching, teamFetching, sprintFetching, memberError, teamError, parentError, parentData, parentFetching]);
 
   const hasMore = page < totalPages;
-
+  console.log("items", items)
   // Update items list when new data arrives
   useEffect(() => {
     if (page === 1) {
@@ -198,17 +201,25 @@ const DynamicDropdownSelector = ({
     }
   }, [items, page]);
 
+  useEffect(() => {
+    if (showDropdown) {
+      setPage(1);
+      setSearchValue("");
+    }
+  }, [showDropdown]);
+
   // Reset state when slug changes
   useEffect(() => {
-    setAllItems([]);
+    if (!showDropdown) {
+      setAllItems([]);
+    }
     setPage(1);
     setSearchValue("");
     setSelectedItem(null);
     if (slug === 'sprint' || slug === 'parent') {
       queryParams.projectId = projectId
     }
-  }, [slug]);
-
+  }, [slug, showDropdown]);
   // Infinite scroll handler
   const handleScroll = useCallback((e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -222,15 +233,24 @@ const DynamicDropdownSelector = ({
   // Item selection handler
   const handleItemSelect = useCallback((itemId) => {
     const item = allItems.find((i) => i._id === itemId);
+    
     if (!item) return;
 
     setSelectedItem(item);
-    onChange?.(selectType === SELECT_TYPES.MEMBER ? itemId : item);
+    if(showDropdown){
+      onChange?.(item);
+    } else {
+      onChange?.(selectType === SELECT_TYPES.MEMBER ? itemId : item);
+      setIsOpen(false)
+    }
     setSearchValue("");
-    setIsOpen(false);
+    // setIsOpen(false);
+    if (!showDropdown) {
+      setIsOpen(false);
+    }
     setTimeout(() => inputRef.current?.focus(), 0);
-  }, [allItems, onChange, selectType]);
-
+  }, [allItems, onChange, selectType, showDropdown]);
+  console.log("setSelectedItem", selectedItem)
   // Clear selection handler
   const handleClear = useCallback((e) => {
     e.stopPropagation();
@@ -252,8 +272,10 @@ const DynamicDropdownSelector = ({
     if (!hasFocused) {
       setHasFocused(true);
     }
-    setIsOpen(true);
-  }, [hasFocused]);
+    if (!showDropdown) {
+      setIsOpen(true);
+    }
+  }, [hasFocused, showDropdown]);
 
   // Get display placeholder
   const displayPlaceholder = label || config.placeholder;
@@ -267,6 +289,70 @@ const DynamicDropdownSelector = ({
       isSelected && "bg-neutral-200/40 before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-neutral-400 before:rounded-full border font-semibold"
     ].filter(Boolean).join(" ");
   };
+  console.log("allItems", allItems)
+  if (showDropdown) {
+    return (
+      <div className="bg-white rounded-md border border-neutral-200 ">
+        {/* Search Input */}
+        <div className="py-2 px-2  border-b  border-neutral-200">
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder={displayPlaceholder}
+            className="bg-transparent w-full outline-none px-2 py-1.5 text-sm text-neutral-700 placeholder:text-neutral-400 border border-neutral-300 rounded-md focus:border-neutral-400"
+          />
+        </div>
+
+        {/* Content */}
+        {isFetching && page === 1 ? (
+          <div className="py-8 flex items-center justify-center bg-neutral-50">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
+              <span className="text-neutral-500 text-sm">Searching...</span>
+            </div>
+          </div>
+        ) : allItems.length > 0 ? (
+          <ScrollArea
+            onScroll={handleScroll}
+            className={`${allItems.length > 2 ? 'h-auto' : 'max-h-auto'}`}
+          >
+            {allItems?.map((item) => (
+              <div
+                key={item?._id}
+                className={getItemClassName(item)}
+                onClick={() => handleItemSelect(item._id)}
+              >
+                {config?.getAvatarProps(item) ? (
+                  <ManageAvatar {...config.getAvatarProps(item)} size="sm" />
+                ) : null}
+                <span className="text-sm truncate flex flex-col">
+                  {config.getDisplayName(item)}
+                  {selectType === SELECT_TYPES.SPRINT && (
+                    <span className="text-xs text-neutral-400 mt-0.5 truncate">
+                      {item.project_key}
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+            {isFetching && page > 1 && (
+              <div className="flex items-center justify-center py-4 bg-neutral-50">
+                <Loader2 className="animate-spin h-5 w-5 text-neutral-400" />
+              </div>
+            )}
+          </ScrollArea>
+        ) : (
+          <div className="py-8 flex items-center justify-center bg-neutral-50">
+            <div className="text-neutral-500 text-sm">
+              {apiError ? 'Error loading data' : config.emptyMessage}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>

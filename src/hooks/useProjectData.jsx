@@ -13,6 +13,7 @@ export const useProjectData = () => {
         error, 
         templateData : currentProject?.template,
         workType : currentProject?.template?.fields?.work_type,
-        workFlow : currentProject?.template?.fields?.work_flow
+        workFlow : currentProject?.template?.fields?.work_flow,
+        importance : currentProject?.template?.fields?.importance
     }
 }

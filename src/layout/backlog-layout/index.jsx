@@ -174,9 +174,6 @@ const Backlog = () => {
         <div className="flex-shrink-0">
           {showEpic && <Epic showEpic={showEpic} setShowEpic={setShowEpic} />}
         </div>
-
-        {/* Middle Div with Horizontal Scrollbar */}
-        {/* <div className="space-y-6 flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-auto max-h-[390px]"> */}
         <div className={`flex-1 ${showEpic ? 'max-w-[calc(100%-16rem)]' : 'max-w-full'} overflow-x-auto`}>
           <div className="min-w-fit space-y-6">
             {
@@ -213,11 +210,9 @@ const Backlog = () => {
               />
             </div>
           )}
-          {selectedIssue && (
             <div className="w-80">
               <EditIssue issue={selectedIssue} onClose={() => setSelectedIssue(null)} />
             </div>
-          )}
         </div>
       </div>
 

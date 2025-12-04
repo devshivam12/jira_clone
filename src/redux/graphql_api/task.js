@@ -13,10 +13,26 @@ export const taskApi = createApi({
                 body : payload
             }),
             invalidatesTags: ['Task']
+        }),
+        getBacklogList : builder.mutation({
+            query : (payload) => ({
+                method : 'POST',
+                body : payload
+            }),
+            validatesTags: ['Task']
+        }),
+        updateIssue : builder.mutation({
+            query : (payload) => ({
+                method : "POST",
+                body : payload
+            }),
+            invalidatesTags: ['Task']
         })
     })
 })
 
 export const {
-    useCreateTaskMutation
+    useCreateTaskMutation,
+    useGetBacklogListMutation,
+    useUpdateIssueMutation
 } = taskApi

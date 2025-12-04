@@ -54,7 +54,7 @@ const assingUser = [
 
 const EditIssue = ({ issue, onClose }) => {
     const [isScrolled, setIsScrolled] = useState(false)
-    const [editedText, setEditedText] = useState(issue.name)
+    const [editedText, setEditedText] = useState(issue?.name)
     const handleClose = () => {
         onClose()
     }

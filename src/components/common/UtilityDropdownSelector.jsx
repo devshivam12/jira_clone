@@ -15,19 +15,14 @@ const UtilityDropdownSelector = ({ data = [], onChange, label = "Select option",
     const [isInitialized, setIsInitialized] = useState(false);
 
     useEffect(() => {
-        // Only run on initial mount or when defaultValue changes
         if (isInitialized && !defaultValue) return;
-
         let defaultItem = null;
-
         if (defaultValue && data.length > 0) {
             defaultItem = data.find((item) => item.value === defaultValue);
         }
-
         if (!defaultItem && data.length > 0) {
             defaultItem = data.find((item) => item.isDefault);
         }
-
         if (defaultItem) {
             setSelectedItem(defaultItem);
             onChange?.(defaultItem);
@@ -108,7 +103,7 @@ const UtilityDropdownSelector = ({ data = [], onChange, label = "Select option",
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
                 <div
-                    className={`flex items-center gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 relative transition-colors focus-within:border-neutral-400 
+                    className={`flex items-center gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 relative transition-colors focus-within:border-neutral-400
         ${iconType === "contain" && selectedItem?.color ? selectedItem.color : ""}`}
                     onClick={() => {
                         setIsOpen(true)
