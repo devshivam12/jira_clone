@@ -383,7 +383,6 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                         slug={'team'}
                                         onChange={setTeamValue}
                                         label={"Choose a team"}
-                                        projectId={projectId}
                                     />
                                 </div>
 

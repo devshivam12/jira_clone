@@ -8,13 +8,15 @@ body {
   @apply antialiased;
   @apply bg-gray-50;
   pointer-events: auto !important;
-  font-family: 'poppins', sans-serif; /* Add your preferred font */
+  font-family: 'poppins', sans-serif;
+  /* Add your preferred font */
+}
+
+@layer base {
+  html {
+    @apply bg-gray-50;
   }
-  
-    @layer base {
-      html {
-        @apply bg-gray-50;
-    }
+
   :root {
 
     --background: 0 0% 100%;
@@ -65,8 +67,7 @@ body {
 
     --chart-5: 27 87% 67%;
 
-    --radius: 0.5rem
-  ;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -82,7 +83,9 @@ body {
 
     --sidebar-border: 220 13% 91%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-ring: 217.2 91.2% 59.8%
+  }
+
   .dark {
 
     --background: 20 14.3% 4.1%;
@@ -131,8 +134,7 @@ body {
 
     --chart-4: 280 65% 60%;
 
-    --chart-5: 340 75% 55%
-  ;
+    --chart-5: 340 75% 55%;
 
     --sidebar-background: 240 5.9% 10%;
 
@@ -148,19 +150,56 @@ body {
 
     --sidebar-border: 240 3.7% 15.9%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-ring: 217.2 91.2% 59.8%
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
 }
 
 
+@layer components {
+  /* --- CKEditor Custom Styles --- */
+
+  /* 1. Editor Height and Shadcn-like Borders */
+  .ck-editor__editable_inline {
+    min-height: 200px;
+    @apply px-4 !important;
+    /* Tailwind padding */
+    border-bottom-left-radius: var(--radius) !important;
+    border-bottom-right-radius: var(--radius) !important;
+  }
+
+  /* 2. Toolbar Styling to match your bg-neutral-100 */
+  .ck.ck-toolbar {
+    @apply bg-neutral-100 !important;
+    border-top-left-radius: var(--radius) !important;
+    border-top-right-radius: var(--radius) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* 3. Border and Focus states */
+  .ck.ck-editor__main>.ck-editor__editable:not(.ck-focused) {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .ck.ck-editor__main>.ck-editor__editable.ck-focused {
+    border-color: hsl(var(--ring)) !important;
+    /* Use the ring color from your variables for the focus state */
+  }
+
+  /* 4. Fix dropdowns (Headings, Font size) appearing behind cards */
+  .ck-body-wrapper {
+    z-index: 9999 !important;
+  }
+}
 
 /* [data-radix-dropdown-menu-content],
 [data-radix-popover-content],
@@ -183,4 +222,4 @@ body {
 .radix-dropdown-menu-overlay,
 .radix-popover-overlay {
   pointer-events: none;
-} */ 
+} */

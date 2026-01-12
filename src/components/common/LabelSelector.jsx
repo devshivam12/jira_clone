@@ -6,9 +6,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useCreateLabelsMutation, useGetLabelQuery } from "@/redux/graphql_api/miscData";
 import { ScrollArea } from "../ui/scroll-area";
 
-const LabelSelector = ({onChange}) => {
+const LabelSelector = ({ onChange, value, className = "" }) => {
     const [createLabel] = useCreateLabelsMutation()
-
+    const triggerWidth = useRef(null)
     const [inputValue, setInputValue] = useState("");
     const [selectedLabels, setSelectedLabels] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -123,6 +123,14 @@ const LabelSelector = ({onChange}) => {
     }, [isFetching, hasMore]);
 
     useEffect(() => {
+        if(value){
+            setSelectedLabels(value)
+        } else {
+            setSelectedLabels([])
+        }
+    },[value])
+
+    useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsOpen(false);
@@ -153,12 +161,13 @@ const LabelSelector = ({onChange}) => {
             isSelected && "bg-neutral-200/40 before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-neutral-400 before:rounded-full border font-semibold"
         ].filter(Boolean).join(" ");
     };
-
+    
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
                 <div
-                    className="flex flex-wrap items-center gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 w-[300px]"
+                    ref={triggerWidth}
+                    className="flex flex-1 items-center gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 relative transition-colors focus-within:border-neutral-400 w-full"
                     onClick={() => {
                         if (!hasFocused) {
                             setHasFocused(true);
@@ -183,7 +192,7 @@ const LabelSelector = ({onChange}) => {
                             />
                         </Badge>
                     ))}
-                    <div className="flex items-center relative w-[300px]">
+                    <div className="flex items-center relative flex-1 min-w-0">
                         <input
                             ref={inputRef}
                             type="text"
@@ -209,7 +218,12 @@ const LabelSelector = ({onChange}) => {
                 </div>
             </PopoverTrigger>
 
-            <PopoverContent className="w-[300px] z-50 p-0">
+            <PopoverContent
+            className="p-0"
+                style={{
+                    width: triggerWidth.current ? `${triggerWidth.current.offsetWidth}px` : '300px'
+                }}
+            >
                 {isFetching && page === 1 ? (
                     // ✅ Initial loading state
                     <div className="py-8 flex items-center justify-center">

@@ -140,13 +140,13 @@ export const miscDataApi = createApi({
             })
         }),
         getSprintDropdown: builder.query({
-            query: ({ search = "", limit = 10, page, projectId }) => ({
+            query: ({ search = "", limit = 10, page}) => ({
                 method: 'POST',
                 body: {
                     operationName: 'getSprintDropdown',
                     query: `
-                    query GetSprintDropdown($search:String, $page:Int, $limit: Int, $projectId : String){
-                        sprintDropdown(search:$search, limit:$limit, page:$page, projectId : $projectId){
+                    query GetSprintDropdown($search:String, $page:Int, $limit: Int){
+                        sprintDropdown(search:$search, limit:$limit, page:$page){
                             sprints{
                                 _id
                                 name
@@ -157,18 +157,18 @@ export const miscDataApi = createApi({
                         }
                     }
                 `,
-                    variables: { search, page, limit, projectId }
+                    variables: { search, page, limit}
                 }
             })
         }),
         getParentDropdown: builder.query({
-            query: ({ search = "", limit = 10, page, projectId }) => ({
+            query: ({ search = "", limit = 10, page }) => ({
                 method: 'POST',
                 body: {
                     operationName: 'getParentDropdown',
                     query: `
-                    query GetParentDropdown($search:String, $page:Int, $limit: Int, $projectId : String){
-                        parentDropdown(search:$search, limit:$limit, page:$page, projectId : $projectId){
+                    query GetParentDropdown($search:String, $page:Int, $limit: Int){
+                        parentDropdown(search:$search, limit:$limit, page:$page){
                             parents{
                                 _id
                                 summary
@@ -179,7 +179,7 @@ export const miscDataApi = createApi({
                         }
                     }
                 `,
-                    variables: { search, page, limit, projectId }
+                    variables: { search, page, limit }
                 }
             })
         })

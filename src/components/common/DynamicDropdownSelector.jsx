@@ -62,8 +62,10 @@ const SELECT_CONFIG = {
 const DynamicDropdownSelector = ({
   slug = null,
   onChange,
+  value,
   label,
-  projectId = null,
+  width = null,
+  className = "",
   showDropdown = false
 }) => {
   // Validate and normalize slug
@@ -86,7 +88,7 @@ const DynamicDropdownSelector = ({
   const [allItems, setAllItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [hasFocused, setHasFocused] = useState(false);
-
+  const triggerRef = useRef(null)
   // Refs
   const inputRef = useRef(null);
   const debounceTimerRef = useRef(null);
@@ -124,7 +126,8 @@ const DynamicDropdownSelector = ({
     error: memberError
   } = useGetMemberDropdownQuery(queryParams, {
     refetchOnMountOrArgChange: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false,
+    refetchOnFocus: false,
     skip: !(shouldFetch && selectType === SELECT_TYPES.MEMBER),
   });
 
@@ -148,45 +151,48 @@ const DynamicDropdownSelector = ({
 
   const { data: parentData, isFetching: parentFetching, error: parentError } = useGetParentDropdownQuery(queryParams, {
     refetchOnMountOrArgChange: false,
-    refetchOnReconnect: true,
-    skip: !(isOpen && selectType === SELECT_TYPES.PARENT && showDropdown === false)
+    refetchOnReconnect: false,
+    refetchOnFocus: false,
+    skip: !(shouldFetch && selectType === SELECT_TYPES.PARENT)
   })
   console.log("parentData", parentData)
 
   // Extract data based on type
-  const { items, totalPages, isFetching, apiError } = useMemo(() => {
+  // Extract data based on type
+  const { items, hasMore, isFetching, apiError } = useMemo(() => {
     if (selectType === SELECT_TYPES.MEMBER) {
       return {
         items: memberData?.data?.memberDropdown?.members || [],
-        totalPages: memberData?.data?.memberDropdown?.total || 1,
+        hasMore: memberData?.data?.memberDropdown?.hasMore || false,
         isFetching: memberFetching,
         apiError: memberError
       };
     } else if (selectType === SELECT_TYPES.TEAM) {
       return {
         items: teamData?.data?.teamDropdown?.teams || [],
-        totalPages: teamData?.data?.teamDropdown?.total || 1,
+        hasMore: teamData?.data?.teamDropdown?.hasMore || false,
         isFetching: teamFetching,
         apiError: teamError
       };
     } else if (selectType === SELECT_TYPES.SPRINT) {
       return {
         items: sprintData?.data?.sprintDropdown?.sprints || [],
-        totalPages: sprintData?.data?.sprintDropdown?.total || 1,
+        hasMore: sprintData?.data?.sprintDropdown?.hasMore || false,
         isFetching: sprintFetching,
         apiError: sprintError
       }
     } else if (selectType === SELECT_TYPES.PARENT) {
       return {
         items: parentData?.data?.parentDropdown?.parents || [],
-        totalPages: parentData?.data?.parentDropdown?.total || 1,
+        hasMore: parentData?.data?.parentDropdown?.hasMore || false,
         isFetching: parentFetching,
         apiError: parentError
       }
     }
-  }, [selectType, memberData, teamData, sprintData, memberFetching, teamFetching, sprintFetching, memberError, teamError, parentError, parentData, parentFetching]);
+    return { items: [], hasMore: false, isFetching: false, apiError: null };
+  }, [selectType, memberData, teamData, sprintData, parentData, memberFetching, teamFetching, sprintFetching, parentFetching, memberError, teamError, sprintError, parentError]);
 
-  const hasMore = page < totalPages;
+  // const hasMore = page < totalPages;
   console.log("items", items)
   // Update items list when new data arrives
   useEffect(() => {
@@ -200,6 +206,14 @@ const DynamicDropdownSelector = ({
       });
     }
   }, [items, page]);
+
+  useEffect(() => {
+    if (value) {
+      setSelectedItem(value);
+    } else {
+      setSelectedItem(null);
+    }
+  }, [value]);
 
   useEffect(() => {
     if (showDropdown) {
@@ -216,15 +230,15 @@ const DynamicDropdownSelector = ({
     setPage(1);
     setSearchValue("");
     setSelectedItem(null);
-    if (slug === 'sprint' || slug === 'parent') {
-      queryParams.projectId = projectId
-    }
-  }, [slug, showDropdown]);
+    // if (slug === 'sprint' || slug === 'parent') {
+    //   queryParams.projectId = projectId
+    // }
+  }, [showDropdown]);
   // Infinite scroll handler
   const handleScroll = useCallback((e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < COMPONENT_CONFIG.scrollThreshold;
-
+    console.log("hasMore", hasMore)
     if (isNearBottom && hasMore && !isFetching) {
       setPage((prev) => prev + 1);
     }
@@ -233,11 +247,11 @@ const DynamicDropdownSelector = ({
   // Item selection handler
   const handleItemSelect = useCallback((itemId) => {
     const item = allItems.find((i) => i._id === itemId);
-    
+
     if (!item) return;
 
     setSelectedItem(item);
-    if(showDropdown){
+    if (showDropdown) {
       onChange?.(item);
     } else {
       onChange?.(selectType === SELECT_TYPES.MEMBER ? itemId : item);
@@ -289,10 +303,11 @@ const DynamicDropdownSelector = ({
       isSelected && "bg-neutral-200/40 before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-neutral-400 before:rounded-full border font-semibold"
     ].filter(Boolean).join(" ");
   };
-  console.log("allItems", allItems)
+
+  const componentWidth = width || COMPONENT_CONFIG.defaultWidth;
   if (showDropdown) {
     return (
-      <div className="bg-white rounded-md border border-neutral-200 ">
+      <div className="bg-white rounded-md border border-neutral-200 w-full">
         {/* Search Input */}
         <div className="py-2 px-2  border-b  border-neutral-200">
           <input
@@ -301,7 +316,7 @@ const DynamicDropdownSelector = ({
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder={displayPlaceholder}
-            className="bg-transparent w-full outline-none px-2 py-1.5 text-sm text-neutral-700 placeholder:text-neutral-400 border border-neutral-300 rounded-md focus:border-neutral-400"
+            className="w-full bg-transparent outline-none px-2 py-1.5 text-sm text-neutral-700 placeholder:text-neutral-400 border border-neutral-300 rounded-md focus:border-neutral-400"
           />
         </div>
 
@@ -316,7 +331,8 @@ const DynamicDropdownSelector = ({
         ) : allItems.length > 0 ? (
           <ScrollArea
             onScroll={handleScroll}
-            className={`${allItems.length > 2 ? 'h-auto' : 'max-h-auto'}`}
+            style={{ maxHeight: COMPONENT_CONFIG.maxHeight }}
+            className="overflow-y-auto"
           >
             {allItems?.map((item) => (
               <div
@@ -358,9 +374,9 @@ const DynamicDropdownSelector = ({
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <div
-          className="flex items-center gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 relative transition-colors focus-within:border-neutral-400"
+          ref={triggerRef}
+          className={`flex items-center justify-between gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 relative transition-colors focus-within:border-neutral-400 w-full ${className}`}
           onClick={handleTriggerClick}
-          style={{ width: COMPONENT_CONFIG.width }}
         >
           {selectedItem ? (
             <div className="flex w-full py-1 px-2 items-center gap-2">
@@ -372,7 +388,7 @@ const DynamicDropdownSelector = ({
               </span>
             </div>
           ) : (
-            <div className="flex items-center relative w-full">
+            <div className="flex items-center relative flex-1 min-w-0">
               <input
                 ref={inputRef}
                 type="text"
@@ -385,7 +401,7 @@ const DynamicDropdownSelector = ({
                   }
                 }}
                 placeholder={selectedItem ? "" : displayPlaceholder}
-                className="flex-1 bg-transparent outline-none py-1 px-2 my-1 w-full text-sm text-neutral-700 placeholder:text-neutral-400"
+                className="w-full bg-transparent outline-none py-1 px-2 my-1 text-sm text-neutral-700 placeholder:text-neutral-400"
               />
 
               {!isFetching && (
@@ -420,7 +436,9 @@ const DynamicDropdownSelector = ({
         side="bottom"
         align="start"
         className="p-0"
-        style={{ width: COMPONENT_CONFIG.width }}
+        style={{
+          width: triggerRef.current ? `${triggerRef.current.offsetWidth}px` : componentWidth
+        }}
       >
         {isFetching && page === 1 ? (
           <div className="py-8 flex items-center justify-center bg-neutral-50">
@@ -432,7 +450,8 @@ const DynamicDropdownSelector = ({
         ) : allItems.length > 0 ? (
           <ScrollArea
             onScroll={handleScroll}
-            className={`${allItems.length > 2 ? 'h-auto' : 'max-h-auto'}`}
+            style={{ maxHeight: COMPONENT_CONFIG.maxHeight }}
+            className="overflow-y-auto"
           >
             {allItems?.map((item) => (
               <div

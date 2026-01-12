@@ -7,14 +7,16 @@ import TooltipWrapper from '../common/TooltipWrapper';
 import ManageAvatar from '../common/ManageAvatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from '../ui/button';
+import CommonDropdownMenu from '../common/CommonDropdownMenu'
 import DynamicDropdownSelector from '../common/DynamicDropdownSelector';
 import { DottedSeparator } from '../dotted-separator';
 import ShowToast from '../common/ShowToast';
 import { useUpdateIssueMutation } from '@/redux/graphql_api/task';
 import { Input } from '../ui/input';
 import { useUserData } from '@/hooks/useUserData';
+import { useSearchParams } from 'react-router-dom';
 
-const IssueRow = ({ issue, onIssueClick }) => {
+const IssueRow = ({ issue }) => {
     const [updateTask, { isLoading }] = useUpdateIssueMutation()
     const [taskId, setTaskId] = useState(issue?._id || null)
     const { currentProject, workType, importance, workFlow } = useProjectData()
@@ -23,6 +25,7 @@ const IssueRow = ({ issue, onIssueClick }) => {
     const [currentAssignee, setCurrentAssignee] = useState(issue?.assigneeDetail || {})
     const [summaryValue, setSummaryValue] = useState(issue?.summary || '')
     const [isEditingSummary, setIsEditingSummary] = useState(false)
+    const [searchParams, setSearchParams] = useSearchParams()
 
     console.log("currentAssignee", currentAssignee)
     const matchWorkType = workType.find(type => type.slug === issue?.work_type)
@@ -40,6 +43,61 @@ const IssueRow = ({ issue, onIssueClick }) => {
         value: status.slug,
         color: status.color
     })), [workFlow]);
+
+
+    const workItemMenuItems = [
+        {
+            id: 'move-work-item',
+            type: 'submenu',
+            label: 'Move work item',
+            items: [
+                {
+                    id: 'backlog',
+                    label: 'Move to Backlog',
+                    onSelect: () => console.log('Move to backlog')
+                },
+                {
+                    id: 'sprint',
+                    label: 'Move to Sprint X',
+                    onSelect: () => console.log('Move to sprint')
+                },
+                { type: 'separator' },
+                {
+                    id: 'project',
+                    label: 'Move to Project Y',
+                    onSelect: () => console.log('Move to project')
+                }
+            ]
+        },
+        { type: 'separator' },
+        {
+            id: 'copy-link',
+            label: 'Copy link',
+            onSelect: () => copyLinkKey(true, false, issue._id, issue.project_key, issue.taskNumber, issue.work_type)
+        },
+        {
+            id: 'copy-key',
+            label: 'Copy key',
+            onSelect: () => copyLinkKey(false, true, issue._id, issue.project_key, issue.taskNumber, issue.work_type)
+        },
+        { type: 'separator' },
+        {
+            id: 'add-flag',
+            label: 'Add flag',
+            onSelect: () => console.log('Add flag')
+        },
+        {
+            id: 'parent',
+            label: 'Parent',
+            onSelect: () => console.log('Parent')
+        },
+        {
+            id: 'delete',
+            label: 'Delete',
+            danger: true,
+            onSelect: () => console.log('Delete')
+        }
+    ];
 
     useEffect(() => {
         setSummaryValue(issue?.summary || '')
@@ -64,6 +122,7 @@ const IssueRow = ({ issue, onIssueClick }) => {
             throw error;
         }
     }, [updateTask, userData?.member_id]);
+
     const handleSummaryClick = (e) => {
         e.stopPropagation();
         setIsEditingSummary(true)
@@ -148,10 +207,18 @@ const IssueRow = ({ issue, onIssueClick }) => {
                 console.error('Failed to copy text: ', err);
             });
     };
+    const handleRowClick = (issue) => {
+        // e.stopPropagation()
+        setSearchParams((prev) => {
+            const newParams = new URLSearchParams(prev);
+            newParams.set("issueId", issue._id);
+            return newParams;
+        });
+    };
     return (
         <TableRow
             className="group hover:bg-gray-50 transition-colors cursor-pointer"
-            onClick={() => onIssueClick && onIssueClick(issue)}
+            onClick={() => handleRowClick(issue)}
         >
             <TableCell className="text-center py-3 w-[15%]">
                 <div className="flex items-center justify-center text-neutral-500 ">
@@ -262,73 +329,7 @@ const IssueRow = ({ issue, onIssueClick }) => {
                 </div>
             </TableCell>
             <TableCell className="text-center p-3 w-[5%]">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost">
-                            <TooltipWrapper content={"More actions"} disableFocusListener>
-                                <MoreHorizontal className="w-4 h-4" />
-                            </TooltipWrapper>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                        className="min-w-44 rounded-sm"
-                        align="end"
-                        sideOffset={13}
-                    >
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="flex justify-between items-center px-3 py-2 cursor-pointer text-neutral-500 hover:bg-neutral-100 rounded-md">
-                                <span className="font-medium">Move work item</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="w-48 p-1 rounded-md shadow-lg border">
-                                <DropdownMenuItem className="px-3 py-2 cursor-pointer hover:bg-neutral-100 rounded-md">
-                                    Move to Backlog
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="px-3 py-2 cursor-pointer hover:bg-neutral-100 rounded-md">
-                                    Move to Sprint X
-                                </DropdownMenuItem>
-                                <DottedSeparator className="h-px my-1 bg-neutral-200" />
-                                <DropdownMenuItem className="px-3 py-2 cursor-pointer hover:bg-neutral-100 rounded-md">
-                                    Move to Project Y
-                                </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DottedSeparator className="h-px my-1 bg-neutral-200" />
-                        <DropdownMenuItem
-                            className="gap-2 py-3 px-3 cursor-pointer"
-                            onSelect={() => copyLinkKey(true, false, issue._id, issue.project_key, issue.taskNumber, issue.work_type)}
-                        >
-                            <span className="text-neutral-500 font-medium">Copy link</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                            className="gap-2 py-3 px-3 cursor-pointer"
-                            onSelect={() => copyLinkKey(false, true, issue._id, issue.project_key, issue.taskNumber, issue.work_type)}
-                        >
-                            <span className="text-neutral-500 font-medium">Copy key</span>
-                        </DropdownMenuItem>
-                        <DottedSeparator className="h-px my-1 bg-neutral-200" />
-                        <DropdownMenuItem
-                            className="gap-2 py-3 px-3 cursor-pointer"
-                        // onSelect={onEditSprint}
-                        >
-                            <span className="text-neutral-500 font-medium">Add flag</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                            className="gap-2 py-3 px-3 cursor-pointer"
-                        // onSelect={onEditSprint}
-                        >
-                            <span className="text-neutral-500 font-medium">Parent</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                            className="gap-2 py-3 px-3 cursor-pointer"
-                        // onSelect={onEditSprint}
-                        >
-                            <span className="text-neutral-500 font-medium">Delete</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <CommonDropdownMenu items={workItemMenuItems} />
             </TableCell>
         </TableRow>
     );
