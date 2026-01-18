@@ -207,8 +207,8 @@ const IssueRow = ({ issue }) => {
                 console.error('Failed to copy text: ', err);
             });
     };
-    const handleRowClick = (issue) => {
-        // e.stopPropagation()
+    const handleRowClick = (e, issue) => {
+        if (e.target.closest('[data-no-row-click]')) return;
         setSearchParams((prev) => {
             const newParams = new URLSearchParams(prev);
             newParams.set("issueId", issue._id);
@@ -217,11 +217,11 @@ const IssueRow = ({ issue }) => {
     };
     return (
         <TableRow
-            className="group hover:bg-gray-50 transition-colors cursor-pointer"
-            onClick={() => handleRowClick(issue)}
+            className="group hover:bg-gray-50 whitespace-nowrap transition-colors cursor-pointer"
+            onClick={(e) => handleRowClick(e, issue)}
         >
-            <TableCell className="text-center py-3 w-[15%]">
-                <div className="flex items-center justify-center text-neutral-500 ">
+            <TableCell className="w-[140px] min-w-[140px] max-w-[140px] whitespace-nowrap">
+                <div className="flex items-center justify-start text-neutral-500 ">
                     <div className={`w-6 h-6 rounded-md flex items-center justify-center ${matchWorkType.color}`}>
                         <img
                             src={matchWorkType.icon}
@@ -235,8 +235,8 @@ const IssueRow = ({ issue }) => {
                 </div>
             </TableCell>
 
-            <TableCell className="p-3 w-[50%]">
-                <div className="flex items-center text-sm font-semibold text-neutral-500">
+            <TableCell className="w-[400px]">
+                <div className="flex items-center text-sm font-semibold text-neutral-500" data-no-row-click>
                     {isEditingSummary ? (
                         <Input
                             value={summaryValue}
@@ -245,27 +245,33 @@ const IssueRow = ({ issue }) => {
                             onBlur={handleSummaryBlur}
                             onClick={(e) => e.stopPropagation()}
                             autoFocus
-                            className="text-sm font-semibold border border-neutral-300 h-8 focus:none ring-none"
+                            className="h-8"
                         />
                     ) : (
                         <>
-                            <span className="truncate hover:underline">{issue?.summary}</span>
-                            {/* Edit Button - Visible on Row Hover */}
+                            <span
+                                className="truncate max-w-[360px]"
+                                title={issue?.summary}
+                            >
+                                {issue?.summary}
+                            </span>
                             <Button
                                 size="icon"
                                 variant="ghost"
-                                className="ml-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200"
+                                className="ml-2 w-6 h-6 opacity-0 group-hover:opacity-100"
                                 onClick={handleSummaryClick}
-                                title="Edit Summary"
                             >
-                                <Pencil className="w-3 h-3 text-neutral-500" />
+                                <Pencil className="w-3 h-3" />
                             </Button>
                         </>
                     )}
                 </div>
             </TableCell>
-            <TableCell className="text-center p-3 w-[10%]">
-                <div className="flex items-center justify-center">
+
+
+            <TableCell className="w-[160px] whitespace-nowrap">
+
+                <div className="flex items-center justify-start" data-no-row-click>
                     <WorkSelector
                         initialValue={issue?.task_status}
                         workTypes={taskTypes}
@@ -273,8 +279,10 @@ const IssueRow = ({ issue }) => {
                     />
                 </div>
             </TableCell>
-            <TableCell className="text-center p-3 w-[15%]">
-                <div className="flex items-center justify-center">
+
+            <TableCell className="w-[160px] whitespace-nowrap">
+
+                <div className="flex items-center justify-start" data-no-row-click>
                     <WorkSelector
                         initialValue={issue?.importance}
                         workTypes={importanceType}
@@ -282,8 +290,10 @@ const IssueRow = ({ issue }) => {
                     />
                 </div>
             </TableCell>
-            <TableCell className="text-center p-3 w-[5%]">
-                <div className="flex items-center justify-center">
+
+            <TableCell className="w-[80px] text-center whitespace-nowrap">
+
+                <div className="flex items-center justify-center" data-no-row-click>
                     {/* Assignee Dropdown with Avatar Trigger */}
                     <DropdownMenu open={openAssignee} onOpenChange={setOpenAssignee}>
                         <DropdownMenuTrigger asChild>
@@ -329,7 +339,10 @@ const IssueRow = ({ issue }) => {
                 </div>
             </TableCell>
             <TableCell className="text-center p-3 w-[5%]">
+                <div data-no-row-click>
+
                 <CommonDropdownMenu items={workItemMenuItems} />
+                </div>
             </TableCell>
         </TableRow>
     );

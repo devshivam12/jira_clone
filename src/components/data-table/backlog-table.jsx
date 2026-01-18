@@ -35,15 +35,17 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint }) => {
                     transition={{ duration: 0.3, ease: "easeOut" }}
                 >
                     {issue && issue?.length > 0 ? (
-                        <Table>
-                            <TableBody>
-                                {issue?.map((task) => (
-                                    <TableRow key={task?._id}>
-                                        <IssueRow issue={task} />
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                        <div className="w-full overflow-x-auto">
+                            <Table className="min-w-[1100px] table-fixed">
+                                <TableBody>
+                                    {issue?.map((task) => (
+                                        <TableRow key={task?._id}>
+                                            <IssueRow issue={task} />
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     ) : (
                         <div className="space-y-2 my-4 flex items-center justify-center flex-col">
                             <ClipboardX size={60} className="text-neutral-400 " />

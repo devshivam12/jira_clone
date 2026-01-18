@@ -356,7 +356,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                 </div>
 
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Assignee
                                     </Label>
@@ -368,14 +368,14 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                     />
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Labels
                                     </Label>
                                     <LabelSelector onChange={setLabel} />
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Team
                                     </Label>
@@ -386,7 +386,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                     />
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Parent
                                     </Label>
@@ -398,7 +398,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                     />
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Sprint
                                     </Label>
@@ -434,7 +434,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                     </div>
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Reporter
                                     </Label>

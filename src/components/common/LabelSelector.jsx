@@ -75,14 +75,19 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
     }, [availableLabels, selectedLabels]);
 
     const handleSelect = useCallback((name) => {
-        if (!selectedLabels.includes(name)) {
-            setSelectedLabels((prev) => [...prev, name]);
-        }
-        onChange?.(selectedLabels)
+        setSelectedLabels((prev) => {
+            if (prev.includes(name)) return prev;
+
+            const updated = [...prev, name];
+            onChange?.(updated);
+            return updated;
+        });
+
         setInputValue("");
         setIsOpen(false);
         setTimeout(() => inputRef.current?.focus(), 0);
-    }, [selectedLabels, onChange]);
+    }, [onChange]);
+
 
     const handleRemove = useCallback((name) => {
         setSelectedLabels((prev) => prev.filter((l) => l !== name));
@@ -123,12 +128,12 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
     }, [isFetching, hasMore]);
 
     useEffect(() => {
-        if(value){
+        if (value) {
             setSelectedLabels(value)
         } else {
             setSelectedLabels([])
         }
-    },[value])
+    }, [value])
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -161,7 +166,7 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
             isSelected && "bg-neutral-200/40 before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-neutral-400 before:rounded-full border font-semibold"
         ].filter(Boolean).join(" ");
     };
-    
+
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
@@ -219,7 +224,7 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
             </PopoverTrigger>
 
             <PopoverContent
-            className="p-0"
+                className="p-0"
                 style={{
                     width: triggerWidth.current ? `${triggerWidth.current.offsetWidth}px` : '300px'
                 }}
