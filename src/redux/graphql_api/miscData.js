@@ -140,7 +140,7 @@ export const miscDataApi = createApi({
             })
         }),
         getSprintDropdown: builder.query({
-            query: ({ search = "", limit = 10, page}) => ({
+            query: ({ search = "", limit = 10, page }) => ({
                 method: 'POST',
                 body: {
                     operationName: 'getSprintDropdown',
@@ -157,7 +157,7 @@ export const miscDataApi = createApi({
                         }
                     }
                 `,
-                    variables: { search, page, limit}
+                    variables: { search, page, limit }
                 }
             })
         }),
@@ -182,6 +182,12 @@ export const miscDataApi = createApi({
                     variables: { search, page, limit }
                 }
             })
+        }),
+        addFlag: builder.mutation({
+            query: (payload) => ({
+                method: 'POST',
+                body: payload
+            }),
         })
     })
 })
@@ -192,5 +198,6 @@ export const {
     useGetTeamDropdownQuery,
     useGetMemberDropdownQuery,
     useGetSprintDropdownQuery,
-    useGetParentDropdownQuery
+    useGetParentDropdownQuery,
+    useAddFlagMutation
 } = miscDataApi

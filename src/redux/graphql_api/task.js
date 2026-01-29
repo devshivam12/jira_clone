@@ -112,56 +112,10 @@ export const taskApi = createApi({
 
         addVotes: builder.mutation({
             query: (payload) => ({
-              method: "POST",
-              body: payload
-            }),
-            async onQueryStarted(payload, { dispatch, queryFulfilled, getState }) {
-              const { taskId, isRemove } = payload.variables;
-                            
-              const state = getState();
-              const cacheEntries = state.taskApi.queries;
-              
-              // Find the cache entry for getTaskById
-              const matchingEntry = Object.entries(cacheEntries).find(([cacheKey]) => {
-                return cacheKey.includes('getTaskById') && cacheKey.includes(String(taskId));
-              });
-              
-              if (!matchingEntry) {
-                console.error("❌ No cache found for taskId:", taskId);
-                return;
-              }
-              
-              const [, cacheValue] = matchingEntry;
-              const currentTask = cacheValue?.data?.data?.getTaskDetail?.data;
-              const currentVoteCount = currentTask?.vote || 0;
-              
-              // Optimistically update the vote count
-              const patchResult = dispatch(
-                taskApi.util.updateQueryData(
-                  'getTaskById',
-                  cacheValue.originalArgs,
-                  (draft) => {
-                    const task = draft?.data?.getTaskDetail?.data;
-                    if (task) {
-                      if (isRemove === 'false' || !isRemove) {
-                        task.vote = (task.vote || 0) + 1; 
-                      } else if (isRemove === 'true' || isRemove) {
-                        task.vote = Math.max((task.vote || 0) - 1, 0); 
-                        
-                      }
-                    }
-                  }
-                )
-              );
-              
-              try {
-                await queryFulfilled;
-              } catch (err) {
-                console.error("❌ Mutation failed, rolling back", err);
-                patchResult.undo();
-              }
-            }
-          })
+                method: "POST",
+                body: payload
+            })
+        })
     })
 })
 

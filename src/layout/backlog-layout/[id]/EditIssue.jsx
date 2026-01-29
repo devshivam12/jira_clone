@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/compon
 import DynamicDropdownSelector from '@/components/common/DynamicDropdownSelector'
 import WorkSelector from '@/components/common/WorkSelector'
 import { useProjectData } from '@/hooks/useProjectData'
-import { useAddVotesMutation, useGetTaskByIdQuery, useGetTaskVotesMutation, useUpdateIssueMutation } from '@/redux/graphql_api/task'
+import { taskApi, useAddVotesMutation, useGetTaskByIdQuery, useGetTaskVotesMutation, useUpdateIssueMutation } from '@/redux/graphql_api/task'
 import CommonDropdownMenu from '@/components/common/CommonDropdownMenu'
 import LabelSelector from '@/components/common/LabelSelector'
 import { CKEditor } from '@ckeditor/ckeditor5-react';
@@ -25,9 +25,10 @@ import { Controller, useForm } from 'react-hook-form'
 import TooltipWrapper from '@/components/common/TooltipWrapper'
 import ManageAvatar from '@/components/common/ManageAvatar'
 import ShowToast from '@/components/common/ShowToast'
+import { useDispatch } from 'react-redux'
 
 const EditIssue = ({ issue }) => {
-    const { control, handleSubmit, setValue, watch, reset } = useForm({
+    const { control, handleSubmit, setValue, watch, reset, getValues } = useForm({
         defaultValues: {
             taskNumber: 0,
             task_status: "",
@@ -44,7 +45,7 @@ const EditIssue = ({ issue }) => {
             work_type: ""
         }
     })
-    const [vote, setVote] = useState(0)
+    const [vote, setVote] = useState({})
     const [taskDetail, setTaskDetail] = useState({})
     const [voteDetail, setVoteDetail] = useState([])
     const [isScrolled, setIsScrolled] = useState(false)
@@ -87,13 +88,17 @@ const EditIssue = ({ issue }) => {
                 work_type: task?.work_type
             })
 
-            setVote(task?.vote)
+            setVote({
+                count: task?.vote?.count,
+                hasVoted: task?.vote?.hasVoted
+            })
         }
     }, [task, reset])
-
+    const dispatch = useDispatch()
     const [updateTask, { isLoading: taskSubmit }] = useUpdateIssueMutation()
     const [getVotes, { isLoading: voteLoading }] = useGetTaskVotesMutation()
     const [addVotes, { isLoading: addVoteLoading }] = useAddVotesMutation()
+    const summaryRef = useRef(null)
 
     const [openParent, setOpenParent] = useState(false)
     const [expandDetails, setExpandDetails] = useState(true)
@@ -101,15 +106,206 @@ const EditIssue = ({ issue }) => {
     const commandRef = useRef(null)
     const [isEditing, setIsEditing] = useState(false)
 
+
+    const taskTypes = useMemo(() => workFlow.map((status, index) => ({
+        id: index + 1,
+        name: status.name,
+        value: status.slug,
+        color: status.color
+    })), [workFlow]);
+
+    const importanceTypes = useMemo(() => importance?.map((imp, index) => ({
+        id: index + 1,
+        name: imp.name,
+        value: imp.slug,
+        color: imp.color
+    })), [importance])
+
+
+    const handleUpdateTask = useCallback(async (key, value) => {
+        try {
+            const payload = {
+                operationName: "updateTask",
+                variables: {
+                    taskId: taskId,
+                    key: key,
+                    value: value,
+                    changeBy: userData.member_id,
+                    projectId: currentProject?._id
+                }
+            }
+            console.log("payload", payload)
+            const response = await updateTask(payload).unwrap()
+            console.log("response", response)
+        } catch (error) {
+            console.log("error", error)
+            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
+        }
+    })
+
+    useEffect(() => {
+        summaryRef.current = getValues("summary")
+    }, [])
+
+    const changeTaskStatus = (status) => {
+        handleUpdateTask('task_status', status)
+    }
+
+    const changeImportance = (imp) => {
+        handleUpdateTask('importance', imp)
+    }
+    const changleAssignee = (ass) => {
+        console.log("assassassass", ass)
+        handleUpdateTask('assigneeId', ass)
+    }
+    const changeLables = (label) => {
+        handleUpdateTask('labels', label)
+    }
+    const changeTeam = (team) => {
+        handleUpdateTask('teamId', team)
+    }
+    const changeReporter = (report) => {
+        handleUpdateTask('reporterId', report)
+    }
+
+    const data_f_vote = (v) => {
+        const fullName = v?.first_name + " " + v?.last_name
+        return (
+            <div className='flex items-center gap-x-2'>
+                <ManageAvatar
+                    firstName={v?.fist_name}
+                    lastName={v?.last_name}
+                    image={v?.image}
+                    size='sm'
+                />
+                <span>{fullName}</span>
+            </div>
+        )
+    }
+
+    const fetchVotes = async () => {
+        try {
+            const payload = {
+                operationName: "getVote",
+                variables: {
+                    taskId: taskId
+                }
+            }
+            const result = await getVotes(payload).unwrap()
+            const votes = result?.data?.getVote?.data
+            if (votes.length > 0) {
+                const formattedVotes = votes.map(v => ({
+                    id: v?._id,
+                    label: data_f_vote(v)
+                }));
+
+                const match = userData?.memberId
+                console.log("match", match)
+                const mResult = vote?.hasVoted ? true : false
+
+                const menuItems = [
+                    {
+                        id: vote.hasVoted ? 'remove-vote' : 'add-vote',
+                        label: vote.hasVoted ? 'Remove vote' : 'Add vote',
+                        danger: vote.hasVoted,
+                        onSelect: () => handleToggleVote()
+                    },
+                    { type: 'separator' },
+                    ...formattedVotes
+                ];
+                console.log("menuItems", menuItems)
+                setVoteDetail(menuItems);
+            }
+        } catch (error) {
+            console.log("error", error)
+            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
+        }
+    }
+
+    const handleToggleVote = useCallback(async () => {
+        const isRemoving = vote.hasVoted
+        try {
+            const payload = {
+                operationName: "addVote",
+                variables: {
+                    taskId: taskId,
+                    memberId: userData?.memberId,
+                    isRemove: isRemoving
+                }
+            }
+
+            const result = await addVotes(payload).unwrap()
+
+            if (result?.data?.addVote?.status === true) {
+                console.log("cxxcxc", typeof taskId)
+                dispatch(
+                    taskApi.util.updateQueryData(
+                        'getTaskById',
+                        { operationName: "getTaskDetail", variables: { taskId: taskId } },
+                        (draft) => {
+                            // console.log("Draft as JSON:", JSON.parse(JSON.stringify(draft)))
+                            if (draft?.data?.getTaskDetail?.data?.vote) {
+                                console.log("console.log(draft.data.getTaskDetail.data.vote)", console.log(draft.data.getTaskDetail.data.vote))
+                                draft.data.getTaskDetail.data.vote.count =
+                                    isRemoving ? Math.max(0, draft.data.getTaskDetail.data.vote.count - 1)
+                                        : draft.data.getTaskDetail.data.vote.count + 1
+                                draft.data.getTaskDetail.data.vote.hasVoted = !isRemoving
+                            }
+                        }
+                    )
+                )
+
+                // ShowToast.success(isRemoving ? 'Vote removed successfully' : 'Vote added successfully')
+            }
+        } catch (error) {
+            console.error("Error toggling vote:", error)
+            ShowToast.error(`Failed to ${isRemoving ? 'remove' : 'add'} vote: ${error?.message || 'Unknown error'}`)
+        }
+    }, [vote.hasVoted, taskId, userData?.memberId, addVotes, fetchVotes])
+
+    // const handleAdd_RemoveVote = async (flag) => {
+    //     try {
+    //         const payload = {
+    //             operationName: "addVote",
+    //             variables: {
+    //                 taskId: taskId,
+    //                 memberId: userData?.memberId,
+    //                 isRemove: flag
+    //             }
+    //         }
+
+    //         const result = await addVotes(payload).unwrap()
+    //         if(result?.data?.addVote?.status === true){
+    //             setVote((prev) => ({
+    //                 count: flag ? prev.count - 1 : prev.count + 1,
+    //                 hasVoted: !flag 
+    //             }));
+    //             fetchVotes()
+    //         }
+
+    //     } catch (error) {
+    //         console.log("error", error)
+    //         ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
+    //     }
+    // }
+
+    const handleVoteOpen = useCallback((open) => {
+        if (open && voteDetail.length === 0) {
+            fetchVotes()
+        }
+    }, [voteDetail.length, fetchVotes])
+
+
     const workItemMenuItems = [
         {
             id: 'add-flag',
             label: 'Add flag',
         },
         {
-            id: 'add-vote',
-            label: 'Add vote',
-            onSelect: () => handleAdd_RemoveVote(false)
+            id: vote.hasVoted ? 'remove-vote' : 'add-vote',
+            label: vote.hasVoted ? 'Remove vote' : 'Add vote',
+            danger: vote.hasVoted,
+            onSelect: handleToggleVote
         },
         { type: 'separator' },
         {
@@ -162,192 +358,6 @@ const EditIssue = ({ issue }) => {
             label: 'Add weblink',
         },
     ];
-
-    const taskTypes = useMemo(() => workFlow.map((status, index) => ({
-        id: index + 1,
-        name: status.name,
-        value: status.slug,
-        color: status.color
-    })), [workFlow]);
-
-    const importanceTypes = useMemo(() => importance?.map((imp, index) => ({
-        id: index + 1,
-        name: imp.name,
-        value: imp.slug,
-        color: imp.color
-    })), [importance])
-
-    const fetchTaskById = async () => {
-        try {
-            const payload = {
-                operationName: "getTaskDetail",
-                variables: {
-                    task_id: taskId
-                }
-            }
-            const result = await getTask(payload).unwrap()
-            const task = result?.data?.getTaskDetail?.data
-            if (task) {
-                reset({
-                    taskNumber: task.taskNumber,
-                    summary: task?.summary,
-                    description: task?.description,
-                    task_status: task?.task_status,
-                    work_type: task?.work_type,
-                    importance: task?.importance,
-                    project_key: task?.project_key,
-                    labels: task?.labels,
-                    assigneeDetail: task?.assigneeDetail,
-                    reporterDetail: task?.reporterDetail,
-                    creatorDetail: task?.creatorDetail,
-                    importance: task?.importance,
-                    teamDetail: task?.teamDetail,
-                    sprintDetail: task?.sprintDetail
-                })
-
-                setTaskDetail({
-                    projectKey: task?.project_key,
-                    taskNumber: task?.taskNumber,
-                    work_type: task?.work_type
-                })
-
-                setVote(task?.vote)
-
-            }
-        } catch (error) {
-            console.log("error", error)
-            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-        }
-    }
-
-    const handleUpdateTask = useCallback(async (key, value) => {
-        try {
-            const payload = {
-                operationName: "updateTask",
-                variables: {
-                    taskId: taskId,
-                    key: key,
-                    value: value,
-                    changeBy: userData.member_id,
-                    projectId : currentProject?._id
-                }
-            }
-            console.log("payload", payload)
-            const response = await updateTask(payload).unwrap()
-            console.log("response", response)
-        } catch (error) {
-            console.log("error", error)
-            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-        }
-    })
-
-    const changeTaskStatus = (status) => {
-        handleUpdateTask('task_status', status)
-    }
-
-    const changeImportance = (imp) => {
-        handleUpdateTask('importance', imp)
-    }
-    const changleAssignee = (ass) => {
-        handleUpdateTask('assigneeId', ass)
-    }
-    const changeLables = (label) => {
-        handleUpdateTask('labels', label)
-    }
-    const changeTeam = (team) => {
-        handleUpdateTask('teamId', team)
-    }
-    const changeReporter = (report) => {
-        handleUpdateTask('reporterId', report)
-    }
-
-    const data_f_vote = (v) => {
-        const fullName = v?.first_name + " " + v?.last_name
-        return (
-            <div className='flex items-center gap-x-2'>
-                <ManageAvatar
-                    firstName={v?.fist_name}
-                    lastName={v?.last_name}
-                    image={v?.image}
-                    size='sm'
-                />
-                <span>{fullName}</span>
-            </div>
-        )
-    }
-
-    const fetchVotes = async () => {
-        try {
-            const payload = {
-                operationName: "getVote",
-                variables: {
-                    taskId: taskId
-                }
-            }
-            const result = await getVotes(payload).unwrap()
-            const votes = result?.data?.getVote?.data
-            if (votes.length > 0) {
-                const formateVotes = votes.map(v => ({
-                    id: v?._id,
-                    label: data_f_vote(v)
-                }));
-
-                const match = userData?.memberId
-                console.log("match", match)
-                const mResult = votes.some(m => m.memberId === match)
-                console.log("mResult", mResult)
-                
-                const menuItems = [
-                    ...(mResult
-                        ? [{
-                            id: 'remove-vote',
-                            label: 'Remove vote',
-                            danger: true,
-                            onSelect: () => handleAdd_RemoveVote(true)
-                        }]
-                        : [{
-                            id: 'add-vote',
-                            label: 'Add vote',
-                            onSelect: () => handleAdd_RemoveVote(false)
-                        }]
-                    ),
-                    { type: 'separator' },
-                    ...formateVotes
-                ];
-                console.log("menuItems", menuItems)
-                setVoteDetail(menuItems);
-            }
-        } catch (error) {
-            console.log("error", error)
-            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-        }
-    }
-
-    const handleAdd_RemoveVote = async (flag) => {
-        try {
-            const payload = {
-                operationName: "addVote",
-                variables: {
-                    taskId: taskId,
-                    memberId: userData?.memberId,
-                    isRemove: flag
-                }
-            }
-
-            const result = await addVotes(payload).unwrap()
-
-
-        } catch (error) {
-            console.log("error", error)
-            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-        }
-    }
-
-    const handleVoteOpen = (open) => {
-        if (open && voteDetail.length === 0) {
-            fetchVotes()
-        }
-    }
 
     const renderIcon = (item) => {
         console.log("item-------", item)
@@ -441,30 +451,40 @@ const EditIssue = ({ issue }) => {
                                     </DropdownMenu>
                                 </div>
                                 <div className='flex items-center'>
-                                    <div className="w-10 flex justify-center">
-                                        {
-                                            vote > 0 ? (
-                                                <div className='mr-8'>
-                                                    <CommonDropdownMenu
-                                                        triggerIcon={
-                                                            <Button size="sm" variant="teritary" type="button" className="w-[64px] justify-center">
-                                                                <ThumbsUp size={18} />
-                                                                <span className="text-blue-600 text-sm">{vote}</span>
-                                                            </Button>
-                                                        }
-                                                        items={voteDetail}
-                                                        isLoading={voteLoading}
-                                                        onOpenChange={handleVoteOpen}
-                                                        triggerTooltip=""
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="w-10 flex justify-center">
-                                                    <Button variant='default' size='icon' type='button'>
-                                                        <ThumbsUp size={20} />
+                                <div className="w-14 flex justify-center overflow-hidden rounded-md" >
+                                        {vote.count > 0 && (
+                                            <CommonDropdownMenu
+                                                triggerIcon={
+                                                    <Button
+                                                        size="sm"
+                                                        variant="teritary"
+                                                        type="button"
+                                                        disabled={addVoteLoading}
+                                                    >
+                                                        <ThumbsUp size={18} className={vote.hasVoted ? 'fill-blue-600 text-blue-600' : ''} />
+                                                        <span className={vote.hasVoted ? 'text-blue-600' : ''}>
+                                                            {vote.count}
+                                                        </span>
                                                     </Button>
-                                                </div>
-                                            )
+                                                }
+                                                items={voteDetail}
+                                                isLoading={voteLoading}
+                                                onOpenChange={handleVoteOpen}
+                                            />
+                                        )
+                                            // : (
+                                            //     <TooltipWrapper content={vote.hasVoted ? "Remove vote" : "Add vote"}>
+                                            //         <Button
+                                            //             variant='default'
+                                            //             size='icon'
+                                            //             type='button'
+                                            //             onClick={handleToggleVote}
+                                            //             disabled={addVoteLoading}
+                                            //         >
+                                            //             <ThumbsUp size={20} className={vote.hasVoted ? 'fill-current' : ''} />
+                                            //         </Button>
+                                            //     </TooltipWrapper>
+                                            // )
                                         }
                                     </div>
 
@@ -524,9 +544,15 @@ const EditIssue = ({ issue }) => {
                                         placeholder="Your summary"
                                         // className="text-2xl font-semibold text-neutral-500 border-none h-auto py-2 focus:ring-0"
                                         className="text-2xl font-semibold text-neutral-500 border-none h-auto py-3 px-2 shadow-none focus-visible:ring-1 hover:bg-neutral-200/40 transition-all"
+                                        onFocus={() => {
+                                            summaryRef.current = field.value; // store old value
+                                        }}
                                         onBlur={(e) => {
                                             field.onBlur()
-                                            handleUpdateTask('summary', e.target.value)
+                                            const newValue = e.target.value
+                                            if (newValue !== summaryRef.current) {
+                                                handleUpdateTask('summary', e.target.value)
+                                            }
                                         }}
                                     />
                                 )}

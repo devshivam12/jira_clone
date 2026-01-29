@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { TableRow, TableCell } from "@/components/ui/table";
-import { ChevronRight, MoreHorizontal, Pencil } from 'lucide-react';
+import { ChevronRight, Flag, MoreHorizontal, Pencil } from 'lucide-react';
 import WorkSelector from '../common/WorkSelector';
 import { useProjectData } from '@/hooks/useProjectData';
 import TooltipWrapper from '../common/TooltipWrapper';
@@ -15,6 +15,7 @@ import { useUpdateIssueMutation } from '@/redux/graphql_api/task';
 import { Input } from '../ui/input';
 import { useUserData } from '@/hooks/useUserData';
 import { useSearchParams } from 'react-router-dom';
+import AddFlag from '../common/AddFlag';
 
 const IssueRow = ({ issue }) => {
     const [updateTask, { isLoading }] = useUpdateIssueMutation()
@@ -26,8 +27,17 @@ const IssueRow = ({ issue }) => {
     const [summaryValue, setSummaryValue] = useState(issue?.summary || '')
     const [isEditingSummary, setIsEditingSummary] = useState(false)
     const [searchParams, setSearchParams] = useSearchParams()
+    const [isAddFlagOpen, setIsFlagOpen] = useState(false)
+    const [isFlagged, setIsFlagged] = useState(false)
+    const [taskInfo, setTaskInfo] = useState({
+        _id: issue?._id,
+        workType: issue?.work_type,
+        project_key: issue?.project_key,
+        taskNumber: issue?.taskNumber,
+        summary: issue?.summary
+    })
 
-    console.log("currentAssignee", currentAssignee)
+    // console.log("currentAssignee", currentAssignee)
     const matchWorkType = workType.find(type => type.slug === issue?.work_type)
 
     const importanceType = useMemo(() => importance.map((imp, index) => ({
@@ -54,7 +64,10 @@ const IssueRow = ({ issue }) => {
                 {
                     id: 'backlog',
                     label: 'Move to Backlog',
-                    onSelect: () => console.log('Move to backlog')
+                    onSelect: (e) => {
+                        e?.stopPropagation?.();
+                        console.log('Move to backlog')
+                    }
                 },
                 {
                     id: 'sprint',
@@ -84,7 +97,11 @@ const IssueRow = ({ issue }) => {
         {
             id: 'add-flag',
             label: 'Add flag',
-            onSelect: () => console.log('Add flag')
+            onSelect: (e) => {
+                e?.stopPropagation?.();
+                setIsFlagOpen(true)
+                setIsFlagged(true)
+            }
         },
         {
             id: 'parent',
@@ -217,9 +234,15 @@ const IssueRow = ({ issue }) => {
     };
     return (
         <TableRow
-            className="group hover:bg-gray-50 whitespace-nowrap transition-colors cursor-pointer"
+            className={`group whitespace-nowrap cursor-pointer transition-all
+          ${issue?.isFlagged
+                    ? 'bg-red-50/60 hover:bg-red-100 shadow-[inset_1px_0_30px_5px_rgba(239,68,68,0.25)]'
+                    : 'hover:bg-gray-50'
+                }
+        `}
             onClick={(e) => handleRowClick(e, issue)}
         >
+
             <TableCell className="w-[140px] min-w-[140px] max-w-[140px] whitespace-nowrap">
                 <div className="flex items-center justify-start text-neutral-500 ">
                     <div className={`w-6 h-6 rounded-md flex items-center justify-center ${matchWorkType.color}`}>
@@ -291,6 +314,24 @@ const IssueRow = ({ issue }) => {
                 </div>
             </TableCell>
 
+            <TableCell className="w-[60px] min-w-[60px] max-w-[60px] text-center whitespace-nowrap">
+                <div
+                    data-no-row-click
+                    className="flex justify-center items-center"
+                >
+                    {issue?.isFlagged && (
+                        <div>
+                            <Flag
+                                className="text-red-500"
+                                size={14}
+                                fill="currentColor"
+                            />
+                        </div>
+                    )}
+                </div>
+            </TableCell>
+
+
             <TableCell className="w-[80px] text-center whitespace-nowrap">
 
                 <div className="flex items-center justify-center" data-no-row-click>
@@ -338,10 +379,14 @@ const IssueRow = ({ issue }) => {
                     </DropdownMenu>
                 </div>
             </TableCell>
-            <TableCell className="text-center p-3 w-[5%]">
-                <div data-no-row-click>
 
-                <CommonDropdownMenu items={workItemMenuItems} />
+
+
+            <TableCell className="text-center p-3 w-[5%]">
+                <div data-no-row-click onClick={(e) => e.stopPropagation()}>
+
+                    <CommonDropdownMenu items={workItemMenuItems} />
+                    <AddFlag isOpen={isAddFlagOpen} setIsOpen={setIsFlagOpen} taskInfo={taskInfo} isFlagged={isFlagged} />
                 </div>
             </TableCell>
         </TableRow>

@@ -254,7 +254,8 @@ const DynamicDropdownSelector = ({
     if (showDropdown) {
       onChange?.(item);
     } else {
-      onChange?.(selectType === SELECT_TYPES.MEMBER ? itemId : item);
+      // onChange?.(selectType === SELECT_TYPES.MEMBER ? itemId : item);
+      onChange?.(item);
       setIsOpen(false)
     }
     setSearchValue("");
