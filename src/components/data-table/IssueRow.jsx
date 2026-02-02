@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TableRow, TableCell } from "@/components/ui/table";
 import { ChevronRight, Flag, MoreHorizontal, Pencil } from 'lucide-react';
 import WorkSelector from '../common/WorkSelector';
@@ -13,22 +13,21 @@ import { DottedSeparator } from '../dotted-separator';
 import ShowToast from '../common/ShowToast';
 import { useUpdateIssueMutation } from '@/redux/graphql_api/task';
 import { Input } from '../ui/input';
-import { useUserData } from '@/hooks/useUserData';
+
 import { useSearchParams } from 'react-router-dom';
 import AddFlag from '../common/AddFlag';
 
-const IssueRow = ({ issue }) => {
-    const [updateTask, { isLoading }] = useUpdateIssueMutation()
+const IssueRow = ({ issue, projectData, onUpdateTask, rowClick }) => {
     const [taskId, setTaskId] = useState(issue?._id || null)
-    const { currentProject, workType, importance, workFlow } = useProjectData()
-    const { userData } = useUserData()
+    const { currentProject, workType, importance, workFlow } = projectData
     const [openAssignee, setOpenAssignee] = useState(false)
     const [currentAssignee, setCurrentAssignee] = useState(issue?.assigneeDetail || {})
     const [summaryValue, setSummaryValue] = useState(issue?.summary || '')
     const [isEditingSummary, setIsEditingSummary] = useState(false)
-    const [searchParams, setSearchParams] = useSearchParams()
+
     const [isAddFlagOpen, setIsFlagOpen] = useState(false)
     const [isFlagged, setIsFlagged] = useState(false)
+
     const [taskInfo, setTaskInfo] = useState({
         _id: issue?._id,
         workType: issue?.work_type,
@@ -37,7 +36,8 @@ const IssueRow = ({ issue }) => {
         summary: issue?.summary
     })
 
-    // console.log("currentAssignee", currentAssignee)
+    const addFlagRef = useRef(null)
+
     const matchWorkType = workType.find(type => type.slug === issue?.work_type)
 
     const importanceType = useMemo(() => importance.map((imp, index) => ({
@@ -95,12 +95,17 @@ const IssueRow = ({ issue }) => {
         },
         { type: 'separator' },
         {
-            id: 'add-flag',
-            label: 'Add flag',
+            id: `${issue?.isFlagged === true || issue?.isFlagged === 'true' ? 'remove-flag' : 'add-flag'}`,
+            label: `${issue?.isFlagged === true || issue?.isFlagged === 'true' ? 'Remove flag' : 'Add flag'}`,
             onSelect: (e) => {
                 e?.stopPropagation?.();
-                setIsFlagOpen(true)
-                setIsFlagged(true)
+                if (issue?.isFlagged === true || issue?.isFlagged === 'true') {
+                    addFlagRef.current?.handleAddFlag(false)
+                } else {
+                    // Open popup to add flag
+                    setIsFlagOpen(true)
+                    setIsFlagged(true)
+                }
             }
         },
         {
@@ -120,25 +125,6 @@ const IssueRow = ({ issue }) => {
         setSummaryValue(issue?.summary || '')
         setTaskId(issue?._id || null)
     }, [issue.summary, issue._id])
-    const handleUpdateTask = useCallback(async (key, value, id) => {
-        try {
-            const payload = {
-                operationName: "updateTask",
-                variables: {
-                    taskId: id,
-                    key: key,
-                    value: value,
-                    changeBy: userData?.member_id
-                }
-            }
-            const response = await updateTask(payload).unwrap()
-            console.log("response", response)
-            return response;
-        } catch (error) {
-            console.log("error", error)
-            throw error;
-        }
-    }, [updateTask, userData?.member_id]);
 
     const handleSummaryClick = (e) => {
         e.stopPropagation();
@@ -157,14 +143,14 @@ const IssueRow = ({ issue }) => {
         }
 
         try {
-            await handleUpdateTask('summary', trimmedSummary, taskId);
+            await onUpdateTask('summary', trimmedSummary, taskId);
         } catch (error) {
             setSummaryValue(issue.summary);
             ShowToast.error("Failed to update summary.");
         } finally {
             setIsEditingSummary(false);
         }
-    }, [summaryValue, issue.summary, taskId, handleUpdateTask]);
+    }, [summaryValue, issue.summary, taskId, onUpdateTask]);
     const handleSummaryKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault()
@@ -180,7 +166,7 @@ const IssueRow = ({ issue }) => {
         setOpenAssignee(false)
         const assignee = selectedMember?._id
         if (assignee !== issue?.assigneeDetail?._id) {
-            handleUpdateTask('assigneeId', assignee, taskId)
+            onUpdateTask('assigneeId', assignee, taskId)
         }
     }
     const handleSummaryBlur = (e) => {
@@ -188,15 +174,13 @@ const IssueRow = ({ issue }) => {
         saveSummaryAndClose()
     }
     const changeImportance = (imp) => {
-        handleUpdateTask("importance", imp, taskId)
+        onUpdateTask("importance", imp, taskId)
     }
     const changeTaskStatus = (status) => {
-        handleUpdateTask("task_status", status, taskId)
+        onUpdateTask("task_status", status, taskId)
     }
     const hasAssignee = Object.keys(currentAssignee).length > 0
-    // useMemo(() => {
-    //     issue?.assigneeDetail ? setManageAssingee(issue?.assigneeDetail) : setManageAssingee(selectedAssingee)
-    // },[selectedAssingee, issue?.assigneeDetail])
+
     const copyLinkKey = (isLink, isKey, issueId, projectKey, taskNumber, type) => {
 
         let textToCopy;
@@ -224,31 +208,26 @@ const IssueRow = ({ issue }) => {
                 console.error('Failed to copy text: ', err);
             });
     };
-    const handleRowClick = (e, issue) => {
-        if (e.target.closest('[data-no-row-click]')) return;
-        setSearchParams((prev) => {
-            const newParams = new URLSearchParams(prev);
-            newParams.set("issueId", issue._id);
-            return newParams;
-        });
-    };
+
     return (
         <TableRow
-            className={`group whitespace-nowrap cursor-pointer transition-all
-          ${issue?.isFlagged
-                    ? 'bg-red-50/60 hover:bg-red-100 shadow-[inset_1px_0_30px_5px_rgba(239,68,68,0.25)]'
-                    : 'hover:bg-gray-50'
-                }
-        `}
-            onClick={(e) => handleRowClick(e, issue)}
+            className={`group cursor-pointer transition-colors
+            ${issue?.isFlagged
+                    ? 'bg-red-50/60 shadow-[inset_0_0_0_1px_theme(colors.red.500)]'
+                    : 'hover:bg-gray-50'}
+          `}
+            onClick={(e) => rowClick(e, issue._id)}
         >
 
-            <TableCell className="w-[140px] min-w-[140px] max-w-[140px] whitespace-nowrap">
+            <TableCell className="w-[160px] min-w-[160px] max-w-[160px] p-2">
                 <div className="flex items-center justify-start text-neutral-500 ">
                     <div className={`w-6 h-6 rounded-md flex items-center justify-center ${matchWorkType.color}`}>
                         <img
                             src={matchWorkType.icon}
+                            loading="lazy"
+                            alt={matchWorkType.name}
                             className="w-4 h-4 filter brightness-0 invert"
+                            decoding="async"
                         />
                     </div>
                     <div className='underline hover:text-blue-600 text-base font-semibold'>
@@ -258,7 +237,7 @@ const IssueRow = ({ issue }) => {
                 </div>
             </TableCell>
 
-            <TableCell className="w-[400px]">
+            <TableCell className="w-auto p-2">
                 <div className="flex items-center text-sm font-semibold text-neutral-500" data-no-row-click>
                     {isEditingSummary ? (
                         <Input
@@ -273,7 +252,7 @@ const IssueRow = ({ issue }) => {
                     ) : (
                         <>
                             <span
-                                className="truncate max-w-[360px]"
+                                className="truncate max-w-full"
                                 title={issue?.summary}
                             >
                                 {issue?.summary}
@@ -292,7 +271,7 @@ const IssueRow = ({ issue }) => {
             </TableCell>
 
 
-            <TableCell className="w-[160px] whitespace-nowrap">
+            <TableCell className="w-[160px] min-w-[160px] max-w-[160px] p-2">
 
                 <div className="flex items-center justify-start" data-no-row-click>
                     <WorkSelector
@@ -303,7 +282,7 @@ const IssueRow = ({ issue }) => {
                 </div>
             </TableCell>
 
-            <TableCell className="w-[160px] whitespace-nowrap">
+            <TableCell className="w-[160px] min-w-[160px] max-w-[160px] p-2">
 
                 <div className="flex items-center justify-start" data-no-row-click>
                     <WorkSelector
@@ -314,7 +293,7 @@ const IssueRow = ({ issue }) => {
                 </div>
             </TableCell>
 
-            <TableCell className="w-[60px] min-w-[60px] max-w-[60px] text-center whitespace-nowrap">
+            <TableCell className="w-[60px] min-w-[60px] max-w-[60px] text-center p-2">
                 <div
                     data-no-row-click
                     className="flex justify-center items-center"
@@ -332,7 +311,7 @@ const IssueRow = ({ issue }) => {
             </TableCell>
 
 
-            <TableCell className="w-[80px] text-center whitespace-nowrap">
+            <TableCell className="w-[80px] min-w-[80px] max-w-[80px] text-center p-2">
 
                 <div className="flex items-center justify-center" data-no-row-click>
                     {/* Assignee Dropdown with Avatar Trigger */}
@@ -382,15 +361,15 @@ const IssueRow = ({ issue }) => {
 
 
 
-            <TableCell className="text-center p-3 w-[5%]">
+            <TableCell className="w-[56px] min-w-[56px] max-w-[56px] text-center p-2">
                 <div data-no-row-click onClick={(e) => e.stopPropagation()}>
 
                     <CommonDropdownMenu items={workItemMenuItems} />
-                    <AddFlag isOpen={isAddFlagOpen} setIsOpen={setIsFlagOpen} taskInfo={taskInfo} isFlagged={isFlagged} />
+                    <AddFlag ref={addFlagRef} isOpen={isAddFlagOpen} setIsOpen={setIsFlagOpen} taskInfo={taskInfo} isFlagged={isFlagged} />
                 </div>
             </TableCell>
         </TableRow>
     );
 };
 
-export default IssueRow;
+export default React.memo(IssueRow);

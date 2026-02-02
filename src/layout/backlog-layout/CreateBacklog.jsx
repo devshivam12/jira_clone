@@ -3,32 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SprintTable from '@/components/data-table/create-sprint-data-table';
 import BacklogTable from '@/components/data-table/backlog-table'
 import { useGetBacklogListQuery } from '@/redux/graphql_api/task';
-import { useProjectData } from '@/hooks/useProjectData';
+import { useDispatch } from 'react-redux';
+import { setTaskQuery } from '@/redux/reducers/taskSlice';
 
 
-const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedIssue }) => {
+const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedIssue, userData, projectData }) => {
 
-  const { currentProject } = useProjectData()
-  const [backlogData, setBacklogData] = useState([])
+  const { currentProject } = projectData
   const [expanded, setExpanded] = useState(true)
+  const dispatch = useDispatch()
   const { data: backlog, isFetching: taskFetching } = useGetBacklogListQuery({
     operationName: "getBacklogData",
     variables: {
       epic: false,
-      limit: 10,
+      limit: 100,
       page: 1,
       projectId: currentProject?._id,
     }
   })
   const issueList = backlog?.data?.getBacklogData?.data
 
-  // useEffect(() => {
-  //   if (issueList) {
-  //     setBacklogData(issueList)
-  //   }
-  // }, [issueList])
+  useEffect(() => {
+    if (!backlog?.data?.getBacklogData) return;
 
-
+    dispatch(
+      setTaskQuery({
+        page: backlog.data.getBacklogData.page,
+        limit: backlog.data.getBacklogData.limit,
+      })
+    );
+  }, [backlog, dispatch]);
 
   const handleOpen = useCallback(() => {
     setExpanded((value) => !value)
@@ -40,6 +44,8 @@ const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedI
         issue={issueList}
         expanded={expanded}
         onToggleExpand={handleOpen}
+        userData={userData}
+        projectData={projectData}
       />
 
       <SprintTable />

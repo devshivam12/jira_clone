@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { forwardRef, useImperativeHandle } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/Button'
 import RichTextEditor from '../ui/richTextEditor'
@@ -7,10 +7,12 @@ import ShowToast from './ShowToast'
 import { useAddFlagMutation } from '@/redux/graphql_api/miscData'
 import { useForm, Controller } from 'react-hook-form'
 import ButtonLoader from '../ui/buttonLoader'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { taskApi } from '@/redux/graphql_api/task'
 
-const AddFlag = ({ isOpen, setIsOpen, taskInfo, isFlagged }) => {
+const AddFlag = forwardRef(({ isOpen, setIsOpen, taskInfo, isFlagged }, ref) => {
+    const taskQuery = useSelector((state) => state.taskSlice.taskListQuery)
+    console.log("taskQuery", taskQuery)
     const [addFlag, { isLoading }] = useAddFlagMutation()
     const { workType } = useProjectData()
     const dispatch = useDispatch()
@@ -29,7 +31,7 @@ const AddFlag = ({ isOpen, setIsOpen, taskInfo, isFlagged }) => {
         }
     })
 
-    const handleAddFlag = async (data) => {
+    const handleAddFlag = async (data, isFlagged) => {
         try {
             const payload = {
                 operationName: "addFlag",
@@ -37,7 +39,7 @@ const AddFlag = ({ isOpen, setIsOpen, taskInfo, isFlagged }) => {
                     taskId: taskInfo?._id,
                     flagPayload: {
                         isFlagged: isFlagged,
-                        reason: data.reason
+                        ...(isFlagged === 'true' || isFlagged === true ? { reason: data.reason } : {})
                     }
                 }
             }
@@ -69,6 +71,10 @@ const AddFlag = ({ isOpen, setIsOpen, taskInfo, isFlagged }) => {
             console.log("error", error)
         }
     }
+
+    useImperativeHandle(ref, () => ({
+        handleAddFlag: (flagStatus) => handleAddFlag({}, flagStatus)
+    }))
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => {
@@ -102,7 +108,7 @@ const AddFlag = ({ isOpen, setIsOpen, taskInfo, isFlagged }) => {
                     </DialogTitle>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit(handleAddFlag)}>
+                <form onSubmit={handleSubmit((data) => handleAddFlag(data, isFlagged))}>
 
                     <div className="mt-2">
                         <Controller
@@ -157,6 +163,6 @@ const AddFlag = ({ isOpen, setIsOpen, taskInfo, isFlagged }) => {
             </DialogContent>
         </Dialog>
     )
-}
+})
 
 export default AddFlag

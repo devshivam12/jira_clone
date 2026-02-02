@@ -17,6 +17,8 @@ import BacklogLayoutSetting from '../BacklogLayoutSetting';
 import EditIssue from './[id]/EditIssue';
 import { useSelector } from 'react-redux';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useUserData } from '@/hooks/useUserData';
+import { useProjectData } from '@/hooks/useProjectData';
 
 const randomData = [
   { first_name: "Shivam" },
@@ -27,9 +29,15 @@ const randomData = [
 const Backlog = () => {
   const [searchParams] = useSearchParams()
   const issueId = searchParams.get('issueId')
-  
-  console.log("issueId", issueId)
-  
+  const { userData } = useUserData()
+  const { currentProject, workType, importance, workFlow } = useProjectData()
+  const defaultProject = {
+    currentProject: currentProject,
+    workType: workType,
+    importance: importance,
+    workFlow: workFlow
+  }
+
   const selectedIssue = issueId ? true : false
   const [isExpand, setIsExpand] = useState(false);
   const [showEpic, setShowEpic] = useState(false);
@@ -183,19 +191,20 @@ const Backlog = () => {
           </div>
 
 
-          <div className="flex-1 h-full min-h-0 overflow-y-auto mt-5">
+          <div className="flex-1 h-full mt-5">
             <div className="space-y-4">
-              {sprint.map((sprint) => (
+              {/* {sprint.map((sprint) => (
                 <div key={sprint.id} className="w-full">
                   <Sprint sprintName={sprint.name} onIssueClick={handleIssueClick} />
                 </div>
-              ))}
+              ))} */}
               <div className="w-full">
                 <CreateBacklog
                   onIssueClick={handleIssueClick}
                   createSprint={handleCreateSprint}
                   selectedIssue={selectedIssue}
-                  // setSelectedIssue={setSelectedIssue}
+                  userData={userData}
+                  projectData={defaultProject}
                 />
               </div>
             </div>

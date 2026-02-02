@@ -10,6 +10,7 @@ import { team } from "./api/company/team"
 import { sprintApi } from "./graphql_api/sprint"
 import { taskApi } from "./graphql_api/task"
 import { miscDataApi } from "./graphql_api/miscData"
+import tasksReducer from "./reducers/taskSlice"
 
 const projectPersistConfig = {
     key: 'project',
@@ -30,6 +31,7 @@ const store = configureStore({
         auth: userReducer,
         dynamicRouting: dynamicRoutingReducer,
         projectSlice: persistedProjectReducer,
+        taskSlice : tasksReducer,
         [apiAuth.reducerPath]: apiAuth.reducer,
         [api.reducerPath]: api.reducer,
         [team.reducerPath]: team.reducer,
