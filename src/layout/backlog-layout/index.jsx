@@ -198,7 +198,7 @@ const Backlog = () => {
                   <Sprint sprintName={sprint.name} onIssueClick={handleIssueClick} />
                 </div>
               ))} */}
-              <div className="w-full">
+              <div className="">
                 <CreateBacklog
                   onIssueClick={handleIssueClick}
                   createSprint={handleCreateSprint}

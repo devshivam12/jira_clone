@@ -39,7 +39,7 @@ const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedI
   }, [])
 
   return (
-    <Card className="w-full border-0 bg-none bg-card-none shadow-none border-bg-0 outline-none p-4 min-h-[100px] transition-all duration-300 rounded-none ">
+    <Card className="w-full border-0 bg-none bg-card-none shadow-none border-bg-0 outline-none p-4 transition-all duration-300 rounded-none ">
       <BacklogTable
         issue={issueList}
         expanded={expanded}

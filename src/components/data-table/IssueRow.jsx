@@ -1,20 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TableRow, TableCell } from "@/components/ui/table";
-import { ChevronRight, Flag, MoreHorizontal, Pencil } from 'lucide-react';
+import {  Flag, Pencil } from 'lucide-react';
 import WorkSelector from '../common/WorkSelector';
-import { useProjectData } from '@/hooks/useProjectData';
-import TooltipWrapper from '../common/TooltipWrapper';
 import ManageAvatar from '../common/ManageAvatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from '../ui/button';
 import CommonDropdownMenu from '../common/CommonDropdownMenu'
 import DynamicDropdownSelector from '../common/DynamicDropdownSelector';
-import { DottedSeparator } from '../dotted-separator';
 import ShowToast from '../common/ShowToast';
-import { useUpdateIssueMutation } from '@/redux/graphql_api/task';
 import { Input } from '../ui/input';
-
-import { useSearchParams } from 'react-router-dom';
 import AddFlag from '../common/AddFlag';
 
 const IssueRow = ({ issue, projectData, onUpdateTask, rowClick }) => {
@@ -28,13 +22,13 @@ const IssueRow = ({ issue, projectData, onUpdateTask, rowClick }) => {
     const [isAddFlagOpen, setIsFlagOpen] = useState(false)
     const [isFlagged, setIsFlagged] = useState(false)
 
-    const [taskInfo, setTaskInfo] = useState({
+    const taskInfo = useMemo(() => ({
         _id: issue?._id,
         workType: issue?.work_type,
         project_key: issue?.project_key,
         taskNumber: issue?.taskNumber,
         summary: issue?.summary
-    })
+    }), [issue?.summary, issue?.project_key, issue?.taskNumber, issue?.work_type, issue?._id])
 
     const addFlagRef = useRef(null)
 
@@ -54,8 +48,33 @@ const IssueRow = ({ issue, projectData, onUpdateTask, rowClick }) => {
         color: status.color
     })), [workFlow]);
 
+    const copyLinkKey = useCallback((isLink, isKey, issueId, projectKey, taskNumber, type) => {
+        let textToCopy;
+        const taskIdentifier = `${projectKey}-${taskNumber}`;
+        let message = ''
+        if (isLink) {
+            const baseUrl = window.location.origin;
+            textToCopy = `${baseUrl}/${taskIdentifier}/${issueId}`;
+            message = `You've copied the link to the ${type.charAt(0).toUpperCase() + type.slice(1)} ${projectKey}-${taskNumber} to your clipboard`
+        } else if (isKey) {
+            textToCopy = taskIdentifier;
+            message = 'Key successfully copied to your clipboard'
+        } else {
+            return;
+        }
 
-    const workItemMenuItems = [
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                ShowToast.info(message)
+                console.log(`${isLink ? 'Link' : 'Key'} copied: ${textToCopy}`);
+            })
+            .catch(err => {
+                ShowToast.warning(err)
+                console.error('Failed to copy text: ', err);
+            });
+    }, []);
+
+    const workItemMenuItems = useMemo(() => [
         {
             id: 'move-work-item',
             type: 'submenu',
@@ -102,7 +121,6 @@ const IssueRow = ({ issue, projectData, onUpdateTask, rowClick }) => {
                 if (issue?.isFlagged === true || issue?.isFlagged === 'true') {
                     addFlagRef.current?.handleAddFlag(false)
                 } else {
-                    // Open popup to add flag
                     setIsFlagOpen(true)
                     setIsFlagged(true)
                 }
@@ -119,20 +137,22 @@ const IssueRow = ({ issue, projectData, onUpdateTask, rowClick }) => {
             danger: true,
             onSelect: () => console.log('Delete')
         }
-    ];
+    ], [issue._id, issue.project_key, issue.taskNumber, issue.work_type, issue?.isFlagged, copyLinkKey]);
 
     useEffect(() => {
         setSummaryValue(issue?.summary || '')
         setTaskId(issue?._id || null)
     }, [issue.summary, issue._id])
 
-    const handleSummaryClick = (e) => {
+    const handleSummaryClick = useCallback((e) => {
         e.stopPropagation();
         setIsEditingSummary(true)
-    }
-    const handleSummaryChange = (e) => {
+    }, []);
+
+    const handleSummaryChange = useCallback((e) => {
         setSummaryValue(e.target.value)
-    }
+    }, []);
+
     const saveSummaryAndClose = useCallback(async () => {
         const trimmedSummary = summaryValue.trim();
 
@@ -151,63 +171,42 @@ const IssueRow = ({ issue, projectData, onUpdateTask, rowClick }) => {
             setIsEditingSummary(false);
         }
     }, [summaryValue, issue.summary, taskId, onUpdateTask]);
-    const handleSummaryKeyDown = (e) => {
+
+    const handleSummaryKeyDown = useCallback((e) => {
         if (e.key === 'Enter') {
             e.preventDefault()
             saveSummaryAndClose()
         }
-    }
-    const handleAvatarClick = (e) => {
+    },[saveSummaryAndClose])
+
+    const handleAvatarClick = useCallback((e) => {
         e.stopPropagation()
         setOpenAssignee((val) => !val)
-    }
-    const handleAssigneeChange = (selectedMember) => {
+    },[])
+
+    const handleAssigneeChange = useCallback((selectedMember) => {
         setCurrentAssignee(selectedMember)
         setOpenAssignee(false)
         const assignee = selectedMember?._id
         if (assignee !== issue?.assigneeDetail?._id) {
             onUpdateTask('assigneeId', assignee, taskId)
         }
-    }
-    const handleSummaryBlur = (e) => {
+    }, [issue?.assigneeDetail?._id, onUpdateTask, taskId])
+
+    const handleSummaryBlur = useCallback((e) => {
         e.stopPropagation()
         saveSummaryAndClose()
-    }
-    const changeImportance = (imp) => {
+    }, [saveSummaryAndClose])
+
+    const changeImportance = useCallback((imp) => {
         onUpdateTask("importance", imp, taskId)
-    }
-    const changeTaskStatus = (status) => {
+    }, [onUpdateTask, taskId])
+
+    const changeTaskStatus = useCallback((status) => {
         onUpdateTask("task_status", status, taskId)
-    }
+    },[onUpdateTask, taskId])
+    
     const hasAssignee = Object.keys(currentAssignee).length > 0
-
-    const copyLinkKey = (isLink, isKey, issueId, projectKey, taskNumber, type) => {
-
-        let textToCopy;
-        const taskIdentifier = `${projectKey}-${taskNumber}`;
-        let message = ''
-        if (isLink) {
-
-            const baseUrl = window.location.origin;
-            textToCopy = `${baseUrl}/${taskIdentifier}/${issueId}`;
-            message = `You’ve copied the link to the ${type.charAt(0).toUpperCase() + type.slice(1)} ${projectKey}-${taskNumber} to your clipboard`
-        } else if (isKey) {
-            textToCopy = taskIdentifier;
-            message = 'Key successfully copied to your clipboard'
-        } else {
-            return;
-        }
-
-        navigator.clipboard.writeText(textToCopy)
-            .then(() => {
-                ShowToast.info(message)
-                console.log(`${isLink ? 'Link' : 'Key'} copied: ${textToCopy}`);
-            })
-            .catch(err => {
-                ShowToast.warning(err)
-                console.error('Failed to copy text: ', err);
-            });
-    };
 
     return (
         <TableRow

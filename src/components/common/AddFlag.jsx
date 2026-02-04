@@ -33,6 +33,7 @@ const AddFlag = forwardRef(({ isOpen, setIsOpen, taskInfo, isFlagged }, ref) => 
 
     const handleAddFlag = async (data, isFlagged) => {
         try {
+            console.log("taskInfo", taskInfo)
             const payload = {
                 operationName: "addFlag",
                 variables: {
