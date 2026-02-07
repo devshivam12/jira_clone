@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Button } from '../ui/button';
 
-const WorkSelector = ({ initialValue, workTypes, onChange }) => {
+const WorkSelector = ({ initialValue, workTypes, onChange, ...props }) => {
     const [selectedWork, setSelectedWork] = useState(null);
 
     useEffect(() => {
@@ -48,17 +48,13 @@ const WorkSelector = ({ initialValue, workTypes, onChange }) => {
         <Select
             value={selectedWork?.value || ''}
             onValueChange={handleValueChange}
+            {...props}
         >
             <SelectTrigger
                 className={`flex items-center gap-2 border-none rounded-md px-2 py-0.5 transition-colors w-30 text-start h-auto ${selectedWork?.color ? selectedWork.color : 'bg-white'}`}
             >
                 {selectedWork ? (
                     <div className="py-1">
-                        {/* {selectedWork.icon && (
-                            <span className="text-lg" role="img" aria-label={selectedWork.name}>
-                                {selectedWork.icon}
-                            </span>
-                        )} */}
                         <span className={`text-sm font-medium truncate ${selectedWork.color && 'text-white'}`}>
                             {selectedWork.name}
                         </span>
