@@ -72,7 +72,6 @@ const EditIssue = ({ issue }) => {
                 description: task?.description,
                 task_status: task?.task_status,
                 work_type: task?.work_type,
-                importance: task?.importance,
                 project_key: task?.project_key,
                 labels: task?.labels,
                 assigneeDetail: task?.assigneeDetail,

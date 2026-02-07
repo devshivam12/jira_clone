@@ -1,47 +1,47 @@
 import { TableRow, TableCell } from "@/components/ui/table";
-
-const SkeletonBlock = ({ className }) => (
-  <div className={`h-4 bg-gray-200 rounded ${className}`} />
-);
+import { Skeleton } from "@/components/ui/skeleton";
 
 const IssueRowSkeleton = () => {
   return (
-    <TableRow className="animate-pulse p-2">
-      {/* TYPE + KEY */}
-      <TableCell className="w-[140px] p-2">
-        <SkeletonBlock className="w-24" />
-      </TableCell>
+    <div className="flex items-center w-full border-b bg-white">
+      {/* Task ID Skeleton */}
+      <div className="w-[160px] min-w-[160px] max-w-[160px] p-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-6 rounded-md" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+      </div>
 
-      {/* SUMMARY */}
-      <TableCell className="w-auto p-2">
-        <SkeletonBlock className="w-[80%]" />
-      </TableCell>
+      {/* Summary Skeleton */}
+      <div className="flex-1 p-2 min-w-0">
+        <Skeleton className="h-4 w-3/4" />
+      </div>
 
-      {/* STATUS */}
-      <TableCell className="w-[160px] p-2">
-        <SkeletonBlock className="w-24 h-6 rounded-full" />
-      </TableCell>
+      {/* Status Skeleton */}
+      <div className="w-[160px] min-w-[160px] max-w-[160px] p-2">
+        <Skeleton className="h-8 w-24 rounded-md" />
+      </div>
 
-      {/* PRIORITY */}
-      <TableCell className="w-[160px] p-2">
-        <SkeletonBlock className="w-20 h-6 rounded-full" />
-      </TableCell>
+      {/* Importance Skeleton */}
+      <div className="w-[160px] min-w-[160px] max-w-[160px] p-2">
+        <Skeleton className="h-8 w-24 rounded-md" />
+      </div>
 
-      {/* FLAG */}
-      <TableCell className="w-[60px] text-center p-2">
-        <SkeletonBlock className="w-4 h-4 mx-auto rounded-full" />
-      </TableCell>
+      {/* Flag Skeleton */}
+      <div className="w-[60px] min-w-[60px] max-w-[60px] p-2 flex justify-center">
+        <Skeleton className="h-4 w-4 rounded-full" />
+      </div>
 
-      {/* ASSIGNEE */}
-      <TableCell className="w-[80px] text-center p-2">
-        <SkeletonBlock className="w-8 h-8 mx-auto rounded-full" />
-      </TableCell>
+      {/* Assignee Skeleton */}
+      <div className="w-[80px] min-w-[80px] max-w-[80px] p-2 flex justify-center">
+        <Skeleton className="h-8 w-8 rounded-full" />
+      </div>
 
-      {/* ACTIONS */}
-      <TableCell className="w-[56px] text-center p-2">
-        <SkeletonBlock className="w-4 h-4 mx-auto" />
-      </TableCell>
-    </TableRow>
+      {/* Actions Skeleton */}
+      <div className="w-[56px] min-w-[56px] max-w-[56px] p-2 flex justify-center">
+        <Skeleton className="h-8 w-8 rounded-md" />
+      </div>
+    </div>
   );
 };
 

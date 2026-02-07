@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from "
 import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight, ClipboardX, Flag, Pencil } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardX, Flag, Pencil, MoreHorizontal } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import IssueRowSkeleton from "./IssueRowSkeleton";
 import { useSearchParams } from "react-router-dom";
@@ -21,10 +21,10 @@ const ROW_HEIGHT = 56;
 const TaskRow = memo(({
     task,
     virtualRow,
-    workType,
+    workTypeMap,
     editingTaskId,
-    summaryValues,
-    assigneeStates,
+    summaryValue,
+    assigneeState,
     taskTypes,
     importanceTypes,
     currentProjectId,
@@ -41,27 +41,15 @@ const TaskRow = memo(({
     changeImportance,
     getWorkItemMenuItems
 }) => {
-    const matchWorkType = useMemo(
-        () => workType.find(type => type.slug === task?.work_type),
-        [workType, task?.work_type]
+    const matchWorkType = useMemo(() => {
+        const result = workTypeMap?.get(task?.work_type)
+        return result
+    },
+        [workTypeMap, task?.work_type]
     );
-
+    console.log(":matchWorkType", matchWorkType)
     const isEditing = editingTaskId === task._id;
-    const assigneeState = assigneeStates[task._id] || { isOpen: false, assignee: {} };
-    const hasAssignee = Object.keys(assigneeState.assignee).length > 0;
-
-    const taskInfo = useMemo(() => ({
-        _id: task._id,
-        workType: task.work_type,
-        project_key: task.project_key,
-        taskNumber: task.taskNumber,
-        summary: task.summary
-    }), [task._id, task.work_type, task.project_key, task.taskNumber, task.summary]);
-
-    const menuItems = useMemo(
-        () => getWorkItemMenuItems(task),
-        [getWorkItemMenuItems, task]
-    );
+    // const assigneeState = assigneeStates[task._id] || { isOpen: false, assignee: {} };
 
     const handleRowClickInternal = useCallback((e) => {
         onRowClick(e, task._id);
@@ -74,6 +62,13 @@ const TaskRow = memo(({
     const handleSummaryChangeInternal = useCallback((e) => {
         onSummaryChange(e, task._id);
     }, [onSummaryChange, task._id]);
+
+    // Derived state with fallback to props
+    const currentSummary = summaryValue !== undefined ? summaryValue : task?.summary;
+    const currentAssignee = assigneeState?.assignee ?? task?.assigneeDetail ?? {};
+    const isAssigneeMenuOpen = assigneeState?.isOpen || false;
+    const hasAssignee = Object.keys(currentAssignee).length > 0;
+
 
     const handleSummaryKeyDownInternal = useCallback((e) => {
         onSummaryKeyDown(e, task);
@@ -104,9 +99,9 @@ const TaskRow = memo(({
     }, [changeImportance, task._id]);
 
     return (
-        <TableRow
+        <div
             key={task._id}
-            className={`group cursor-pointer transition-colors
+            className={`group flex items-center cursor-pointer transition-colors border-b
                 ${task?.isFlagged
                     ? 'bg-red-50/60 shadow-[inset_0_0_0_1px_theme(colors.red.500)]'
                     : 'hover:bg-gray-50'}
@@ -119,14 +114,13 @@ const TaskRow = memo(({
                 width: '100%',
                 height: `${ROW_HEIGHT}px`,
                 transform: `translateY(${virtualRow.start}px)`,
-                display: 'table',
-                tableLayout: 'fixed',
             }}
         >
             {/* Task ID and Type */}
-            <TableCell className="w-[160px] min-w-[160px] max-w-[160px] p-2">
-                <div className="flex items-center justify-start text-neutral-500">
-                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${matchWorkType?.color || 'bg-gray-200'}`}>
+            {/* Task ID and Type */}
+            <div className="w-[160px] min-w-[160px] max-w-[160px] p-2 flex items-center">
+                <div className="flex items-center justify-start text-neutral-500 w-full">
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${matchWorkType?.color || 'bg-gray-200'}`}>
                         {matchWorkType?.icon && (
                             <img
                                 src={matchWorkType.icon}
@@ -137,29 +131,28 @@ const TaskRow = memo(({
                             />
                         )}
                     </div>
-                    <div className='underline hover:text-blue-600 text-base font-semibold ml-1'>
+                    <div className='underline hover:text-blue-600 text-base font-semibold ml-1 truncate'>
                         <span className="font-medium">{task?.project_key}-{task?.taskNumber}</span>
                     </div>
                 </div>
-            </TableCell>
+            </div>
 
-            {/* Summary */}
-            <TableCell className="w-auto p-2">
-                <div className="flex items-center text-sm font-semibold text-neutral-500" data-no-row-click>
+            <div className="flex-1 p-2 min-w-0">
+                <div className="flex items-center text-sm font-semibold text-neutral-500 w-full" data-no-row-click>
                     {isEditing ? (
                         <Input
-                            value={summaryValues[task._id] || ''}
+                            value={currentSummary || ''}
                             onChange={handleSummaryChangeInternal}
                             onKeyDown={handleSummaryKeyDownInternal}
                             onBlur={handleSummaryBlurInternal}
                             onClick={(e) => e.stopPropagation()}
                             autoFocus
-                            className="h-8"
+                            className="h-8 w-full"
                         />
                     ) : (
-                        <>
+                        <div className="flex items-center w-full min-w-0">
                             <span
-                                className="truncate max-w-full"
+                                className="truncate block flex-1"
                                 title={task?.summary}
                             >
                                 {task?.summary}
@@ -167,43 +160,50 @@ const TaskRow = memo(({
                             <Button
                                 size="icon"
                                 variant="ghost"
-                                className="ml-2 w-6 h-6 opacity-0 group-hover:opacity-100"
+                                className="ml-2 w-6 h-6 shrink-0 opacity-0 group-hover:opacity-100"
                                 onClick={handleSummaryClickInternal}
                             >
                                 <Pencil className="w-3 h-3" />
                             </Button>
-                        </>
+                        </div>
                     )}
                 </div>
-            </TableCell>
+            </div>
 
             {/* Task Status */}
-            <TableCell className="w-[160px] min-w-[160px] max-w-[160px] p-2">
-                <div className="flex items-center justify-start" data-no-row-click>
-                    <WorkSelector
-                        initialValue={task?.task_status}
-                        workTypes={taskTypes}
-                        onChange={changeTaskStatusInternal}
-                    />
+            {/* Task Status */}
+            <div className="w-[160px] min-w-[160px] max-w-[160px] p-2 flex items-center">
+                <div className="flex items-center justify-start w-full" data-no-row-click>
+                    <div className="flex items-center justify-start w-full" data-no-row-click>
+                        <LazyWorkSelector
+                            initialValue={task?.task_status}
+                            workTypes={taskTypes}
+                            onChange={changeTaskStatusInternal}
+                        />
+                    </div>
                 </div>
-            </TableCell>
+            </div>
 
             {/* Importance */}
-            <TableCell className="w-[160px] min-w-[160px] max-w-[160px] p-2">
-                <div className="flex items-center justify-start" data-no-row-click>
-                    <WorkSelector
-                        initialValue={task?.importance}
-                        workTypes={importanceTypes}
-                        onChange={changeImportanceInternal}
-                    />
+            {/* Importance */}
+            <div className="w-[160px] min-w-[160px] max-w-[160px] p-2 flex items-center">
+                <div className="flex items-center justify-start w-full" data-no-row-click>
+                    <div className="flex items-center justify-start w-full" data-no-row-click>
+                        <LazyWorkSelector
+                            initialValue={task?.importance}
+                            workTypes={importanceTypes}
+                            onChange={changeImportanceInternal}
+                        />
+                    </div>
                 </div>
-            </TableCell>
+            </div>
 
             {/* Flag */}
-            <TableCell className="w-[60px] min-w-[60px] max-w-[60px] text-center p-2">
+            {/* Flag */}
+            <div className="w-[60px] min-w-[60px] max-w-[60px] text-center p-2 flex items-center justify-center">
                 <div
                     data-no-row-click
-                    className="flex justify-center items-center"
+                    className="flex justify-center items-center w-full"
                 >
                     {task?.isFlagged && (
                         <div>
@@ -215,88 +215,237 @@ const TaskRow = memo(({
                         </div>
                     )}
                 </div>
-            </TableCell>
+            </div>
 
             {/* Assignee */}
-            <TableCell className="w-[80px] min-w-[80px] max-w-[80px] text-center p-2">
-                <div className="flex items-center justify-center" data-no-row-click>
-                    <DropdownMenu
-                        open={assigneeState.isOpen}
-                        onOpenChange={toggleAssigneeOpenInternal}
-                    >
-                        <DropdownMenuTrigger asChild>
-                            <div
-                                onClick={handleAvatarClickInternal}
-                                className="cursor-pointer"
-                            >
-                                {hasAssignee ? (
-                                    <ManageAvatar
-                                        firstName={assigneeState.assignee?.first_name}
-                                        lastName={assigneeState.assignee?.last_name}
-                                        image={assigneeState.assignee?.image}
-                                        size='sm'
-                                        tooltipContent={`${assigneeState.assignee?.first_name} ${assigneeState.assignee?.last_name}`}
-                                        showTooltip={!assigneeState.isOpen}
-                                    />
-                                ) : (
-                                    <ManageAvatar
-                                        fallbackIcon={true}
-                                        size='sm'
-                                        tooltipContent="Unassigned"
-                                        showTooltip={!assigneeState.isOpen}
-                                    />
-                                )}
-                            </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            className="w-64 p-0"
-                            align="end"
-                            sideOffset={8}
-                            onClick={(e) => e.stopPropagation()}
-                            forceMount={true}
-                        >
-                            <DynamicDropdownSelector
-                                slug={'member'}
-                                onChange={handleAssigneeChangeInternal}
-                                label={"Select assignee"}
-                                projectId={currentProjectId}
-                                showDropdown={true}
-                            />
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+            {/* Assignee */}
+            <div className="w-[80px] min-w-[80px] max-w-[80px] text-center p-2 flex items-center justify-center">
+                <div className="flex items-center justify-center w-full" data-no-row-click>
+                    <div className="flex items-center justify-center" data-no-row-click>
+                        <LazyAssignee
+                            assigneeState={assigneeState}
+                            toggleAssigneeOpen={toggleAssigneeOpenInternal}
+                            handleAvatarClick={handleAvatarClickInternal}
+                            handleAssigneeChange={handleAssigneeChangeInternal}
+                            currentProjectId={currentProjectId}
+                            currentAssignee={currentAssignee}
+                            hasAssignee={hasAssignee}
+                            isAssigneeMenuOpen={isAssigneeMenuOpen}
+                        />
+                    </div>
                 </div>
-            </TableCell>
+            </div>
 
             {/* Actions Menu */}
-            <TableCell className="w-[56px] min-w-[56px] max-w-[56px] text-center p-2">
+            <div className="w-[56px] min-w-[56px] max-w-[56px] text-center p-2 flex items-center justify-center">
                 <div data-no-row-click onClick={(e) => e.stopPropagation()}>
-                    <CommonDropdownMenu items={menuItems} />
-
+                    <LazyActionMenu
+                        getItems={getWorkItemMenuItems}
+                        task={task}
+                    />
                 </div>
-            </TableCell>
-        </TableRow>
+            </div>
+        </div>
     );
 }, (prevProps, nextProps) => {
     return (
-        prevProps.task._id === nextProps.task._id &&
-        prevProps.task.summary === nextProps.task.summary &&
-        prevProps.task.task_status === nextProps.task.task_status &&
-        prevProps.task.importance === nextProps.task.importance &&
-        prevProps.task.isFlagged === nextProps.task.isFlagged &&
-        prevProps.task.assigneeDetail?._id === nextProps.task.assigneeDetail?._id &&
+        prevProps.task?._id === nextProps.task?._id &&
+        prevProps.task?.summary === nextProps.task?.summary &&
+        prevProps.task?.task_status === nextProps.task?.task_status &&
+        prevProps.task?.importance === nextProps.task?.importance &&
+        prevProps.task?.isFlagged === nextProps.task?.isFlagged &&
+        prevProps.task?.work_type === nextProps.task?.work_type &&
+        prevProps.task?.assigneeDetail?._id === nextProps.task?.assigneeDetail?._id &&
         prevProps.virtualRow.start === nextProps.virtualRow.start &&
         prevProps.editingTaskId === nextProps.editingTaskId &&
-        prevProps.summaryValues[prevProps.task._id] === nextProps.summaryValues[nextProps.task._id] &&
-        prevProps.assigneeStates[prevProps.task._id]?.isOpen === nextProps.assigneeStates[nextProps.task._id]?.isOpen
+        prevProps.summaryValue === nextProps.summaryValue &&
+        prevProps.assigneeState?.isOpen === nextProps.assigneeState?.isOpen &&
+        prevProps.assigneeState?.assignee?._id === nextProps.assigneeState?.assignee?._id &&
+        prevProps.workTypeMap === nextProps.workTypeMap
     );
 });
 
 TaskRow.displayName = 'TaskRow';
 
-const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
-    console.log("issue------------", issue);
+// Lazy wrapper for WorkSelector to improve render performance
+const LazyWorkSelector = memo(({ initialValue, workTypes, onChange }) => {
+    const [isInteracted, setIsInteracted] = useState(false);
+    const selectedWork = useMemo(() =>
+        workTypes?.find(t => t.value === initialValue) || null,
+        [workTypes, initialValue]);
 
+    if (!isInteracted) {
+        return (
+            <div
+                onClick={(e) => {
+                    e.stopPropagation();
+                    console.log("Lazy selector clicked");
+                    setIsInteracted(true);
+                }}
+                className={`flex items-center gap-2 rounded-md px-2 py-0.5 transition-colors w-30 text-start h-10 cursor-pointer ${selectedWork?.color ? selectedWork.color : 'bg-white'} hover:bg-gray-100 border border-transparent hover:border-gray-200`}
+            >
+                <div className="py-1">
+                    {selectedWork ? (
+                        <span className={`text-sm font-medium truncate ${selectedWork.color && 'text-white'}`}>
+                            {selectedWork.name}
+                        </span>
+                    ) : (
+                        <span className="text-sm text-neutral-400">Select work type</span>
+                    )}
+                </div>
+                <ChevronDown className={`w-4 h-4 ml-auto ${selectedWork?.color ? 'text-white' : 'text-neutral-400'}`} />
+            </div>
+        );
+    }
+
+    return (
+        <WorkSelector
+            initialValue={initialValue}
+            workTypes={workTypes}
+            defaultOpen={true}
+            onOpenChange={(open) => {
+                if (!open) {
+                    setIsInteracted(false);
+                }
+            }}
+            onChange={(val) => {
+                onChange(val);
+                setIsInteracted(false);
+            }}
+        />
+    );
+});
+LazyWorkSelector.displayName = 'LazyWorkSelector';
+
+// Lazy wrapper for Assignee Dropdown
+const LazyAssignee = memo(({ assigneeState, toggleAssigneeOpen, handleAvatarClick, handleAssigneeChange, currentProjectId, currentAssignee, hasAssignee, isAssigneeMenuOpen }) => {
+    const [isMounted, setIsMounted] = useState(false);
+
+    const handleClick = (e) => {
+        setIsMounted(true);
+        handleAvatarClick(e);
+    };
+
+    if (!isMounted && !isAssigneeMenuOpen) {
+        return (
+            <div onClick={handleClick} className="cursor-pointer">
+                {hasAssignee ? (
+                    <ManageAvatar
+                        firstName={currentAssignee?.first_name}
+                        lastName={currentAssignee?.last_name}
+                        image={currentAssignee?.image}
+                        size='sm'
+                        tooltipContent={`${currentAssignee?.first_name} ${currentAssignee?.last_name}`}
+                        showTooltip={false} // Disable tooltip in lazy mode for speed
+                    />
+                ) : (
+                    <ManageAvatar
+                        fallbackIcon={true}
+                        size='sm'
+                        tooltipContent="Unassigned"
+                        showTooltip={false}
+                    />
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <DropdownMenu
+            open={isAssigneeMenuOpen}
+            onOpenChange={(open) => {
+                toggleAssigneeOpen(open);
+                if (!open) setIsMounted(false); // Unmount when closed
+            }}
+        >
+            <DropdownMenuTrigger asChild>
+                <div
+                    onClick={handleAvatarClick}
+                    className="cursor-pointer"
+                >
+                    {hasAssignee ? (
+                        <ManageAvatar
+                            firstName={currentAssignee?.first_name}
+                            lastName={currentAssignee?.last_name}
+                            image={currentAssignee?.image}
+                            size='sm'
+                            tooltipContent={`${currentAssignee?.first_name} ${currentAssignee?.last_name}`}
+                            showTooltip={!isAssigneeMenuOpen}
+                        />
+                    ) : (
+                        <ManageAvatar
+                            fallbackIcon={true}
+                            size='sm'
+                            tooltipContent="Unassigned"
+                            showTooltip={!isAssigneeMenuOpen}
+                        />
+                    )}
+                </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                className="w-64 p-0"
+                align="end"
+                sideOffset={8}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <DynamicDropdownSelector
+                    slug={'member'}
+                    onChange={handleAssigneeChange}
+                    label={"Select assignee"}
+                    projectId={currentProjectId}
+                    showDropdown={true}
+                />
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+});
+LazyAssignee.displayName = 'LazyAssignee';
+
+// Lazy wrapper for CommonDropdownMenu (Actions)
+const LazyActionMenu = memo(({ getItems, task }) => {
+    const [isMounted, setIsMounted] = useState(false);
+
+    const handleClick = (e) => {
+        e.stopPropagation();
+        setIsMounted(true);
+    };
+
+    if (!isMounted) {
+        return (
+            <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleClick}
+                className="opacity-100" // Ensure visibility
+            >
+                <MoreHorizontal className="w-4 h-4 text-neutral-500" />
+            </Button>
+        );
+    }
+
+    return (
+        <CommonDropdownMenu
+            items={getItems(task)}
+            onOpenChange={(open) => {
+                if (!open) setIsMounted(false);
+            }}
+        />
+    );
+});
+LazyActionMenu.displayName = 'LazyActionMenu';
+
+const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
+    console.log("issue-----------", issue)
     const { currentProject, workType, importance, workFlow } = projectData;
+
+    // Performance measurement
+    const renderStartTime = performance.now();
+
+    useEffect(() => {
+        const renderDuration = performance.now() - renderStartTime;
+        console.log(`BacklogTable render time: ${renderDuration.toFixed(2)}ms`);
+    });
+
     const [updateTask, { isLoading }] = useUpdateIssueMutation();
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -308,35 +457,23 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
     const addFlagRef = useRef(null);
     const parentRef = useRef(null);
 
-    useEffect(() => {
-        if (issue && issue.length > 0) {
-            const newSummaries = {};
-            const newAssignees = {};
-            const newFlags = {};
-
-            issue.forEach(task => {
-                newSummaries[task._id] = task.summary || '';
-                newAssignees[task._id] = {
-                    isOpen: false,
-                    assignee: task.assigneeDetail || {}
-                };
-                newFlags[task._id] = {
-                    isOpen: false,
-                    isFlagged: task.isFlagged || false
-                };
-            });
-
-            setSummaryValues(newSummaries);
-            setAssigneeStates(newAssignees);
-        }
-    }, [issue]);
+    // Removed expensive useEffect that synced props to state on every render/change.
+    // Derived state is now handled in TaskRow or on-the-fly where needed.
 
     const rowVirtualizer = useVirtualizer({
         count: issue?.length ?? 0,
         getScrollElement: () => parentRef.current,
         estimateSize: () => ROW_HEIGHT,
-        overscan: 15,
+        overscan: 5,
+        enabled: true,
     });
+
+    const workTypeMap = useMemo(() => {
+        return new Map(workType.map((status, index) => [
+            status.slug,
+            { id: index + 1, name: status.name, value: status.slug, color: status.color, icon: status.icon }
+        ]));
+    }, [workType]);
 
     const taskTypes = useMemo(() =>
         workFlow.map((status, index) => ({
@@ -461,7 +598,7 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
                 e?.stopPropagation?.();
 
                 if (task.isFlagged) {
-                    handleUpdateTask('isFlagged', false, task._id);
+                    handleUpdateTask('isFlagged', "false", task._id);
                 } else {
                     setCurrentFlagTask({
                         _id: task._id,
@@ -485,7 +622,7 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
             danger: true,
             onSelect: () => console.log('Delete')
         }
-    ], [copyLinkKey]);
+    ], [copyLinkKey, handleUpdateTask]);
 
     const handleSummaryClick = useCallback((e, taskId) => {
         e.stopPropagation();
@@ -618,68 +755,62 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
                     {issue && issue?.length > 0 ? (
                         <div
                             ref={parentRef}
-                            className="h-[600px] overflow-auto"
+                            className="h-[600px] overflow-auto border-t"
                         >
-                            <div className="min-w-[1200px]">
-                                <Table className="w-full table-fixed">
-                                    <TableBody
-                                        style={{
-                                            height: `${rowVirtualizer.getTotalSize()}px`,
-                                            position: 'relative',
-                                            display: 'block',
-                                        }}
-                                    >
-                                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                            const task = issue[virtualRow?.index];
+                            <div
+                                style={{
+                                    height: `${rowVirtualizer.getTotalSize()}px`,
+                                    width: '100%',
+                                    position: 'relative',
+                                }}
+                            >
+                                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                    const task = issue[virtualRow?.index];
 
-                                            if (!task) {
-                                                return (
-                                                    <TableRow
-                                                        key={`skeleton-${virtualRow.index}`}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: 0,
-                                                            left: 0,
-                                                            width: '100%',
-                                                            height: `${ROW_HEIGHT}px`,
-                                                            transform: `translateY(${virtualRow.start}px)`,
-                                                            display: 'table',
-                                                            tableLayout: 'fixed',
-                                                        }}
-                                                    >
-                                                        <IssueRowSkeleton />
-                                                    </TableRow>
-                                                );
-                                            }
+                                    if (!task) {
+                                        return (
+                                            <div
+                                                key={`skeleton-${virtualRow.index}`}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    height: `${ROW_HEIGHT}px`,
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                }}
+                                            >
+                                                <IssueRowSkeleton />
+                                            </div>
+                                        );
+                                    }
 
-                                            return (
-                                                <TaskRow
-                                                    key={task._id}
-                                                    task={task}
-                                                    virtualRow={virtualRow}
-                                                    workType={workType}
-                                                    editingTaskId={editingTaskId}
-                                                    summaryValues={summaryValues}
-                                                    assigneeStates={assigneeStates}
-                                                    taskTypes={taskTypes}
-                                                    importanceTypes={importanceTypes}
-                                                    currentProjectId={currentProjectId}
-                                                    onRowClick={handleRowClick}
-                                                    onSummaryClick={handleSummaryClick}
-                                                    onSummaryChange={handleSummaryChange}
-                                                    onSummaryKeyDown={handleSummaryKeyDown}
-                                                    onSummaryBlur={handleSummaryBlur}
-                                                    onAvatarClick={handleAvatarClick}
-                                                    onAssigneeChange={handleAssigneeChange}
-                                                    toggleAssigneeOpen={toggleAssigneeOpen}
-                                                    changeTaskStatus={changeTaskStatus}
-                                                    changeImportance={changeImportance}
-                                                    getWorkItemMenuItems={getWorkItemMenuItems}
-                                                />
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
+                                    return (
+                                        <TaskRow
+                                            key={task._id}
+                                            task={task}
+                                            virtualRow={virtualRow}
+                                            workTypeMap={workTypeMap}
+                                            editingTaskId={editingTaskId}
+                                            summaryValue={summaryValues[task._id]}
+                                            assigneeState={assigneeStates[task._id]}
+                                            taskTypes={taskTypes}
+                                            importanceTypes={importanceTypes}
+                                            currentProjectId={currentProjectId}
+                                            onRowClick={handleRowClick}
+                                            onSummaryClick={handleSummaryClick}
+                                            onSummaryChange={handleSummaryChange}
+                                            onSummaryKeyDown={handleSummaryKeyDown}
+                                            onSummaryBlur={handleSummaryBlur}
+                                            onAvatarClick={handleAvatarClick}
+                                            onAssigneeChange={handleAssigneeChange}
+                                            toggleAssigneeOpen={toggleAssigneeOpen}
+                                            changeTaskStatus={changeTaskStatus}
+                                            changeImportance={changeImportance}
+                                            getWorkItemMenuItems={getWorkItemMenuItems}
+                                        />
+                                    );
+                                })}
                             </div>
                         </div>
                     ) : (
@@ -692,24 +823,26 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
                     )}
                 </div>
             )}
-            {currentFlagTask && (
-                <AddFlag
-                    isOpen={isFlagDialogOpen}
-                    setIsOpen={setIsFlagDialogOpen}
-                    taskInfo={currentFlagTask}
-                    isFlagged={true}
-                    onConfirm={(reason) => {
-                        handleUpdateTask('isFlagged', true, currentFlagTask._id);
-                        setIsFlagDialogOpen(false);
-                        setCurrentFlagTask(null);
-                    }}
-                    onCancel={() => {
-                        setIsFlagDialogOpen(false);
-                        setCurrentFlagTask(null);
-                    }}
-                />
-            )}
-        </div>
+            {
+                currentFlagTask && (
+                    <AddFlag
+                        isOpen={isFlagDialogOpen}
+                        setIsOpen={setIsFlagDialogOpen}
+                        taskInfo={currentFlagTask}
+                        isFlagged={true}
+                        onConfirm={(reason) => {
+                            handleUpdateTask('isFlagged', true, currentFlagTask._id);
+                            setIsFlagDialogOpen(false);
+                            setCurrentFlagTask(null);
+                        }}
+                        onCancel={() => {
+                            setIsFlagDialogOpen(false);
+                            setCurrentFlagTask(null);
+                        }}
+                    />
+                )
+            }
+        </div >
     );
 };
 

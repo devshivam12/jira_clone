@@ -110,7 +110,7 @@ const Backlog = () => {
           </div>
         )}
 
-        <div className="flex flex-col h-full min-h-0">
+        <div className="flex flex-col min-h-0">
 
           <div className='flex flex-col space-y-5'>
             <h1 className="text-neutral-500 text-2xl font-semibold">Backlog</h1>
@@ -191,13 +191,8 @@ const Backlog = () => {
           </div>
 
 
-          <div className="flex-1 h-full mt-5">
+          <div className="flex-1 mt-5">
             <div className="space-y-4">
-              {/* {sprint.map((sprint) => (
-                <div key={sprint.id} className="w-full">
-                  <Sprint sprintName={sprint.name} onIssueClick={handleIssueClick} />
-                </div>
-              ))} */}
               <div className="">
                 <CreateBacklog
                   onIssueClick={handleIssueClick}

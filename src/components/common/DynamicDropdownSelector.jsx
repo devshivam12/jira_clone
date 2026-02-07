@@ -79,7 +79,6 @@ const DynamicDropdownSelector = ({
           : slug === 'parent' ? SELECT_TYPES.PARENT : null;
 
   const config = SELECT_CONFIG[selectType];
-  console.log("config", config)
   // State management
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
