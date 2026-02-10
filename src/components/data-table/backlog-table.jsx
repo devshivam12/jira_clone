@@ -14,6 +14,7 @@ import AddFlag from "../common/AddFlag";
 import WorkSelector from "../common/WorkSelector";
 import DynamicDropdownSelector from "../common/DynamicDropdownSelector";
 import ShowToast from "../common/ShowToast";
+import TooltipWrapper from "../common/TooltipWrapper";
 
 const ROW_HEIGHT = 56;
 
@@ -47,7 +48,6 @@ const TaskRow = memo(({
     },
         [workTypeMap, task?.work_type]
     );
-    console.log(":matchWorkType", matchWorkType)
     const isEditing = editingTaskId === task._id;
     // const assigneeState = assigneeStates[task._id] || { isOpen: false, assignee: {} };
 
@@ -282,7 +282,7 @@ const LazyWorkSelector = memo(({ initialValue, workTypes, onChange }) => {
                     console.log("Lazy selector clicked");
                     setIsInteracted(true);
                 }}
-                className={`flex items-center gap-2 rounded-md px-2 py-0.5 transition-colors w-30 text-start h-10 cursor-pointer ${selectedWork?.color ? selectedWork.color : 'bg-white'} hover:bg-gray-100 border border-transparent hover:border-gray-200`}
+                className={`flex items-center gap-2 rounded-md px-2 py-0.5 w-30 text-start h-10 ${selectedWork?.color ? selectedWork.color : 'bg-white'}`}
             >
                 <div className="py-1">
                     {selectedWork ? (
@@ -412,20 +412,23 @@ const LazyActionMenu = memo(({ getItems, task }) => {
 
     if (!isMounted) {
         return (
-            <Button
-                size="icon"
-                variant="ghost"
-                onClick={handleClick}
-                className="opacity-100" // Ensure visibility
-            >
-                <MoreHorizontal className="w-4 h-4 text-neutral-500" />
-            </Button>
+            <TooltipWrapper content="More actions">
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleClick}
+                    className="opacity-100"
+                >
+                    <MoreHorizontal className="w-4 h-4 text-neutral-500" />
+                </Button>
+            </TooltipWrapper>
         );
     }
 
     return (
         <CommonDropdownMenu
             items={getItems(task)}
+            defaultOpen={true}
             onOpenChange={(open) => {
                 if (!open) setIsMounted(false);
             }}
@@ -434,7 +437,7 @@ const LazyActionMenu = memo(({ getItems, task }) => {
 });
 LazyActionMenu.displayName = 'LazyActionMenu';
 
-const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
+const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
     console.log("issue-----------", issue)
     const { currentProject, workType, importance, workFlow } = projectData;
 
@@ -446,7 +449,7 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
         console.log(`BacklogTable render time: ${renderDuration.toFixed(2)}ms`);
     });
 
-    const [updateTask, { isLoading }] = useUpdateIssueMutation();
+    const [updateTask, { isLoading: isUpdating }] = useUpdateIssueMutation();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [editingTaskId, setEditingTaskId] = useState(null);
@@ -461,12 +464,30 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
     // Derived state is now handled in TaskRow or on-the-fly where needed.
 
     const rowVirtualizer = useVirtualizer({
-        count: issue?.length ?? 0,
+        count: (issue?.length ?? 0) + (isLoading ? 5 : 0),
         getScrollElement: () => parentRef.current,
         estimateSize: () => ROW_HEIGHT,
         overscan: 5,
         enabled: true,
     });
+    const virtualItems = rowVirtualizer.getVirtualItems()
+    const lastLoadIndexRef = useRef(-1);
+
+    useEffect(() => {
+        if (!virtualItems.length || isLoading) return
+
+        const leastVisible = virtualItems[virtualItems.length - 1]
+        const prefetchThreshhold = 20
+        const triggerPoint = issue.length - prefetchThreshhold;
+
+        // Only trigger if we haven't already triggered for this threshold
+        if (leastVisible.index >= triggerPoint &&
+            hasMore &&
+            lastLoadIndexRef.current < triggerPoint) {
+            lastLoadIndexRef.current = triggerPoint;
+            onLoadMore()
+        }
+    }, [virtualItems, issue.length, hasMore, onLoadMore, isLoading])
 
     const workTypeMap = useMemo(() => {
         return new Map(workType.map((status, index) => [
@@ -735,6 +756,9 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
         }
     }, []);
 
+    const showEmptyState = !isLoading && (!issue || issue.length === 0);
+    const showInitialSkeleton = isLoading && (!issue || issue.length === 0);
+
     return (
         <div className="rounded-xl border bg-white overflow-hidden cursor-default">
             <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
@@ -752,7 +776,21 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
 
             {expanded && (
                 <div className="w-full">
-                    {issue && issue?.length > 0 ? (
+                    {showEmptyState ? (
+                        <div className="h-[400px] flex items-center justify-center flex-col gap-2">
+                            <ClipboardX size={60} className="text-neutral-400" />
+                            <span className="text-center text-sm text-gray-500">
+                                No tasks have been added to this backlog.
+                            </span>
+                        </div>
+                    ) : showInitialSkeleton ? (
+                        // Show skeleton loaders on initial load
+                        <div className="border-t">
+                            {[...Array(5)].map((_, index) => (
+                                <IssueRowSkeleton key={`initial-skeleton-${index}`} />
+                            ))}
+                        </div>
+                    ) : (
                         <div
                             ref={parentRef}
                             className="h-[600px] overflow-auto border-t"
@@ -765,9 +803,10 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
                                 }}
                             >
                                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                    const task = issue[virtualRow?.index];
+                                    // Check if this index is beyond actual data (skeleton row)
+                                    const isSkeletonRow = virtualRow.index >= (issue?.length ?? 0);
 
-                                    if (!task) {
+                                    if (isSkeletonRow) {
                                         return (
                                             <div
                                                 key={`skeleton-${virtualRow.index}`}
@@ -785,6 +824,9 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
                                         );
                                     }
 
+                                    const task = issue[virtualRow.index];
+                                    if (!task) return null;
+
                                     return (
                                         <TaskRow
                                             key={task._id}
@@ -797,6 +839,7 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
                                             taskTypes={taskTypes}
                                             importanceTypes={importanceTypes}
                                             currentProjectId={currentProjectId}
+                                            addFlagRefs={addFlagRef}
                                             onRowClick={handleRowClick}
                                             onSummaryClick={handleSummaryClick}
                                             onSummaryChange={handleSummaryChange}
@@ -812,13 +855,6 @@ const BacklogTable = ({ issue, expanded, onToggleExpand, onEditSprint, userData,
                                     );
                                 })}
                             </div>
-                        </div>
-                    ) : (
-                        <div className="h-[400px] flex items-center justify-center flex-col gap-2">
-                            <ClipboardX size={60} className="text-neutral-400" />
-                            <span className="text-center text-sm text-gray-500">
-                                No tasks have been added to this backlog.
-                            </span>
                         </div>
                     )}
                 </div>

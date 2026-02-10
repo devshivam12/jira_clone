@@ -106,8 +106,8 @@ const SprintItem = ({ sprint, expanded, onToggleExpand, onEditSprint, onDragEnd,
           {sprint.tasks && sprint.tasks.length > 0 ? (
             <Table>
               <TableBody>
-                {sprint.tasks.map((task) => (
-                  <TableRow key={task.id}>
+                {sprint?.tasks?.map((task) => (
+                  <TableRow key={task.id ?? `task-${index}`}>
                     <TableCell>{/* Task details */}</TableCell>
                   </TableRow>
                 ))}
@@ -117,7 +117,7 @@ const SprintItem = ({ sprint, expanded, onToggleExpand, onEditSprint, onDragEnd,
             <div className="space-y-2 my-4 flex items-center justify-center flex-col">
               <ClipboardX size={60} className="text-neutral-400 " />
               <span className="text-center text-sm text-gray-500">
-              No tasks have been added to this sprint.
+                No tasks have been added to this sprint.
               </span>
             </div>
           )}

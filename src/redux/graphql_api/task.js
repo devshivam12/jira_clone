@@ -65,41 +65,38 @@ export const taskApi = createApi({
                     )
                 );
 
-                const backlogArgs = {
-                    operationName: "getBacklogData",
-                    variables: {
-                        epic: false,
-                        limit: 10,
-                        page: 1,
-                        projectId: payload.variables.projectId
-                    }
-                };
-                console.log("backlogArgs", backlogArgs)
-                const listPatch = dispatch(
-                    taskApi.util.updateQueryData(
-                        'getBacklogList',
-                        backlogArgs,
-                        (draft) => {
-                            console.log("draftdraftdraftdraft", draft)
-                            const taskList = draft?.data?.getBacklogData?.data;
-
-                            if (Array.isArray(taskList)) {
-                                const taskToUpdate = taskList.find(t => t._id === taskId);
-                                if (taskToUpdate) {
-                                    taskToUpdate[key] = value;
-                                }
-                            }
-                        }
-                    )
+                const queryEntries = Object.values(state.taskApi.queries);
+                const backlogQueries = queryEntries.filter(
+                    (entry) => entry?.endpointName === 'getBacklogList' && entry?.status === 'fulfilled'
                 );
 
+                const listUndos = [];
+
+                backlogQueries.forEach((entry) => {
+                    const patch = dispatch(
+                        taskApi.util.updateQueryData(
+                            'getBacklogList',
+                            entry.originalArgs,
+                            (draft) => {
+                                const taskList = draft?.data?.getBacklogData?.data;
+                                if (Array.isArray(taskList)) {
+                                    const taskToUpdate = taskList.find((t) => t._id === taskId);
+                                    if (taskToUpdate) {
+                                        taskToUpdate[key] = value;
+                                    }
+                                }
+                            }
+                        )
+                    );
+                    listUndos.push(patch.undo);
+                });
 
                 try {
                     await queryFulfilled
                 } catch (err) {
                     console.error("Mutation failed, rolling back", err);
                     patchResult.undo();
-                    listPatch.undo()
+                    listUndos.forEach(undo => undo());
                 }
             }
         }),

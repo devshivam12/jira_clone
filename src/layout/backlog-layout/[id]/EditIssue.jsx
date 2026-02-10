@@ -104,6 +104,7 @@ const EditIssue = ({ issue }) => {
     const [openCommand, setOpenCommand] = useState(false)
     const commandRef = useRef(null)
     const [isEditing, setIsEditing] = useState(false)
+    const [activeDropdown, setActiveDropdown] = useState(null);
 
 
     const taskTypes = useMemo(() => workFlow.map((status, index) => ({
@@ -450,7 +451,7 @@ const EditIssue = ({ issue }) => {
                                     </DropdownMenu>
                                 </div>
                                 <div className='flex items-center'>
-                                <div className="w-14 flex justify-center overflow-hidden rounded-md" >
+                                    <div className="w-14 flex justify-center overflow-hidden rounded-md" >
                                         {vote.count > 0 && (
                                             <CommonDropdownMenu
                                                 triggerIcon={
@@ -567,6 +568,11 @@ const EditIssue = ({ issue }) => {
                                         <WorkSelector
                                             initialValue={field.value}
                                             workTypes={taskTypes}
+                                            open={activeDropdown === 'task_status'}
+                                            onOpenChange={(isOpen) => {
+                                                if (isOpen) setActiveDropdown('task_status');
+                                                else setActiveDropdown(null);
+                                            }}
                                             onChange={changeTaskStatus}
                                         />
                                     )}
@@ -581,6 +587,11 @@ const EditIssue = ({ issue }) => {
                                         <WorkSelector
                                             initialValue={field.value}
                                             workTypes={importanceTypes}
+                                            open={activeDropdown === 'importance'}
+                                            onOpenChange={(isOpen) => {
+                                                if (isOpen) setActiveDropdown('importance');
+                                                else setActiveDropdown(null);
+                                            }}
                                             onChange={changeImportance}
                                         />
                                     )}

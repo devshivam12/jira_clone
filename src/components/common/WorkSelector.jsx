@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Button } from '../ui/button';
 
 const WorkSelector = ({ initialValue, workTypes, onChange, ...props }) => {
     const [selectedWork, setSelectedWork] = useState(null);

@@ -17,9 +17,10 @@ const CommonDropdownMenu = ({
   isLoading = false,
   onOpenChange,
   className = "",
+  defaultOpen,
+  open
 }) => {
   const renderMenuItem = (item, index) => {
-    // Handle separator
     if (item.type === 'separator') {
       return (
         <DottedSeparator
@@ -29,7 +30,6 @@ const CommonDropdownMenu = ({
       );
     }
 
-    // Handle submenu
     if (item.type === 'submenu') {
       return (
         <DropdownMenuSub key={item.id || index}>
@@ -83,7 +83,7 @@ const CommonDropdownMenu = ({
   };
 
   return (
-    <DropdownMenu onOpenChange={onOpenChange}>
+    <DropdownMenu onOpenChange={onOpenChange} defaultOpen={defaultOpen} open={open}>
       <DropdownMenuTrigger asChild>
         <Button size="icon" variant="ghost">
           <TooltipWrapper content={triggerTooltip} disableFocusListener>
