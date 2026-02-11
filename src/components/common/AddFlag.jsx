@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import RichTextEditor from '../ui/richTextEditor'
 import { useProjectData } from '@/hooks/useProjectData'
 import ShowToast from './ShowToast'
-import { useAddFlagMutation } from '@/redux/graphql_api/miscData'
+import { useAddFlagMutation } from '@/redux/graphql_api/task'
 import { useForm, Controller } from 'react-hook-form'
 import ButtonLoader from '../ui/buttonLoader'
 import { useDispatch, useSelector } from 'react-redux'
@@ -50,22 +50,6 @@ const AddFlag = forwardRef(({ isOpen, setIsOpen, taskInfo, isFlagged }, ref) => 
             if (response?.data?.addFlag?.status === true) {
                 reset()
                 setIsOpen(false)
-                dispatch(
-                    taskApi.util.updateQueryData(
-                        'getBacklogList',
-                        { operationName: "getBacklogData", variables: { taskId: taskId } },
-                        (draft) => {
-                            // console.log("Draft as JSON:", JSON.parse(JSON.stringify(draft)))
-                            if (draft?.data?.getTaskDetail?.data?.vote) {
-                                console.log("console.log(draft.data.getTaskDetail.data.vote)", console.log(draft.data.getTaskDetail.data.vote))
-                                draft.data.getTaskDetail.data.vote.count =
-                                    isRemoving ? Math.max(0, draft.data.getTaskDetail.data.vote.count - 1)
-                                        : draft.data.getTaskDetail.data.vote.count + 1
-                                draft.data.getTaskDetail.data.vote.hasVoted = !isRemoving
-                            }
-                        }
-                    )
-                )
             }
         } catch (error) {
             ShowToast.error("Something went wrong on our end. Please try again shortly.")

@@ -72,7 +72,7 @@ export const taskApi = createApi({
 
                 const listUndos = [];
 
-                backlogQueries.forEach((entry) => {
+                for (const entry of backlogQueries) {
                     const patch = dispatch(
                         taskApi.util.updateQueryData(
                             'getBacklogList',
@@ -82,14 +82,18 @@ export const taskApi = createApi({
                                 if (Array.isArray(taskList)) {
                                     const taskToUpdate = taskList.find((t) => t._id === taskId);
                                     if (taskToUpdate) {
-                                        taskToUpdate[key] = value;
+                                        if (key === 'isFlagged' && value === 'false') {
+                                            taskToUpdate.isFlagged = false
+                                        } else {
+                                            taskToUpdate[key] = value;
+                                        }
                                     }
                                 }
                             }
                         )
                     );
                     listUndos.push(patch.undo);
-                });
+                }
 
                 try {
                     await queryFulfilled
@@ -111,7 +115,72 @@ export const taskApi = createApi({
             query: (payload) => ({
                 method: "POST",
                 body: payload
-            })
+            }),
+
+        }),
+
+        addFlag: builder.mutation({
+            query: (payload) => ({
+                method: 'POST',
+                body: payload
+            }),
+            async onQueryStarted(payload, { dispatch, queryFulfilled, getState }) {
+                const { taskId, flagPayload } = payload.variables
+                const { isFlagged, reason } = flagPayload
+                const taskByIdPatch = dispatch(
+                    taskApi.util.updateQueryData(
+                        'getTaskById',
+                        {
+                            operationName: "getTaskDetail",
+                            variables: { taskId: taskId }
+                        },
+                        (draft) => {
+                            const task = draft?.data?.getTaskDetail?.data
+                            if (task) {
+                                task.isFlagged = isFlagged;
+                            }
+                        }
+                    )
+                )
+                const state = getState();
+                const queryEntries = Object.values(state.taskApi.queries);
+                const backlogQueries = queryEntries.filter(
+                    (entry) =>
+                        entry?.endpointName === 'getBacklogList' &&
+                        entry?.status === 'fulfilled'
+                );
+                console.log("backlogQueries", backlogQueries)
+                const listUndos = [];
+                for (const entry of backlogQueries) {
+                    const patch = dispatch(
+                        taskApi.util.updateQueryData(
+                            'getBacklogList',
+                            entry.originalArgs,
+                            (draft) => {
+                                const taskList = draft?.data?.getBacklogData?.data;
+                                console.log("taskListtaskListtaskList", taskList)
+                                if (Array.isArray(taskList)) {
+                                    const taskToUpdate = taskList.find((t) => t._id === taskId);
+                                    console.log("taskToUpdate", taskToUpdate)
+                                    if (taskToUpdate) {
+                                        taskToUpdate.isFlagged = true;
+                                    }
+                                }
+                            }
+                        )
+                    );
+                    listUndos.push(patch.undo);
+                }
+
+                try {
+                    await queryFulfilled;
+                } catch (err) {
+                    console.error("Add flag mutation failed, rolling back", err);
+                    taskByIdPatch.undo();
+                    listUndos.forEach(undo => undo());
+                }
+
+            }
         })
     })
 })
@@ -122,5 +191,6 @@ export const {
     useUpdateIssueMutation,
     useGetTaskByIdQuery,
     useGetTaskVotesMutation,
-    useAddVotesMutation
+    useAddVotesMutation,
+    useAddFlagMutation
 } = taskApi

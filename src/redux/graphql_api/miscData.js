@@ -183,12 +183,7 @@ export const miscDataApi = createApi({
                 }
             })
         }),
-        addFlag: builder.mutation({
-            query: (payload) => ({
-                method: 'POST',
-                body: payload
-            }),
-        })
+
     })
 })
 
@@ -198,6 +193,5 @@ export const {
     useGetTeamDropdownQuery,
     useGetMemberDropdownQuery,
     useGetSprintDropdownQuery,
-    useGetParentDropdownQuery,
-    useAddFlagMutation
+    useGetParentDropdownQuery
 } = miscDataApi
