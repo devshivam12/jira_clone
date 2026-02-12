@@ -137,8 +137,8 @@ const TaskRow = memo(({
                 </div>
             </div>
 
-            <div className="flex-1 p-2 min-w-0">
-                <div className="flex items-center text-sm font-semibold text-neutral-500 w-full" data-no-row-click>
+            <div className="p-2 flex-1" >
+                <div className="flex items-center text-sm font-semibold text-neutral-500" >
                     {isEditing ? (
                         <Input
                             value={currentSummary || ''}
@@ -147,10 +147,11 @@ const TaskRow = memo(({
                             onBlur={handleSummaryBlurInternal}
                             onClick={(e) => e.stopPropagation()}
                             autoFocus
-                            className="h-8 w-full"
+                            data-no-row-click
+                            className="h-8 "
                         />
                     ) : (
-                        <div className="flex items-center w-full min-w-0">
+                        <div className="flex items-center">
                             <span
                                 className="truncate block flex-1"
                                 title={task?.summary}
@@ -172,7 +173,8 @@ const TaskRow = memo(({
 
             {/* Task Status */}
             {/* Task Status */}
-            <div className="w-[160px] min-w-[160px] max-w-[160px] p-2 flex items-center">
+            {/* Task Status */}
+            <div className="hidden md:flex w-[160px] min-w-[160px] max-w-[160px] p-2 items-center">
                 <div className="flex items-center justify-start w-full" data-no-row-click>
                     <div className="flex items-center justify-start w-full" data-no-row-click>
                         <LazyWorkSelector
@@ -186,7 +188,8 @@ const TaskRow = memo(({
 
             {/* Importance */}
             {/* Importance */}
-            <div className="w-[160px] min-w-[160px] max-w-[160px] p-2 flex items-center">
+            {/* Importance */}
+            <div className="hidden lg:flex w-[160px] min-w-[160px] max-w-[160px] p-2 items-center">
                 <div className="flex items-center justify-start w-full" data-no-row-click>
                     <div className="flex items-center justify-start w-full" data-no-row-click>
                         <LazyWorkSelector
@@ -200,7 +203,8 @@ const TaskRow = memo(({
 
             {/* Flag */}
             {/* Flag */}
-            <div className="w-[60px] min-w-[60px] max-w-[60px] text-center p-2 flex items-center justify-center">
+            {/* Flag */}
+            <div className="hidden sm:flex w-[60px] min-w-[60px] max-w-[60px] text-center p-2 items-center justify-center">
                 <div
                     data-no-row-click
                     className="flex justify-center items-center w-full"
@@ -219,7 +223,8 @@ const TaskRow = memo(({
 
             {/* Assignee */}
             {/* Assignee */}
-            <div className="w-[80px] min-w-[80px] max-w-[80px] text-center p-2 flex items-center justify-center">
+            {/* Assignee */}
+            <div className="hidden sm:flex w-[80px] min-w-[80px] max-w-[80px] text-center p-2 items-center justify-center">
                 <div className="flex items-center justify-center w-full" data-no-row-click>
                     <div className="flex items-center justify-center" data-no-row-click>
                         <LazyAssignee

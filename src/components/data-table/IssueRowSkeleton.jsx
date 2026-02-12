@@ -18,22 +18,22 @@ const IssueRowSkeleton = () => {
       </div>
 
       {/* Status Skeleton */}
-      <div className="w-[160px] min-w-[160px] max-w-[160px] p-2">
+      <div className="hidden md:block w-[160px] min-w-[160px] max-w-[160px] p-2">
         <Skeleton className="h-8 w-24 rounded-md" />
       </div>
 
       {/* Importance Skeleton */}
-      <div className="w-[160px] min-w-[160px] max-w-[160px] p-2">
+      <div className="hidden lg:block w-[160px] min-w-[160px] max-w-[160px] p-2">
         <Skeleton className="h-8 w-24 rounded-md" />
       </div>
 
       {/* Flag Skeleton */}
-      <div className="w-[60px] min-w-[60px] max-w-[60px] p-2 flex justify-center">
+      <div className="hidden sm:flex w-[60px] min-w-[60px] max-w-[60px] p-2 justify-center">
         <Skeleton className="h-4 w-4 rounded-full" />
       </div>
 
       {/* Assignee Skeleton */}
-      <div className="w-[80px] min-w-[80px] max-w-[80px] p-2 flex justify-center">
+      <div className="hidden sm:flex w-[80px] min-w-[80px] max-w-[80px] p-2 justify-center">
         <Skeleton className="h-8 w-8 rounded-full" />
       </div>
 

@@ -80,13 +80,13 @@ const Backlog = () => {
   let gridColumnsClass = 'grid-cols-[minmax(0,1fr)]';
 
   if (showEpic && isAnySidebarPanelOpen) {
-    gridColumnsClass = 'grid-cols-[256px_minmax(0,1fr)_320px]';
+    gridColumnsClass = 'grid-cols-1 lg:grid-cols-[256px_minmax(0,1fr)_320px]';
   } else if (showEpic && !isAnySidebarPanelOpen) {
-    gridColumnsClass = 'grid-cols-[256px_minmax(0,1fr)]';
+    gridColumnsClass = 'grid-cols-1 lg:grid-cols-[256px_minmax(0,1fr)]';
   } else if (!showEpic && isAnySidebarPanelOpen) {
-    gridColumnsClass = 'grid-cols-[minmax(0,1fr)_320px]';
+    gridColumnsClass = 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]';
   } else {
-    gridColumnsClass = 'grid-cols-[minmax(0,1fr)]';
+    gridColumnsClass = 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)]';
   }
 
 
@@ -105,7 +105,7 @@ const Backlog = () => {
     <div className='flex flex-col h-screen px-4 py-4'>
       <div className={`grid ${gridColumnsClass} gap-x-2 w-full h-full min-h-0`}>
         {showEpic && (
-          <div className="w-full h-full min-h-0 overflow-y-auto">
+          <div className="hidden lg:block w-full h-full min-h-0 overflow-y-auto">
             <Epic showEpic={showEpic} setShowEpic={setShowEpic} />
           </div>
         )}
@@ -207,7 +207,7 @@ const Backlog = () => {
         </div>
 
         {isAnySidebarPanelOpen && (
-          <div className="w-full h-full flex-shrink-0 bg-neutral-50">
+          <div className="fixed inset-0 z-50 bg-white w-full h-full flex-shrink-0 lg:static lg:z-auto lg:bg-neutral-50 lg:w-auto">
 
             {openInsight && (
               <Insight openInsight={openInsight} setOpenInsight={setOpenInsight} />
