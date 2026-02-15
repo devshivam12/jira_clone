@@ -421,7 +421,6 @@ const EditIssue = ({ issue }) => {
                                     <DropdownMenu open={openParent} onOpenChange={setOpenParent}>
                                         <DropdownMenuTrigger asChild>
                                             <div
-                                                // onClick={handlEpicClick}
                                                 className="cursor-pointer"
                                             >
                                                 <p className='flex items-center gap-2'>
