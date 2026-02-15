@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight, ClipboardX, Flag, Pencil, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardX, Flag, Pencil, MoreHorizontal, Pen } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import IssueRowSkeleton from "./IssueRowSkeleton";
 import { useSearchParams } from "react-router-dom";
@@ -117,28 +118,27 @@ const TaskRow = memo(({
             }}
         >
             {/* Task ID and Type */}
-            {/* Task ID and Type */}
-            <div className="w-[160px] min-w-[160px] max-w-[160px] p-2 flex items-center">
+            <div className="w-[120px] min-w-[120px] max-w-[120px] p-2 flex items-center">
                 <div className="flex items-center justify-start text-neutral-500 w-full">
-                    <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${matchWorkType?.color || 'bg-gray-200'}`}>
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${matchWorkType?.color || 'bg-gray-200'}`}>
                         {matchWorkType?.icon && (
                             <img
                                 src={matchWorkType.icon}
                                 loading="lazy"
                                 alt={matchWorkType.name}
-                                className="w-4 h-4 filter brightness-0 invert"
+                                className="w-3 h-3 filter brightness-0 invert"
                                 decoding="async"
                             />
                         )}
                     </div>
-                    <div className='underline hover:text-blue-600 text-base font-semibold ml-1 truncate'>
+                    <div className='underline hover:text-blue-600 text-sm font-semibold ml-1 truncate'>
                         <span className="font-medium">{task?.project_key}-{task?.taskNumber}</span>
                     </div>
                 </div>
             </div>
 
-            <div className="p-2 flex-1" >
-                <div className="flex items-center text-sm font-semibold text-neutral-500" >
+            <div className="p-2 flex-1 min-w-[250px]">
+                <div className="flex items-center text-sm font-semibold text-neutral-500">
                     {isEditing ? (
                         <Input
                             value={currentSummary || ''}
@@ -148,10 +148,10 @@ const TaskRow = memo(({
                             onClick={(e) => e.stopPropagation()}
                             autoFocus
                             data-no-row-click
-                            className="h-8 "
+                            className="h-8 text-sm w-full"
                         />
                     ) : (
-                        <div className="flex items-center">
+                        <div className="flex items-center min-w-0">
                             <span
                                 className="truncate block flex-1"
                                 title={task?.summary}
@@ -172,39 +172,29 @@ const TaskRow = memo(({
             </div>
 
             {/* Task Status */}
-            {/* Task Status */}
-            {/* Task Status */}
-            <div className="hidden md:flex w-[160px] min-w-[160px] max-w-[160px] p-2 items-center">
+            <div className="flex w-[140px] min-w-[140px] max-w-[140px] p-2 items-center">
                 <div className="flex items-center justify-start w-full" data-no-row-click>
-                    <div className="flex items-center justify-start w-full" data-no-row-click>
-                        <LazyWorkSelector
-                            initialValue={task?.task_status}
-                            workTypes={taskTypes}
-                            onChange={changeTaskStatusInternal}
-                        />
-                    </div>
+                    <LazyWorkSelector
+                        initialValue={task?.task_status}
+                        workTypes={taskTypes}
+                        onChange={changeTaskStatusInternal}
+                    />
                 </div>
             </div>
 
             {/* Importance */}
-            {/* Importance */}
-            {/* Importance */}
-            <div className="hidden lg:flex w-[160px] min-w-[160px] max-w-[160px] p-2 items-center">
+            <div className="flex w-[140px] min-w-[140px] max-w-[140px] p-2 items-center">
                 <div className="flex items-center justify-start w-full" data-no-row-click>
-                    <div className="flex items-center justify-start w-full" data-no-row-click>
-                        <LazyWorkSelector
-                            initialValue={task?.importance}
-                            workTypes={importanceTypes}
-                            onChange={changeImportanceInternal}
-                        />
-                    </div>
+                    <LazyWorkSelector
+                        initialValue={task?.importance}
+                        workTypes={importanceTypes}
+                        onChange={changeImportanceInternal}
+                    />
                 </div>
             </div>
 
             {/* Flag */}
-            {/* Flag */}
-            {/* Flag */}
-            <div className="hidden sm:flex w-[60px] min-w-[60px] max-w-[60px] text-center p-2 items-center justify-center">
+            <div className="flex w-[50px] min-w-[50px] max-w-[50px] text-center p-2 items-center justify-center">
                 <div
                     data-no-row-click
                     className="flex justify-center items-center w-full"
@@ -222,27 +212,23 @@ const TaskRow = memo(({
             </div>
 
             {/* Assignee */}
-            {/* Assignee */}
-            {/* Assignee */}
-            <div className="hidden sm:flex w-[80px] min-w-[80px] max-w-[80px] text-center p-2 items-center justify-center">
+            <div className="flex w-[60px] min-w-[60px] max-w-[60px] text-center p-2 items-center justify-center">
                 <div className="flex items-center justify-center w-full" data-no-row-click>
-                    <div className="flex items-center justify-center" data-no-row-click>
-                        <LazyAssignee
-                            assigneeState={assigneeState}
-                            toggleAssigneeOpen={toggleAssigneeOpenInternal}
-                            handleAvatarClick={handleAvatarClickInternal}
-                            handleAssigneeChange={handleAssigneeChangeInternal}
-                            currentProjectId={currentProjectId}
-                            currentAssignee={currentAssignee}
-                            hasAssignee={hasAssignee}
-                            isAssigneeMenuOpen={isAssigneeMenuOpen}
-                        />
-                    </div>
+                    <LazyAssignee
+                        assigneeState={assigneeState}
+                        toggleAssigneeOpen={toggleAssigneeOpenInternal}
+                        handleAvatarClick={handleAvatarClickInternal}
+                        handleAssigneeChange={handleAssigneeChangeInternal}
+                        currentProjectId={currentProjectId}
+                        currentAssignee={currentAssignee}
+                        hasAssignee={hasAssignee}
+                        isAssigneeMenuOpen={isAssigneeMenuOpen}
+                    />
                 </div>
             </div>
 
             {/* Actions Menu */}
-            <div className="w-[56px] min-w-[56px] max-w-[56px] text-center p-2 flex items-center justify-center">
+            <div className="w-[50px] min-w-[50px] max-w-[50px] text-center p-1 sm:p-2 flex items-center justify-center">
                 <div data-no-row-click onClick={(e) => e.stopPropagation()}>
                     <LazyActionMenu
                         getItems={getWorkItemMenuItems}
@@ -250,7 +236,7 @@ const TaskRow = memo(({
                     />
                 </div>
             </div>
-        </div>
+        </div >
     );
 }, (prevProps, nextProps) => {
     return (
@@ -287,7 +273,7 @@ const LazyWorkSelector = memo(({ initialValue, workTypes, onChange }) => {
                     console.log("Lazy selector clicked");
                     setIsInteracted(true);
                 }}
-                className={`flex items-center gap-2 rounded-md px-2 py-0.5 w-30 text-start h-10 ${selectedWork?.color ? selectedWork.color : 'bg-white'}`}
+                className={`flex items-center gap-2 rounded-md px-2 w-30 text-start ${selectedWork?.color ? selectedWork.color : 'bg-white'}`}
             >
                 <div className="py-1">
                     {selectedWork ? (
@@ -442,6 +428,46 @@ const LazyActionMenu = memo(({ getItems, task }) => {
 });
 LazyActionMenu.displayName = 'LazyActionMenu';
 
+// Lazy Parent Selector Component
+const LazyParentSelector = memo(({ isOpen, onClose, onChange }) => {
+    return (
+        <DropdownMenu open={isOpen} onOpenChange={onClose}>
+            <DropdownMenuTrigger asChild>
+                <div
+                    className="cursor-pointer"
+                >
+                    <p className='flex items-center gap-2'>
+                        <Pen className='flex items-center justify-center w-3 h-3 font-normal text-neutral-500 cursor-pointer' />
+                        <span
+                            className='text-xs text-neutral-500'
+                        >
+                            Parent
+                        </span>
+                    </p>
+                </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                className="w-64 p-0"
+                align="end"
+                sideOffset={40}
+                alignOffset={10}
+
+                onClick={(e) => e.stopPropagation()}
+                forceMount={true}
+            >
+                <DynamicDropdownSelector
+                    slug="parent"
+                    onChange={onChange}
+                    showDropdown={true}
+                    label="Select parent"
+                />
+            </DropdownMenuContent>
+
+        </DropdownMenu>
+    );
+});
+LazyParentSelector.displayName = 'LazyParentSelector';
+
 const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
     console.log("issue-----------", issue)
     const { currentProject, workType, importance, workFlow } = projectData;
@@ -462,6 +488,7 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
     const [assigneeStates, setAssigneeStates] = useState({});
     const [currentFlagTask, setCurrentFlagTask] = useState(null);
     const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
+    const [parentDialogState, setParentDialogState] = useState({ isOpen: false, task: null });
     const addFlagRef = useRef(null);
     const parentRef = useRef(null);
 
@@ -640,7 +667,10 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
         {
             id: 'parent',
             label: 'Parent',
-            onSelect: () => console.log('Parent')
+            onSelect: (e) => {
+                e?.stopPropagation?.();
+                setParentDialogState({ isOpen: true, task: task });
+            }
         },
         {
             id: 'delete',
@@ -782,7 +812,7 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
             {expanded && (
                 <div className="w-full">
                     {showEmptyState ? (
-                        <div className="h-[400px] flex items-center justify-center flex-col gap-2">
+                        <div className="h-[200px] flex items-center justify-center flex-col gap-2">
                             <ClipboardX size={60} className="text-neutral-400" />
                             <span className="text-center text-sm text-gray-500">
                                 No tasks have been added to this backlog.
@@ -798,12 +828,13 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                     ) : (
                         <div
                             ref={parentRef}
-                            className="h-[600px] overflow-auto border-t"
+                            className="max-h-[300px] overflow-auto border-t"
                         >
                             <div
                                 style={{
                                     height: `${rowVirtualizer.getTotalSize()}px`,
                                     width: '100%',
+                                    minWidth: '950px',
                                     position: 'relative',
                                 }}
                             >
@@ -883,6 +914,20 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                     />
                 )
             }
+            {parentDialogState.isOpen && (
+                <LazyParentSelector
+                    isOpen={parentDialogState.isOpen}
+                    onClose={(open) => {
+                        if (!open) setParentDialogState(prev => ({ ...prev, isOpen: false }));
+                    }}
+                    onChange={(selectedParent) => {
+                        if (selectedParent && parentDialogState.task) {
+                            handleUpdateTask('parentId', selectedParent._id, parentDialogState.task._id);
+                            setParentDialogState({ isOpen: false, task: null });
+                        }
+                    }}
+                />
+            )}
         </div >
     );
 };
