@@ -19,6 +19,30 @@ import TooltipWrapper from "../common/TooltipWrapper";
 
 const ROW_HEIGHT = 56;
 
+const ParentWorkTypeIcon = memo(({ workTypeMap }) => {
+    console.log("workTypeMap", workTypeMap)
+    const matchEpic = useMemo(() => {
+        const item = workTypeMap?.get('epic');
+        console.log("item", item)
+        return workTypeMap?.get('epic');
+    }, [workTypeMap]);
+    console.log("matchEpic", matchEpic)
+    if (!matchEpic?.icon) return null;
+
+    return (
+        <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${matchEpic?.color || 'bg-gray-200'}`}>
+            <img
+                src={matchEpic?.icon}
+                loading="lazy"
+                alt={matchEpic?.name}
+                className="w-3 h-3 filter brightness-0 invert"
+                decoding="async"
+            />
+        </div>
+    );
+});
+ParentWorkTypeIcon.displayName = 'ParentWorkTypeIcon';
+
 // Memoized row component to prevent unnecessary re-renders
 const TaskRow = memo(({
     task,
@@ -49,6 +73,7 @@ const TaskRow = memo(({
     },
         [workTypeMap, task?.work_type]
     );
+
     const isEditing = editingTaskId === task._id;
     // const assigneeState = assigneeStates[task._id] || { isOpen: false, assignee: {} };
 
@@ -171,6 +196,26 @@ const TaskRow = memo(({
                 </div>
             </div>
 
+            <div className="flex w-[50px] min-w-[50px] max-w-[50px] text-center p-2 items-center justify-center">
+                <div
+                    data-no-row-click
+                    className="flex justify-center items-center w-full"
+                >
+                    {task?.parentDetail && (() => {
+                        const truncSummary = task.parentDetail.summary.length > 30 ? task.parentDetail.summary.slice(0, 10) + '...' : task.parentDetail.summary;
+
+                        return (
+                            <TooltipWrapper content={truncSummary}>
+                                <div>
+                                    <ParentWorkTypeIcon workTypeMap={workTypeMap} />
+                                </div>
+                            </TooltipWrapper>
+                        );
+                    })()}
+                </div>
+            </div>
+
+
             {/* Task Status */}
             <div className="flex w-[140px] min-w-[140px] max-w-[140px] p-2 items-center">
                 <div className="flex items-center justify-start w-full" data-no-row-click>
@@ -258,7 +303,6 @@ const TaskRow = memo(({
 
 TaskRow.displayName = 'TaskRow';
 
-// Lazy wrapper for WorkSelector to improve render performance
 const LazyWorkSelector = memo(({ initialValue, workTypes, onChange }) => {
     const [isInteracted, setIsInteracted] = useState(false);
     const selectedWork = useMemo(() =>
@@ -308,7 +352,6 @@ const LazyWorkSelector = memo(({ initialValue, workTypes, onChange }) => {
 });
 LazyWorkSelector.displayName = 'LazyWorkSelector';
 
-// Lazy wrapper for Assignee Dropdown
 const LazyAssignee = memo(({ assigneeState, toggleAssigneeOpen, handleAvatarClick, handleAssigneeChange, currentProjectId, currentAssignee, hasAssignee, isAssigneeMenuOpen }) => {
     const [isMounted, setIsMounted] = useState(false);
 
@@ -327,7 +370,7 @@ const LazyAssignee = memo(({ assigneeState, toggleAssigneeOpen, handleAvatarClic
                         image={currentAssignee?.image}
                         size='sm'
                         tooltipContent={`${currentAssignee?.first_name} ${currentAssignee?.last_name}`}
-                        showTooltip={false} // Disable tooltip in lazy mode for speed
+                        showTooltip={false}
                     />
                 ) : (
                     <ManageAvatar
@@ -346,7 +389,7 @@ const LazyAssignee = memo(({ assigneeState, toggleAssigneeOpen, handleAvatarClic
             open={isAssigneeMenuOpen}
             onOpenChange={(open) => {
                 toggleAssigneeOpen(open);
-                if (!open) setIsMounted(false); // Unmount when closed
+                if (!open) setIsMounted(false);
             }}
         >
             <DropdownMenuTrigger asChild>
@@ -392,7 +435,6 @@ const LazyAssignee = memo(({ assigneeState, toggleAssigneeOpen, handleAvatarClic
 });
 LazyAssignee.displayName = 'LazyAssignee';
 
-// Lazy wrapper for CommonDropdownMenu (Actions)
 const LazyActionMenu = memo(({ getItems, task }) => {
     const [isMounted, setIsMounted] = useState(false);
 
@@ -428,7 +470,6 @@ const LazyActionMenu = memo(({ getItems, task }) => {
 });
 LazyActionMenu.displayName = 'LazyActionMenu';
 
-// Lazy Parent Selector Component
 const LazyParentSelector = memo(({ isOpen, onClose, onChange }) => {
     return (
         <DropdownMenu open={isOpen} onOpenChange={onClose}>
