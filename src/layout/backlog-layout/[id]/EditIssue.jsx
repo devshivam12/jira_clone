@@ -255,39 +255,12 @@ const EditIssue = ({ issue }) => {
                     )
                 )
 
-                // ShowToast.success(isRemoving ? 'Vote removed successfully' : 'Vote added successfully')
             }
         } catch (error) {
             console.error("Error toggling vote:", error)
             ShowToast.error(`Failed to ${isRemoving ? 'remove' : 'add'} vote: ${error?.message || 'Unknown error'}`)
         }
     }, [vote.hasVoted, taskId, userData?.memberId, addVotes, fetchVotes])
-
-    // const handleAdd_RemoveVote = async (flag) => {
-    //     try {
-    //         const payload = {
-    //             operationName: "addVote",
-    //             variables: {
-    //                 taskId: taskId,
-    //                 memberId: userData?.memberId,
-    //                 isRemove: flag
-    //             }
-    //         }
-
-    //         const result = await addVotes(payload).unwrap()
-    //         if(result?.data?.addVote?.status === true){
-    //             setVote((prev) => ({
-    //                 count: flag ? prev.count - 1 : prev.count + 1,
-    //                 hasVoted: !flag 
-    //             }));
-    //             fetchVotes()
-    //         }
-
-    //     } catch (error) {
-    //         console.log("error", error)
-    //         ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-    //     }
-    // }
 
     const handleVoteOpen = useCallback((open) => {
         if (open && voteDetail.length === 0) {
@@ -387,8 +360,12 @@ const EditIssue = ({ issue }) => {
         }
     };
     const handleSelectEpic = (selectedParent) => {
-        console.log("selectedParent", selectedParent)
+        handleUpdateTask('parentId', selectedParent._id)
         setOpenParent(false)
+    }
+
+    const handleRemoveEpic = () => {
+        handleUpdateTask('parentId', null)
     }
     console.log("openParent", openParent)
     useEffect(() => {
@@ -416,38 +393,40 @@ const EditIssue = ({ issue }) => {
                         <CardTitle >
                             <div className='flex items-center justify-between px-2'>
                                 <div
-                                    className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md'
+                                    className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md group'
                                 >
-                                    <DropdownMenu open={openParent} onOpenChange={setOpenParent}>
-                                        <DropdownMenuTrigger asChild>
-                                            <div
-                                                className="cursor-pointer"
+                                    {task?.parentDetail === null && (
+                                        <DropdownMenu open={openParent} onOpenChange={setOpenParent}>
+                                            <DropdownMenuTrigger asChild>
+                                                <div
+                                                    className="cursor-pointer"
+                                                >
+                                                    <p className='flex items-center gap-2'>
+                                                        <Plus className='flex items-center justify-center w-3 h-3 font-normal text-neutral-500 cursor-pointer' />
+                                                        <span
+                                                            className='text-xs text-neutral-500'
+                                                        >
+                                                            Add epic
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent
+                                                className="w-64 p-0"
+                                                align="end"
+                                                sideOffset={8}
+                                                onClick={(e) => e.stopPropagation()}
+                                                forceMount={true}
                                             >
-                                                <p className='flex items-center gap-2'>
-                                                    <Pen className='flex items-center justify-center w-3 h-3 font-normal text-neutral-500 cursor-pointer' />
-                                                    <span
-                                                        className='text-xs text-neutral-500'
-                                                    >
-                                                        Add epic
-                                                    </span>
-                                                </p>
-                                            </div>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent
-                                            className="w-64 p-0"
-                                            align="end"
-                                            sideOffset={8}
-                                            onClick={(e) => e.stopPropagation()}
-                                            forceMount={true}
-                                        >
-                                            <DynamicDropdownSelector
-                                                slug={'parent'}
-                                                onChange={handleSelectEpic}
-                                                label={"Select epic"}
-                                                showDropdown={true}
-                                            />
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                                <DynamicDropdownSelector
+                                                    slug={'parent'}
+                                                    onChange={handleSelectEpic}
+                                                    label={"Select epic"}
+                                                    showDropdown={true}
+                                                />
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
                                 </div>
                                 <div className='flex items-center'>
                                     <div className="w-14 flex justify-center overflow-hidden rounded-md" >
@@ -470,21 +449,7 @@ const EditIssue = ({ issue }) => {
                                                 isLoading={voteLoading}
                                                 onOpenChange={handleVoteOpen}
                                             />
-                                        )
-                                            // : (
-                                            //     <TooltipWrapper content={vote.hasVoted ? "Remove vote" : "Add vote"}>
-                                            //         <Button
-                                            //             variant='default'
-                                            //             size='icon'
-                                            //             type='button'
-                                            //             onClick={handleToggleVote}
-                                            //             disabled={addVoteLoading}
-                                            //         >
-                                            //             <ThumbsUp size={20} className={vote.hasVoted ? 'fill-current' : ''} />
-                                            //         </Button>
-                                            //     </TooltipWrapper>
-                                            // )
-                                        }
+                                        )}
                                     </div>
 
 
@@ -532,7 +497,62 @@ const EditIssue = ({ issue }) => {
                                 </span>
                             </div>
                         </div>
-                        <div className='my-[0.8rem] pb-0'>
+                        {task?.parentDetail && (
+                            <div className="flex items-center cursor-pointer hover:underline group">
+                                <span className="text-neutral-500 font-normal text-base flex items-center gap-x-2">
+                                    {renderIcon('epic')}
+                                    {task.parentDetail.summary}
+
+                                    <div className="flex items-center gap-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                        <DropdownMenu open={openParent} onOpenChange={setOpenParent}>
+                                            <TooltipWrapper content={"Change parent"}>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="default"
+                                                        size="icon"
+                                                        type="button"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <Pen size={15} />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                            </TooltipWrapper>
+
+                                            <DropdownMenuContent
+                                                className="w-64 p-0"
+                                                align="end"
+                                                sideOffset={8}
+                                                onClick={(e) => e.stopPropagation()}
+                                                forceMount
+                                            >
+                                                <DynamicDropdownSelector
+                                                    slug={"parent"}
+                                                    onChange={handleSelectEpic}
+                                                    label={"Select epic"}
+                                                    showDropdown
+                                                />
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+
+                                        <TooltipWrapper content={"Remove parent"}>
+                                            <Button
+                                                variant="ghost"
+                                                size="xs"
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRemoveEpic();
+                                                }}
+                                            >
+                                                <X size={15} />
+                                            </Button>
+                                        </TooltipWrapper>
+                                    </div>
+                                </span>
+                            </div>
+                        )}
+
+                        < div className='my-[0.8rem] pb-0'>
                             <Controller
                                 name="summary"
                                 control={control}
