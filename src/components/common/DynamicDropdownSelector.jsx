@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Loader2, X } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -59,6 +59,42 @@ const SELECT_CONFIG = {
   }
 };
 
+const DropdownItem = memo(({ item, isSelected, config, onSelect, selectType }) => {
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    onSelect(item);
+  }, [item, onSelect]);
+
+  const className = useMemo(() => {
+    return [
+      "flex items-center gap-x-5 py-2 px-6 bg-neutral-50 cursor-pointer relative transition-colors text-neutral-500 font-medium",
+      "hover:bg-neutral-200/20 hover:before:absolute hover:before:left-0 hover:before:top-0 hover:before:h-full hover:before:w-1 hover:before:bg-neutral-400 hover:before:rounded-full",
+      isSelected && "bg-neutral-200/40 before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-neutral-400 before:rounded-full border font-semibold"
+    ].filter(Boolean).join(" ");
+  }, [isSelected]);
+
+  const avatarProps = config.getAvatarProps(item);
+
+  return (
+    <div
+      className={className}
+      onMouseDown={handleMouseDown}
+    >
+      {avatarProps && (
+        <ManageAvatar {...avatarProps} size="sm" />
+      )}
+      <span className="text-sm truncate flex flex-col">
+        {config.getDisplayName(item)}
+        {selectType === SELECT_TYPES.SPRINT && (
+          <span className="text-xs text-neutral-400 mt-0.5 truncate">
+            {item.project_key}
+          </span>
+        )}
+      </span>
+    </div>
+  );
+});
+
 const DynamicDropdownSelector = ({
   slug = null,
   onChange,
@@ -91,6 +127,10 @@ const DynamicDropdownSelector = ({
   // Refs
   const inputRef = useRef(null);
   const debounceTimerRef = useRef(null);
+  const skipSearchRef = useRef(false);
+
+  // Get display placeholder
+  const displayPlaceholder = label || config.placeholder;
 
   // Debounce search input
   useEffect(() => {
@@ -99,6 +139,10 @@ const DynamicDropdownSelector = ({
     }
 
     debounceTimerRef.current = setTimeout(() => {
+      if (skipSearchRef.current) {
+        skipSearchRef.current = false;
+        return;
+      }
       setDebouncedSearch(searchValue.trim());
       setPage(1);
     }, COMPONENT_CONFIG.debounceDelay);
@@ -139,14 +183,12 @@ const DynamicDropdownSelector = ({
     refetchOnReconnect: true,
     skip: !(shouldFetch && selectType === SELECT_TYPES.TEAM),
   });
-  console.log("memberData", memberData)
 
   const { data: sprintData, isFetching: sprintFetching, error: sprintError } = useGetSprintDropdownQuery(queryParams, {
     refetchOnMountOrArgChange: false,
     refetchOnReconnect: true,
     skip: !(shouldFetch && selectType === SELECT_TYPES.SPRINT)
   })
-  console.log("sprintData", sprintData)
 
   const { data: parentData, isFetching: parentFetching, error: parentError } = useGetParentDropdownQuery(queryParams, {
     refetchOnMountOrArgChange: false,
@@ -154,9 +196,7 @@ const DynamicDropdownSelector = ({
     refetchOnFocus: false,
     skip: !(shouldFetch && selectType === SELECT_TYPES.PARENT)
   })
-  console.log("parentData", parentData)
 
-  // Extract data based on type
   // Extract data based on type
   const { items, hasMore, isFetching, apiError } = useMemo(() => {
     if (selectType === SELECT_TYPES.MEMBER) {
@@ -191,8 +231,6 @@ const DynamicDropdownSelector = ({
     return { items: [], hasMore: false, isFetching: false, apiError: null };
   }, [selectType, memberData, teamData, sprintData, parentData, memberFetching, teamFetching, sprintFetching, parentFetching, memberError, teamError, sprintError, parentError]);
 
-  // const hasMore = page < totalPages;
-  console.log("items", items)
   // Update items list when new data arrives
   useEffect(() => {
     if (page === 1) {
@@ -229,42 +267,37 @@ const DynamicDropdownSelector = ({
     setPage(1);
     setSearchValue("");
     setSelectedItem(null);
-    // if (slug === 'sprint' || slug === 'parent') {
-    //   queryParams.projectId = projectId
-    // }
   }, [showDropdown]);
+
   // Infinite scroll handler
   const handleScroll = useCallback((e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < COMPONENT_CONFIG.scrollThreshold;
-    console.log("hasMore", hasMore)
     if (isNearBottom && hasMore && !isFetching) {
       setPage((prev) => prev + 1);
     }
   }, [hasMore, isFetching]);
 
-  // Item selection handler
-  const handleItemSelect = useCallback((itemId) => {
-    const item = allItems.find((i) => i._id === itemId);
-
+  // Item selection handler (Optimized)
+  const handleItemSelect = useCallback((item) => {
     if (!item) return;
 
     setSelectedItem(item);
     if (showDropdown) {
       onChange?.(item);
     } else {
-      // onChange?.(selectType === SELECT_TYPES.MEMBER ? itemId : item);
       onChange?.(item);
-      setIsOpen(false)
+      setIsOpen(false);
     }
     setSearchValue("");
-    // setIsOpen(false);
     if (!showDropdown) {
       setIsOpen(false);
     }
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, [allItems, onChange, selectType, showDropdown]);
-  console.log("setSelectedItem", selectedItem)
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }, [onChange, showDropdown]);
+
   // Clear selection handler
   const handleClear = useCallback((e) => {
     e.stopPropagation();
@@ -274,35 +307,46 @@ const DynamicDropdownSelector = ({
     setTimeout(() => inputRef.current?.focus(), 0);
   }, [onChange]);
 
+  // Handle interaction when opening the dropdown
+  const handleOpenChange = useCallback((open) => {
+    if (open) {
+      // Opening: If there is a selected item, switch to search mode
+      if (selectedItem) {
+        skipSearchRef.current = true;
+        setSearchValue(config.getDisplayName(selectedItem));
+        setSelectedItem(null);
+      }
+      setIsOpen(true);
+    } else {
+      // Closing: If no item is selected (and we didn't just clear it for search), restore value
+      if (value) {
+        setSelectedItem(value);
+      }
+      setIsOpen(false);
+      setSearchValue("");
+      setHasFocused(false);
+    }
+  }, [selectedItem, config, value]);
+
   // Focus input when popover opens
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 0);
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      });
     }
   }, [isOpen]);
 
   // Handle popover trigger click
   const handleTriggerClick = useCallback(() => {
-    if (!hasFocused) {
-      setHasFocused(true);
+    if (!showDropdown && !isOpen) {
+      handleOpenChange(true);
     }
-    if (!showDropdown) {
-      setIsOpen(true);
-    }
-  }, [hasFocused, showDropdown]);
+  }, [showDropdown, isOpen, handleOpenChange]);
 
-  // Get display placeholder
-  const displayPlaceholder = label || config.placeholder;
-  // console.log("allItems", allItems)
-
-  const getItemClassName = (item) => {
-    const isSelected = selectedItem?._id === item._id;
-    return [
-      "flex items-center gap-x-5 py-2 px-6 bg-neutral-50 cursor-pointer relative transition-colors text-neutral-500 font-medium",
-      "hover:bg-neutral-200/20 hover:before:absolute hover:before:left-0 hover:before:top-0 hover:before:h-full hover:before:w-1 hover:before:bg-neutral-400 hover:before:rounded-full",
-      isSelected && "bg-neutral-200/40 before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-neutral-400 before:rounded-full border font-semibold"
-    ].filter(Boolean).join(" ");
-  };
 
   const componentWidth = width || COMPONENT_CONFIG.defaultWidth;
   if (showDropdown) {
@@ -317,6 +361,7 @@ const DynamicDropdownSelector = ({
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder={displayPlaceholder}
             className="w-full bg-transparent outline-none px-2 py-1.5 text-sm text-neutral-700 placeholder:text-neutral-400 border border-neutral-300 rounded-md focus:border-neutral-400"
+            autoFocus
           />
         </div>
 
@@ -335,23 +380,14 @@ const DynamicDropdownSelector = ({
             className="overflow-y-auto"
           >
             {allItems?.map((item) => (
-              <div
-                key={item?._id}
-                className={getItemClassName(item)}
-                onClick={() => handleItemSelect(item._id)}
-              >
-                {config?.getAvatarProps(item) ? (
-                  <ManageAvatar {...config.getAvatarProps(item)} size="sm" />
-                ) : null}
-                <span className="text-sm truncate flex flex-col">
-                  {config.getDisplayName(item)}
-                  {selectType === SELECT_TYPES.SPRINT && (
-                    <span className="text-xs text-neutral-400 mt-0.5 truncate">
-                      {item.project_key}
-                    </span>
-                  )}
-                </span>
-              </div>
+              <DropdownItem
+                key={item._id}
+                item={item}
+                isSelected={selectedItem?._id === item._id}
+                config={config}
+                selectType={selectType}
+                onSelect={handleItemSelect}
+              />
             ))}
             {isFetching && page > 1 && (
               <div className="flex items-center justify-center py-4 bg-neutral-50">
@@ -370,19 +406,19 @@ const DynamicDropdownSelector = ({
     );
   }
 
+  const avatarProps = selectedItem ? config.getAvatarProps(selectedItem) : null;
+
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <div
           ref={triggerRef}
           className={`flex items-center justify-between gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 relative transition-colors focus-within:border-neutral-400 w-full ${className}`}
           onClick={handleTriggerClick}
         >
-          {selectedItem ? (
+          {avatarProps ? (
             <div className="flex w-full py-1 px-2 items-center gap-2">
-              {config.getAvatarProps(selectedItem) ? (
-                <ManageAvatar {...config.getAvatarProps(selectedItem)} size="sm" />
-              ) : null}
+              <ManageAvatar {...avatarProps} size="sm" />
               <span className="text-sm text-neutral-500 font-medium truncate flex-1 max-w-[180px] block">
                 {config.getDisplayName(selectedItem)}
               </span>
@@ -454,30 +490,14 @@ const DynamicDropdownSelector = ({
             className="overflow-y-auto"
           >
             {allItems?.map((item) => (
-              <div
-                key={item?._id}
-                className={getItemClassName(item)}
-                // border-b border-neutral-100 last:border-b-0
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  handleItemSelect(item._id);
-                }}
-              >
-                {config?.getAvatarProps(item) ? (
-                  <ManageAvatar {...config.getAvatarProps(item)} size="sm" />
-                ) : null}
-                <span className="text-sm truncate flex flex-col ">
-                  {config.getDisplayName(item)}
-
-                  {selectType === SELECT_TYPES.SPRINT && (
-                    <span className="text-xs text-neutral-400 mt-0.5 truncate">
-                      {item.project_key}
-                    </span>
-                  )}
-                </span>
-
-
-              </div>
+              <DropdownItem
+                key={item._id}
+                item={item}
+                isSelected={selectedItem?._id === item._id}
+                config={config}
+                selectType={selectType}
+                onSelect={handleItemSelect}
+              />
             ))}
             {isFetching && page > 1 && (
               <div className="flex items-center justify-center py-4 bg-neutral-50">

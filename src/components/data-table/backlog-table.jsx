@@ -20,13 +20,13 @@ import TooltipWrapper from "../common/TooltipWrapper";
 const ROW_HEIGHT = 56;
 
 const ParentWorkTypeIcon = memo(({ workTypeMap }) => {
-    console.log("workTypeMap", workTypeMap)
+    // console.log("workTypeMap", workTypeMap)
     const matchEpic = useMemo(() => {
         const item = workTypeMap?.get('epic');
-        console.log("item", item)
+        // console.log("item", item)
         return workTypeMap?.get('epic');
     }, [workTypeMap]);
-    console.log("matchEpic", matchEpic)
+    // console.log("matchEpic", matchEpic)
     if (!matchEpic?.icon) return null;
 
     return (
@@ -314,7 +314,6 @@ const LazyWorkSelector = memo(({ initialValue, workTypes, onChange }) => {
             <div
                 onClick={(e) => {
                     e.stopPropagation();
-                    console.log("Lazy selector clicked");
                     setIsInteracted(true);
                 }}
                 className={`flex items-center gap-2 rounded-md px-2 w-30 text-start ${selectedWork?.color ? selectedWork.color : 'bg-white'}`}
@@ -510,7 +509,7 @@ const LazyParentSelector = memo(({ isOpen, onClose, onChange }) => {
 LazyParentSelector.displayName = 'LazyParentSelector';
 
 const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
-    console.log("issue-----------", issue)
+    // console.log("issue-----------", issue)
     const { currentProject, workType, importance, workFlow } = projectData;
 
     // Performance measurement
@@ -518,7 +517,7 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
 
     useEffect(() => {
         const renderDuration = performance.now() - renderStartTime;
-        console.log(`BacklogTable render time: ${renderDuration.toFixed(2)}ms`);
+        // console.log(`BacklogTable render time: ${renderDuration.toFixed(2)}ms`);
     });
 
     const [updateTask, { isLoading: isUpdating }] = useUpdateIssueMutation();
@@ -602,10 +601,10 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                 }
             };
             const response = await updateTask(payload).unwrap();
-            console.log("response", response);
+            // console.log("response", response);
             return response;
         } catch (error) {
-            console.log("error", error);
+            // console.log("error", error);
             throw error;
         }
     }, [updateTask]);
@@ -638,7 +637,7 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
         navigator.clipboard.writeText(textToCopy)
             .then(() => {
                 ShowToast.info(message);
-                console.log(`${isLink ? 'Link' : 'Key'} copied: ${textToCopy}`);
+                // console.log(`${isLink ? 'Link' : 'Key'} copied: ${textToCopy}`);
             })
             .catch(err => {
                 ShowToast.warning(err);

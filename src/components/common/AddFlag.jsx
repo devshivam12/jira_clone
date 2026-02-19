@@ -110,7 +110,7 @@ const AddFlag = forwardRef(({ isOpen, setIsOpen, taskInfo, isFlagged }, ref) => 
                                 <RichTextEditor
                                     content={field.value}
                                     onChange={field.onChange}
-                                    placeholder="Write flag description..."
+                                    placeholder="Add flag description..."
                                     minHeight="150px"
                                 />
                             )}

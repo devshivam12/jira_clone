@@ -2,186 +2,214 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { Badge } from "@/components/ui/badge";
 import { BadgePlus, ChevronDown, Loader2, X } from "lucide-react";
 import { Button } from "../ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCreateLabelsMutation, useGetLabelQuery } from "@/redux/graphql_api/miscData";
 import { ScrollArea } from "../ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+
+const LabelItem = React.memo(({ label, isSelected, onSelect }) => {
+    const handleClick = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onSelect(label.name);
+    }, [label.name, onSelect]);
+
+    return (
+        <div
+            className="flex items-center gap-x-3 py-2 px-4 bg-neutral-50 cursor-pointer relative transition-colors text-neutral-500 font-medium hover:bg-neutral-100/50"
+            onMouseDown={handleClick} // use onMouseDown to prevent popover blur
+        >
+            <Checkbox
+                checked={isSelected}
+                className="border-neutral-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                // prevent checkbox from stealing focus and causing re-renders
+                onCheckedChange={() => onSelect(label.name)}
+            />
+            <span className="text-neutral-600 font-medium text-sm">
+                {label.name}
+            </span>
+        </div>
+    );
+});
+
+LabelItem.displayName = "LabelItem";
 
 const LabelSelector = ({ onChange, value, className = "" }) => {
-    const [createLabel] = useCreateLabelsMutation()
-    const triggerWidth = useRef(null)
+    const [createLabel] = useCreateLabelsMutation();
+    const triggerRef = useRef(null);
+    const [width, setWidth] = useState(0);
     const [inputValue, setInputValue] = useState("");
-    const [selectedLabels, setSelectedLabels] = useState([]);
+    const [selectedLabels, setSelectedLabels] = useState(() => value || []);
     const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null)
-    const inputRef = useRef(null)
-    const [debouncedSearch, setDebouncedSearch] = useState("")
-    const [hasFocused, setHasFocused] = useState(false)
+    const inputRef = useRef(null);
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [hasFocused, setHasFocused] = useState(false);
     const [page, setPage] = useState(1);
-    const scrollRef = useRef(null);
+    const [allLabels, setAllLabels] = useState([]);
     const observerRef = useRef(null);
     const debounceTimerRef = useRef(null);
+    // Track if we should skip the value sync (i.e., we are managing internally)
+    const isInternalChange = useRef(false);
 
+    // Sync external value → internal state (only when value actually changes, not on every render)
+    const prevValueRef = useRef(value);
     useEffect(() => {
-        if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current);
+        // Only sync if value changed externally (not from our own onChange call)
+        if (!isInternalChange.current && value !== prevValueRef.current) {
+            setSelectedLabels(value || []);
         }
+        prevValueRef.current = value;
+        isInternalChange.current = false;
+    }, [value]);
 
+    // Update popover width
+    useEffect(() => {
+        if (isOpen && triggerRef.current) {
+            setWidth(triggerRef.current.offsetWidth);
+        }
+    }, [isOpen, selectedLabels]);
+
+    // Debounce search
+    useEffect(() => {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = setTimeout(() => {
             setDebouncedSearch(inputValue.trim());
             setPage(1);
+            setAllLabels([]); // reset accumulated list on new search
         }, 500);
-
-        return () => {
-            if (debounceTimerRef.current) {
-                clearTimeout(debounceTimerRef.current);
-            }
-        };
+        return () => clearTimeout(debounceTimerRef.current);
     }, [inputValue]);
 
-    const { data: getLabels, isFetching, refetch } = useGetLabelQuery({
-        search: debouncedSearch,
-        page,
-        limit: 10
-    }, {
-        refetchOnMountOrArgChange: false,
-        refetchOnReconnect: true,
-        skip: !hasFocused
-    });
+    const { data: getLabels, isFetching, refetch } = useGetLabelQuery(
+        { search: debouncedSearch, page, limit: 10 },
+        {
+            refetchOnMountOrArgChange: false,
+            refetchOnReconnect: true,
+            skip: !hasFocused,
+        }
+    );
 
-    const availableLabels = useMemo(() => {
+    const pageLabels = useMemo(() => {
         return getLabels?.data?.getClientLabels?.labels?.map(item => ({
             id: item?._id,
-            name: item?.value
+            name: item?.value,
         })) || [];
     }, [getLabels]);
 
     const hasMore = getLabels?.data?.getClientLabels?.hasMore || false;
 
-    // ✅ Check if exact match exists in available labels (case-insensitive)
+    // Accumulate pages
+    useEffect(() => {
+        if (pageLabels.length === 0) return;
+        if (page === 1) {
+            setAllLabels(pageLabels);
+        } else {
+            setAllLabels(prev => {
+                const existingIds = new Set(prev.map(l => l.id));
+                const newItems = pageLabels.filter(l => !existingIds.has(l.id));
+                return [...prev, ...newItems];
+            });
+        }
+    }, [pageLabels, page]);
+
     const exactMatchExists = useMemo(() => {
         if (!inputValue.trim()) return false;
         const searchTerm = inputValue.trim().toLowerCase();
-        return availableLabels.some(label =>
-            label?.name?.toLowerCase() === searchTerm
-        );
-    }, [inputValue, availableLabels]);
+        return allLabels.some(label => label?.name?.toLowerCase() === searchTerm);
+    }, [inputValue, allLabels]);
 
-    // ✅ Filter out already selected labels
-    const filteredLabels = useMemo(() => {
-        if (!availableLabels) return [];
-        return availableLabels.filter((label) =>
-            !selectedLabels.includes(label.name)
-        );
-    }, [availableLabels, selectedLabels]);
-
+    // Stable select handler — no external dependencies that cause loops
     const handleSelect = useCallback((name) => {
-        setSelectedLabels((prev) => {
-            if (prev.includes(name)) return prev;
+        setSelectedLabels(prev =>
+            prev.includes(name) ? prev.filter(l => l !== name) : [...prev, name]
+        );
+    }, []); // no deps needed — uses functional updater
 
-            const updated = [...prev, name];
+    const handleRemove = useCallback((e, name) => {
+        e.stopPropagation();
+        setSelectedLabels(prev => {
+            const updated = prev.filter(l => l !== name);
+            isInternalChange.current = true;
             onChange?.(updated);
             return updated;
         });
-
-        setInputValue("");
-        setIsOpen(false);
-        setTimeout(() => inputRef.current?.focus(), 0);
-    }, [onChange]);
-
-
-    const handleRemove = useCallback((name) => {
-        setSelectedLabels((prev) => prev.filter((l) => l !== name));
-        setTimeout(() => inputRef.current?.focus(), 0);
-        onChange?.(null)
     }, [onChange]);
 
     const handleCreateNew = useCallback(async () => {
         const newLabelName = inputValue.trim();
         if (!newLabelName || exactMatchExists) return;
-
         try {
             await createLabel(newLabelName).unwrap();
-            setSelectedLabels((prev) => [...prev, newLabelName]);
+            setSelectedLabels(prev => [...prev, newLabelName]);
             setInputValue("");
             setPage(1);
-            // Refetch to get the newly created label
+            setAllLabels([]);
             refetch();
         } catch (error) {
             console.error("Failed to create label:", error);
-        } finally {
-            setIsOpen(false);
-            setTimeout(() => inputRef.current?.focus(), 0);
         }
+        setTimeout(() => inputRef.current?.focus(), 0);
     }, [inputValue, exactMatchExists, createLabel, refetch]);
 
+    const handleDone = useCallback(() => {
+        isInternalChange.current = true;
+        onChange?.(selectedLabels);
+        setIsOpen(false);
+        setInputValue("");
+    }, [onChange, selectedLabels]);
+
+    const handleReset = useCallback(() => {
+        setSelectedLabels([]);
+    }, []);
+
+    // Only open/close — no onChange here to avoid the loop
+    const handleOpenChange = useCallback((open) => {
+        setIsOpen(open);
+        if (open) {
+            setHasFocused(true);
+            setTimeout(() => inputRef.current?.focus(), 0);
+        } else {
+            setInputValue("");
+        }
+    }, []);
+
+    const handleTriggerClick = useCallback(() => {
+        setHasFocused(true);
+        setIsOpen(true);
+        setTimeout(() => inputRef.current?.focus(), 0);
+    }, []);
+
+    // Infinite scroll via IntersectionObserver
     const lastLabelRef = useCallback((node) => {
         if (isFetching) return;
         if (observerRef.current) observerRef.current.disconnect();
+        if (!node || !hasMore) return;
 
-        observerRef.current = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && hasMore) {
-                setPage((prevPage) => prevPage + 1);
+        observerRef.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore && !isFetching) {
+                setPage(prev => prev + 1);
             }
-        });
+        }, { threshold: 0.5 });
 
-        if (node) observerRef.current.observe(node);
+        observerRef.current.observe(node);
     }, [isFetching, hasMore]);
 
+    // Cleanup observer on unmount
     useEffect(() => {
-        if (value) {
-            setSelectedLabels(value)
-        } else {
-            setSelectedLabels([])
-        }
-    }, [value])
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        return () => observerRef.current?.disconnect();
     }, []);
 
-    useEffect(() => {
-        if (isOpen) {
-            setTimeout(() => inputRef.current?.focus(), 0);
-        }
-    }, [isOpen]);
-
-    // ✅ Determine what to show in dropdown
-    const shouldShowCreateButton = inputValue.trim() &&
-        !exactMatchExists &&
-        !isFetching &&
-        filteredLabels.length === 0;
-
-    const getItemClassName = (item) => {
-        const isSelected = selectedLabels.includes(item.name)
-        return [
-            "flex items-center gap-x-5 py-2 px-6 bg-neutral-50 cursor-pointer relative transition-colors text-neutral-500 font-medium",
-            "hover:bg-neutral-200/20 hover:before:absolute hover:before:left-0 hover:before:top-0 hover:before:h-full hover:before:w-1 hover:before:bg-neutral-400 hover:before:rounded-full",
-            isSelected && "bg-neutral-200/40 before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-neutral-400 before:rounded-full border font-semibold"
-        ].filter(Boolean).join(" ");
-    };
+    const shouldShowCreateButton = inputValue.trim() && !exactMatchExists && !isFetching;
 
     return (
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <Popover open={isOpen} onOpenChange={handleOpenChange}>
             <PopoverTrigger asChild>
                 <div
-                    ref={triggerWidth}
-                    className="flex flex-1 items-center gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 relative transition-colors focus-within:border-neutral-400 w-full"
-                    onClick={() => {
-                        if (!hasFocused) {
-                            setHasFocused(true);
-                        }
-                        setIsOpen(true);
-                        inputRef.current?.focus();
-                    }}
+                    ref={triggerRef}
+                    className={`flex flex-wrap flex-1 items-center gap-2 border border-neutral-300 rounded-md cursor-text px-2 py-0.5 relative transition-colors focus-within:border-neutral-400 w-full ${className}`}
+                    onClick={handleTriggerClick}
                 >
-                    {selectedLabels.map((label) => (
+                    {selectedLabels.map(label => (
                         <Badge
                             key={label}
                             className="flex items-center gap-1 px-0.5 py-0.5"
@@ -190,19 +218,16 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
                             {label}
                             <X
                                 className="h-3 w-3 cursor-pointer hover:text-neutral-300"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemove(label);
-                                }}
+                                onClick={(e) => handleRemove(e, label)}
                             />
                         </Badge>
                     ))}
-                    <div className="flex items-center relative flex-1 min-w-0">
+                    <div className="flex items-center relative flex-1 min-w-[120px]">
                         <input
                             ref={inputRef}
                             type="text"
                             value={inputValue}
-                            onChange={(e) => {
+                            onChange={e => {
                                 setInputValue(e.target.value);
                                 if (!isOpen) setIsOpen(true);
                             }}
@@ -210,48 +235,36 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
                             className="flex-1 bg-transparent outline-none py-1 px-2 my-1 min-w-[120px] text-sm text-neutral-700 placeholder:text-neutral-400"
                         />
                         {isFetching ? (
-                            <div className="flex items-center pr-2">
-                                <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />
-                            </div>
+                            <Loader2 className="h-4 w-4 animate-spin text-neutral-400 mr-2" />
                         ) : (
-                            <ChevronDown
-                                className="absolute right-0 top-1/2 -translate-y-1/2 text-neutral-500 w-4 h-4 pointer-events-none"
-                            />
+                            <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 text-neutral-500 w-4 h-4 pointer-events-none" />
                         )}
                     </div>
-
                 </div>
             </PopoverTrigger>
 
             <PopoverContent
                 className="p-0"
-                style={{
-                    width: triggerWidth.current ? `${triggerWidth.current.offsetWidth}px` : '300px'
-                }}
+                style={{ width: width ? `${width}px` : "300px" }}
+                // Prevent popover from closing when clicking inside
+                onOpenAutoFocus={e => e.preventDefault()}
             >
                 {isFetching && page === 1 ? (
-                    // ✅ Initial loading state
                     <div className="py-8 flex items-center justify-center">
-                        <span className="text-neutral-500 textfont-semibold">Searching....</span>
+                        <span className="text-neutral-500 font-semibold">Searching...</span>
                     </div>
-                ) : filteredLabels.length > 0 ? (
-                    // ✅ Show filtered labels
-                    <ScrollArea
-                        ref={scrollRef}
-                        className={`${filteredLabels.length > 5 ? 'h-40' : 'max-h-40'}`}
-                    >
-                        {filteredLabels.map((label, index) => {
-                            const isLast = filteredLabels.length === index + 1;
+                ) : allLabels.length > 0 ? (
+                    <ScrollArea className={allLabels.length > 5 ? "h-40" : "max-h-40"}>
+                        {allLabels.map((label, index) => {
+                            const isLast = index === allLabels.length - 1;
+                            const isSelected = selectedLabels.includes(label.name);
                             return (
-                                <div
-                                    ref={isLast ? lastLabelRef : null}
-                                    key={label.id}
-                                    className={getItemClassName(label)}
-                                    onMouseDown={() => handleSelect(label.name)}
-                                >
-                                    <span className="text-neutral-500 font-medium">
-                                        {label.name}
-                                    </span>
+                                <div ref={isLast ? lastLabelRef : null} key={label.id}>
+                                    <LabelItem
+                                        label={label}
+                                        isSelected={isSelected}
+                                        onSelect={handleSelect}
+                                    />
                                 </div>
                             );
                         })}
@@ -262,27 +275,35 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
                         )}
                     </ScrollArea>
                 ) : shouldShowCreateButton ? (
-                    // ✅ Show create new button only when appropriate
                     <div className="p-2 bg-neutral-100 cursor-pointer text-sm text-neutral-600 flex items-center justify-between">
                         <span className="text-neutral-900 font-normal">
                             Create new label{" "}
                             <span className="font-medium text-neutral-500">"{inputValue.trim()}"</span>
                         </span>
-                        <Button
-                            type="button"
-                            size="icon"
-                            variant="teritary"
-                            onClick={handleCreateNew}
-                        >
+                        <Button type="button" size="icon" variant="teritary" onClick={handleCreateNew}>
                             <BadgePlus className="text-xs font-medium" />
                         </Button>
                     </div>
                 ) : (
-                    // ✅ No results found
-                    <div className="py-4 bg-neutral-100 cursor-pointer text-sm text-neutral-500 font-normal flex items-center justify-center">
-                        <span>{inputValue.trim() && "No matches found"}</span>
+                    <div className="py-4 bg-neutral-100 text-sm text-neutral-500 font-normal flex items-center justify-center">
+                        <span>{inputValue.trim() ? "No matches found" : "Type to search"}</span>
                     </div>
                 )}
+
+                <div className="flex items-center justify-between p-2 border-t border-neutral-200 bg-neutral-50">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={handleReset}
+                        className="text-neutral-500 hover:text-neutral-700"
+                    >
+                        Reset
+                    </Button>
+                    <Button size="sm" variant="teritary" onClick={handleDone} type="button">
+                        Done
+                    </Button>
+                </div>
             </PopoverContent>
         </Popover>
     );

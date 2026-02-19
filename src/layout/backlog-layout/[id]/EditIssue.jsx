@@ -16,8 +16,7 @@ import { useProjectData } from '@/hooks/useProjectData'
 import { taskApi, useAddVotesMutation, useGetTaskByIdQuery, useGetTaskVotesMutation, useUpdateIssueMutation } from '@/redux/graphql_api/task'
 import CommonDropdownMenu from '@/components/common/CommonDropdownMenu'
 import LabelSelector from '@/components/common/LabelSelector'
-import { CKEditor } from '@ckeditor/ckeditor5-react';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import RichTextEditor from '@/components/ui/richTextEditor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import CommentComponent from '@/components/common/CommentComponent'
 import { useUserData } from '@/hooks/useUserData'
@@ -130,45 +129,57 @@ const EditIssue = ({ issue }) => {
                     taskId: taskId,
                     key: key,
                     value: value,
-                    changeBy: userData.member_id,
-                    projectId: currentProject?._id
+                    // projectId: currentProject?._id
                 }
             }
-            console.log("payload", payload)
+            // console.log("payload", payload)
             const response = await updateTask(payload).unwrap()
-            console.log("response", response)
+            // console.log("response", response)
         } catch (error) {
-            console.log("error", error)
+            // console.log("error", error)
             ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
         }
-    })
+    }, [taskId, userData, currentProject, updateTask])
+
+    const toggleTaskStatusDropdown = useCallback((isOpen) => {
+        if (isOpen) setActiveDropdown('task_status');
+        else setActiveDropdown(null);
+    }, [])
+
+    const toggleImportanceDropdown = useCallback((isOpen) => {
+        if (isOpen) setActiveDropdown('importance');
+        else setActiveDropdown(null);
+    }, [])
 
     useEffect(() => {
         summaryRef.current = getValues("summary")
     }, [])
 
-    const changeTaskStatus = (status) => {
+    const changeTaskStatus = useCallback((status) => {
         handleUpdateTask('task_status', status)
-    }
+    }, [handleUpdateTask])
 
-    const changeImportance = (imp) => {
+    const changeImportance = useCallback((imp) => {
         handleUpdateTask('importance', imp)
-    }
-    const changleAssignee = (ass) => {
-        console.log("assassassass", ass)
-        handleUpdateTask('assigneeId', ass)
-    }
-    const changeLables = (label) => {
-        handleUpdateTask('labels', label)
-    }
-    const changeTeam = (team) => {
-        handleUpdateTask('teamId', team)
-    }
-    const changeReporter = (report) => {
-        handleUpdateTask('reporterId', report)
-    }
+    }, [handleUpdateTask])
 
-    const data_f_vote = (v) => {
+    const changleAssignee = useCallback((ass) => {
+        handleUpdateTask('assigneeId', ass._id)
+    }, [handleUpdateTask])
+
+    const changeLables = useCallback((label) => {
+        handleUpdateTask('labels', label)
+    }, [handleUpdateTask])
+
+    const changeTeam = useCallback((team) => {
+        handleUpdateTask('teamId', team._id)
+    }, [handleUpdateTask])
+
+    const changeReporter = useCallback((report) => {
+        handleUpdateTask('reporterId', report._id)
+    }, [handleUpdateTask])
+
+    const data_f_vote = useCallback((v) => {
         const fullName = v?.first_name + " " + v?.last_name
         return (
             <div className='flex items-center gap-x-2'>
@@ -181,46 +192,7 @@ const EditIssue = ({ issue }) => {
                 <span>{fullName}</span>
             </div>
         )
-    }
-
-    const fetchVotes = async () => {
-        try {
-            const payload = {
-                operationName: "getVote",
-                variables: {
-                    taskId: taskId
-                }
-            }
-            const result = await getVotes(payload).unwrap()
-            const votes = result?.data?.getVote?.data
-            if (votes.length > 0) {
-                const formattedVotes = votes.map(v => ({
-                    id: v?._id,
-                    label: data_f_vote(v)
-                }));
-
-                const match = userData?.memberId
-                console.log("match", match)
-                const mResult = vote?.hasVoted ? true : false
-
-                const menuItems = [
-                    {
-                        id: vote.hasVoted ? 'remove-vote' : 'add-vote',
-                        label: vote.hasVoted ? 'Remove vote' : 'Add vote',
-                        danger: vote.hasVoted,
-                        onSelect: () => handleToggleVote()
-                    },
-                    { type: 'separator' },
-                    ...formattedVotes
-                ];
-                console.log("menuItems", menuItems)
-                setVoteDetail(menuItems);
-            }
-        } catch (error) {
-            console.log("error", error)
-            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-        }
-    }
+    }, [])
 
     const handleToggleVote = useCallback(async () => {
         const isRemoving = vote.hasVoted
@@ -237,7 +209,7 @@ const EditIssue = ({ issue }) => {
             const result = await addVotes(payload).unwrap()
 
             if (result?.data?.addVote?.status === true) {
-                console.log("cxxcxc", typeof taskId)
+                // console.log("cxxcxc", typeof taskId)
                 dispatch(
                     taskApi.util.updateQueryData(
                         'getTaskById',
@@ -245,7 +217,7 @@ const EditIssue = ({ issue }) => {
                         (draft) => {
                             // console.log("Draft as JSON:", JSON.parse(JSON.stringify(draft)))
                             if (draft?.data?.getTaskDetail?.data?.vote) {
-                                console.log("console.log(draft.data.getTaskDetail.data.vote)", console.log(draft.data.getTaskDetail.data.vote))
+                                // console.log("console.log(draft.data.getTaskDetail.data.vote)", console.log(draft.data.getTaskDetail.data.vote))
                                 draft.data.getTaskDetail.data.vote.count =
                                     isRemoving ? Math.max(0, draft.data.getTaskDetail.data.vote.count - 1)
                                         : draft.data.getTaskDetail.data.vote.count + 1
@@ -260,7 +232,46 @@ const EditIssue = ({ issue }) => {
             console.error("Error toggling vote:", error)
             ShowToast.error(`Failed to ${isRemoving ? 'remove' : 'add'} vote: ${error?.message || 'Unknown error'}`)
         }
-    }, [vote.hasVoted, taskId, userData?.memberId, addVotes, fetchVotes])
+    }, [vote.hasVoted, taskId, userData?.memberId, addVotes])
+
+    const fetchVotes = useCallback(async () => {
+        try {
+            const payload = {
+                operationName: "getVote",
+                variables: {
+                    taskId: taskId
+                }
+            }
+            const result = await getVotes(payload).unwrap()
+            const votes = result?.data?.getVote?.data
+            if (votes.length > 0) {
+                const formattedVotes = votes.map(v => ({
+                    id: v?._id,
+                    label: data_f_vote(v)
+                }));
+
+                const match = userData?.memberId
+                // console.log("match", match)
+                const mResult = vote?.hasVoted ? true : false
+
+                const menuItems = [
+                    {
+                        id: vote.hasVoted ? 'remove-vote' : 'add-vote',
+                        label: vote.hasVoted ? 'Remove vote' : 'Add vote',
+                        danger: vote.hasVoted,
+                        onSelect: () => handleToggleVote()
+                    },
+                    { type: 'separator' },
+                    ...formattedVotes
+                ];
+                // console.log("menuItems", menuItems)
+                setVoteDetail(menuItems);
+            }
+        } catch (error) {
+            // console.log("error", error)
+            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
+        }
+    }, [taskId, getVotes, data_f_vote, vote.hasVoted, handleToggleVote])
 
     const handleVoteOpen = useCallback((open) => {
         if (open && voteDetail.length === 0) {
@@ -332,11 +343,11 @@ const EditIssue = ({ issue }) => {
         },
     ];
 
-    const renderIcon = (item) => {
-        console.log("item-------", item)
+    const renderIcon = useCallback((item) => {
+        // console.log("item-------", item)
         let work = workType.find(t => t.slug === item)
-        console.log("work", work)
-        if (item) {
+        // console.log("work", work)
+        if (item && work) {
             return <div className={`w-6 h-6 rounded-md flex items-center justify-center ${work.color}`}>
                 <img
                     src={work.icon}
@@ -344,7 +355,7 @@ const EditIssue = ({ issue }) => {
                 />
             </div>
         }
-    }
+    }, [workType])
 
     const handleClose = () => {
         setSearchParams((prev) => {
@@ -367,7 +378,7 @@ const EditIssue = ({ issue }) => {
     const handleRemoveEpic = () => {
         handleUpdateTask('parentId', null)
     }
-    console.log("openParent", openParent)
+    // console.log("openParent", openParent)
     useEffect(() => {
         if (openCommand) {
             document.addEventListener("click", handleClickOutside);
@@ -507,13 +518,11 @@ const EditIssue = ({ issue }) => {
                                         <DropdownMenu open={openParent} onOpenChange={setOpenParent}>
                                             <TooltipWrapper content={"Change parent"}>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="default"
-                                                        size="icon"
-                                                        type="button"
+                                                    <Button variant='default' size="icon" type="button"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        <Pen size={15} />
+                                                        <Pen size={16}
+                                                            className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                             </TooltipWrapper>
@@ -536,15 +545,14 @@ const EditIssue = ({ issue }) => {
 
                                         <TooltipWrapper content={"Remove parent"}>
                                             <Button
-                                                variant="ghost"
-                                                size="xs"
-                                                type="button"
+                                                variant='default' size="icon" type="button"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleRemoveEpic();
                                                 }}
                                             >
-                                                <X size={15} />
+                                                <X size={16}
+                                                    className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                                             </Button>
                                         </TooltipWrapper>
                                     </div>
@@ -588,10 +596,7 @@ const EditIssue = ({ issue }) => {
                                             initialValue={field.value}
                                             workTypes={taskTypes}
                                             open={activeDropdown === 'task_status'}
-                                            onOpenChange={(isOpen) => {
-                                                if (isOpen) setActiveDropdown('task_status');
-                                                else setActiveDropdown(null);
-                                            }}
+                                            onOpenChange={toggleTaskStatusDropdown}
                                             onChange={changeTaskStatus}
                                         />
                                     )}
@@ -607,10 +612,7 @@ const EditIssue = ({ issue }) => {
                                             initialValue={field.value}
                                             workTypes={importanceTypes}
                                             open={activeDropdown === 'importance'}
-                                            onOpenChange={(isOpen) => {
-                                                if (isOpen) setActiveDropdown('importance');
-                                                else setActiveDropdown(null);
-                                            }}
+                                            onOpenChange={toggleImportanceDropdown}
                                             onChange={changeImportance}
                                         />
                                     )}
@@ -650,12 +652,11 @@ const EditIssue = ({ issue }) => {
                                         control={control}
                                         render={({ field }) => (
                                             <div className="mt-2 border rounded-md overflow-hidden">
-                                                <CKEditor
-                                                    editor={ClassicEditor}
-                                                    data={field.value}
-                                                    onChange={(event, editor) => {
-                                                        field.onChange(editor.getData());
-                                                    }}
+                                                <RichTextEditor
+                                                    content={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Add description..."
+                                                    minHeight="150px"
                                                 />
                                             </div>
                                         )}
@@ -674,7 +675,7 @@ const EditIssue = ({ issue }) => {
                                             type="button"
                                             size="sm"
                                             onClick={() => {
-                                                const value = watch("description")
+                                                const value = getValues("description")
                                                 handleUpdateTask("description", value)
                                                 setIsEditing(false)
                                             }}
