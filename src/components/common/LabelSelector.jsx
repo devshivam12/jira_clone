@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useCreateLabelsMutation, useGetLabelQuery } from "@/redux/graphql_api/miscData";
 import { ScrollArea } from "../ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DottedSeparator } from "../dotted-separator";
 
 const LabelItem = React.memo(({ label, isSelected, onSelect }) => {
     const handleClick = useCallback((e) => {
@@ -17,15 +18,16 @@ const LabelItem = React.memo(({ label, isSelected, onSelect }) => {
     return (
         <div
             className="flex items-center gap-x-3 py-2 px-4 bg-neutral-50 cursor-pointer relative transition-colors text-neutral-500 font-medium hover:bg-neutral-100/50"
-            onMouseDown={handleClick} // use onMouseDown to prevent popover blur
+            onMouseDown={handleClick}
         >
+            {/* FIX #2: pointer-events-none so clicks pass through to the parent div's onMouseDown
+                instead of being consumed by the Checkbox's own internal click handler */}
             <Checkbox
                 checked={isSelected}
-                className="border-neutral-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                // prevent checkbox from stealing focus and causing re-renders
-                onCheckedChange={() => onSelect(label.name)}
+                className="border-neutral-400 data-[state=checked]:bg-neutral-600 data-[state=checked]:border-neutral-600 pointer-events-none"
+                onCheckedChange={() => { }}
             />
-            <span className="text-neutral-600 font-medium text-sm">
+            <span className="text-neutral-500 font-normal text-sm">
                 {label.name}
             </span>
         </div>
@@ -48,15 +50,21 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
     const [allLabels, setAllLabels] = useState([]);
     const observerRef = useRef(null);
     const debounceTimerRef = useRef(null);
-    // Track if we should skip the value sync (i.e., we are managing internally)
+
     const isInternalChange = useRef(false);
 
-    // Sync external value → internal state (only when value actually changes, not on every render)
     const prevValueRef = useRef(value);
     useEffect(() => {
-        // Only sync if value changed externally (not from our own onChange call)
-        if (!isInternalChange.current && value !== prevValueRef.current) {
-            setSelectedLabels(value || []);
+        if (!isInternalChange.current) {
+            const currentVal = value || [];
+            const prevVal = prevValueRef.current || [];
+
+            const isSame = currentVal.length === prevVal.length &&
+                currentVal.every((v, i) => v === prevVal[i]);
+
+            if (!isSame) {
+                setSelectedLabels(currentVal);
+            }
         }
         prevValueRef.current = value;
         isInternalChange.current = false;
@@ -69,13 +77,14 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
         }
     }, [isOpen, selectedLabels]);
 
-    // Debounce search
     useEffect(() => {
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = setTimeout(() => {
             setDebouncedSearch(inputValue.trim());
             setPage(1);
-            setAllLabels([]); // reset accumulated list on new search
+            // FIX #1: Don't clear allLabels here — doing so on every keystroke
+            // wipes the list while the user types. Let the page=1 response replace it instead.
+            // setAllLabels([]);  <-- REMOVED
         }, 500);
         return () => clearTimeout(debounceTimerRef.current);
     }, [inputValue]);
@@ -98,7 +107,6 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
 
     const hasMore = getLabels?.data?.getClientLabels?.hasMore || false;
 
-    // Accumulate pages
     useEffect(() => {
         if (pageLabels.length === 0) return;
         if (page === 1) {
@@ -118,22 +126,24 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
         return allLabels.some(label => label?.name?.toLowerCase() === searchTerm);
     }, [inputValue, allLabels]);
 
-    // Stable select handler — no external dependencies that cause loops
     const handleSelect = useCallback((name) => {
         setSelectedLabels(prev =>
             prev.includes(name) ? prev.filter(l => l !== name) : [...prev, name]
         );
-    }, []); // no deps needed — uses functional updater
+    }, []);
 
     const handleRemove = useCallback((e, name) => {
+        e.preventDefault();
         e.stopPropagation();
         setSelectedLabels(prev => {
             const updated = prev.filter(l => l !== name);
-            isInternalChange.current = true;
-            onChange?.(updated);
+            if (!isOpen) {
+                isInternalChange.current = true;
+                onChange?.(updated);
+            }
             return updated;
         });
-    }, [onChange]);
+    }, [isOpen, onChange]);
 
     const handleCreateNew = useCallback(async () => {
         const newLabelName = inputValue.trim();
@@ -158,11 +168,13 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
         setInputValue("");
     }, [onChange, selectedLabels]);
 
+    // FIX #1: Reset only restores the local selectedLabels state to the last committed value.
+    // It must NOT clear allLabels or reset page/debouncedSearch — that would wipe the API data.
     const handleReset = useCallback(() => {
-        setSelectedLabels([]);
-    }, []);
+        setSelectedLabels(value || []);
+        // Do NOT touch allLabels, page, or debouncedSearch here
+    }, [value]);
 
-    // Only open/close — no onChange here to avoid the loop
     const handleOpenChange = useCallback((open) => {
         setIsOpen(open);
         if (open) {
@@ -170,8 +182,9 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
             setTimeout(() => inputRef.current?.focus(), 0);
         } else {
             setInputValue("");
+            setSelectedLabels(value || []);
         }
-    }, []);
+    }, [value]);
 
     const handleTriggerClick = useCallback(() => {
         setHasFocused(true);
@@ -179,7 +192,6 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
         setTimeout(() => inputRef.current?.focus(), 0);
     }, []);
 
-    // Infinite scroll via IntersectionObserver
     const lastLabelRef = useCallback((node) => {
         if (isFetching) return;
         if (observerRef.current) observerRef.current.disconnect();
@@ -194,7 +206,6 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
         observerRef.current.observe(node);
     }, [isFetching, hasMore]);
 
-    // Cleanup observer on unmount
     useEffect(() => {
         return () => observerRef.current?.disconnect();
     }, []);
@@ -218,6 +229,10 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
                             {label}
                             <X
                                 className="h-3 w-3 cursor-pointer hover:text-neutral-300"
+                                onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }}
                                 onClick={(e) => handleRemove(e, label)}
                             />
                         </Badge>
@@ -246,7 +261,6 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
             <PopoverContent
                 className="p-0"
                 style={{ width: width ? `${width}px` : "300px" }}
-                // Prevent popover from closing when clicking inside
                 onOpenAutoFocus={e => e.preventDefault()}
             >
                 {isFetching && page === 1 ? (
@@ -289,14 +303,13 @@ const LabelSelector = ({ onChange, value, className = "" }) => {
                         <span>{inputValue.trim() ? "No matches found" : "Type to search"}</span>
                     </div>
                 )}
-
-                <div className="flex items-center justify-between p-2 border-t border-neutral-200 bg-neutral-50">
+                <DottedSeparator className="" />
+                <div className="flex items-center justify-end gap-x-2 p-2 bg-neutral-50">
                     <Button
-                        variant="ghost"
-                        size="sm"
                         type="button"
+                        variant="default"
+                        size="sm"
                         onClick={handleReset}
-                        className="text-neutral-500 hover:text-neutral-700"
                     >
                         Reset
                     </Button>

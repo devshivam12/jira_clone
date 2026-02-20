@@ -32,7 +32,7 @@ export const taskApi = createApi({
         }),
         updateIssue: builder.mutation({
             query: (payload) => {
-                const { projectId, ...apiPayload } = payload.variables || {}
+                const { projectId, fullDetail, ...apiPayload } = payload.variables || {}
                 return {
                     method: "POST",
                     body: {
@@ -42,7 +42,7 @@ export const taskApi = createApi({
                 }
             },
             async onQueryStarted(payload, { dispatch, queryFulfilled, getState }) {
-                const { taskId, key, value } = payload.variables
+                const { taskId, key, value, fullDetail } = payload.variables
                 console.log("taskIdtaskIdtaskIdtaskId", taskId)
                 const state = getState();
                 const cacheEntries = state.taskApi.queries;
@@ -54,12 +54,44 @@ export const taskApi = createApi({
                 const patchResult = dispatch(
                     taskApi.util.updateQueryData(
                         'getTaskById',
-                        { operationName: 'getTaskDetail', variables: { taskId: taskId } },
+                        {
+                            operationName: "getTaskDetail",
+                            variables: { taskId: taskId }
+                        },
                         (draft) => {
                             const task = draft?.data?.getTaskDetail?.data;
-                            console.log("tasktasktasktasktask", task)
                             if (task) {
-                                task[key] = value;
+                                // task[key] = value;
+                                // if (key === 'assigneeId') task.assigneeDetail = fullDetail || null;
+                                // if (key === 'reporterId') task.reporterDetail = fullDetail || null;
+                                // if (key === 'teamId') task.teamDetail = fullDetail || null;
+                                switch (key) {
+                                    case 'isFlagged':
+                                        task.isFlagged = (value === 'false' || value === false) ? false : true;
+                                        break;
+
+                                    case 'parentId':
+                                        task.parentId = value
+                                        task.parentDetail = fullDetail || null
+                                        break;
+                                    case 'assigneeId':
+                                        task.assigneeId = value;
+                                        task.assigneeDetail = fullDetail || null;
+                                        break;
+
+                                    case 'reporterId':
+                                        task.reporterId = value;
+                                        task.reporterDetail = fullDetail || null;
+                                        break;
+
+                                    case 'teamId':
+                                        task.teamId = value;
+                                        task.teamDetail = fullDetail || null;
+                                        break;
+
+                                    default:
+                                        task[key] = value;
+                                }
                             }
                         }
                     )
@@ -82,10 +114,34 @@ export const taskApi = createApi({
                                 if (Array.isArray(taskList)) {
                                     const taskToUpdate = taskList.find((t) => t._id === taskId);
                                     if (taskToUpdate) {
-                                        if (key === 'isFlagged' && value === 'false') {
-                                            taskToUpdate.isFlagged = false
-                                        } else {
-                                            taskToUpdate[key] = value;
+
+                                        console.log("keykey", key)
+                                        switch (key) {
+                                            case 'isFlagged':
+                                                taskToUpdate.isFlagged = (value === 'false' || value === false) ? false : true;
+                                                break;
+
+                                            case 'parentId':
+                                                taskToUpdate.parentId = value || null;
+                                                taskToUpdate.parentDetail = fullDetail || null;
+                                                break;
+                                            case 'assigneeId':
+                                                taskToUpdate.assigneeId = value;
+                                                taskToUpdate.assigneeDetail = fullDetail || null;
+                                                break;
+
+                                            case 'reporterId':
+                                                taskToUpdate.reporterId = value;
+                                                taskToUpdate.reporterDetail = fullDetail || null;
+                                                break;
+
+                                            case 'teamId':
+                                                taskToUpdate.teamId = value;
+                                                taskToUpdate.teamDetail = fullDetail || null;
+                                                break;
+
+                                            default:
+                                                taskToUpdate[key] = value;
                                         }
                                     }
                                 }

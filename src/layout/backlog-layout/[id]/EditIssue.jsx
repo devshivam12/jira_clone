@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-import { ChevronDown, ChevronUp, Link, Pen, Plus, Share, Share2, ThumbsUp, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Link, Pen, Plus, Share, Share2, ThumbsUp, X } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { DottedSeparator } from '@/components/dotted-separator'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -103,6 +103,8 @@ const EditIssue = ({ issue }) => {
     const [openCommand, setOpenCommand] = useState(false)
     const commandRef = useRef(null)
     const [isEditing, setIsEditing] = useState(false)
+    const [isEditingSummary, setIsEditingSummary] = useState(false)
+    const [tempSummary, setTempSummary] = useState("")
     const [activeDropdown, setActiveDropdown] = useState(null);
 
 
@@ -121,7 +123,7 @@ const EditIssue = ({ issue }) => {
     })), [importance])
 
 
-    const handleUpdateTask = useCallback(async (key, value) => {
+    const handleUpdateTask = useCallback(async (key, value, fullDetail) => {
         try {
             const payload = {
                 operationName: "updateTask",
@@ -129,14 +131,11 @@ const EditIssue = ({ issue }) => {
                     taskId: taskId,
                     key: key,
                     value: value,
-                    // projectId: currentProject?._id
+                    ...(fullDetail !== undefined && { fullDetail })
                 }
             }
-            // console.log("payload", payload)
             const response = await updateTask(payload).unwrap()
-            // console.log("response", response)
         } catch (error) {
-            // console.log("error", error)
             ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
         }
     }, [taskId, userData, currentProject, updateTask])
@@ -164,7 +163,7 @@ const EditIssue = ({ issue }) => {
     }, [handleUpdateTask])
 
     const changleAssignee = useCallback((ass) => {
-        handleUpdateTask('assigneeId', ass._id)
+        handleUpdateTask('assigneeId', ass?._id || null, ass || null)
     }, [handleUpdateTask])
 
     const changeLables = useCallback((label) => {
@@ -172,11 +171,11 @@ const EditIssue = ({ issue }) => {
     }, [handleUpdateTask])
 
     const changeTeam = useCallback((team) => {
-        handleUpdateTask('teamId', team._id)
+        handleUpdateTask('teamId', team?._id || null, team || null)
     }, [handleUpdateTask])
 
     const changeReporter = useCallback((report) => {
-        handleUpdateTask('reporterId', report._id)
+        handleUpdateTask('reporterId', report?._id || null, report || null)
     }, [handleUpdateTask])
 
     const data_f_vote = useCallback((v) => {
@@ -370,10 +369,10 @@ const EditIssue = ({ issue }) => {
             setOpenCommand(false);
         }
     };
-    const handleSelectEpic = (selectedParent) => {
-        handleUpdateTask('parentId', selectedParent._id)
+    const handleSelectEpic = useCallback((selectedParent) => {
+        handleUpdateTask('parentId', selectedParent._id || null, selectedParent || null)
         setOpenParent(false)
-    }
+    }, [handleUpdateTask])
 
     const handleRemoveEpic = () => {
         handleUpdateTask('parentId', null)
@@ -486,11 +485,11 @@ const EditIssue = ({ issue }) => {
                 </div>
                 <DottedSeparator className="h-px my-1 bg-neutral-200" />
                 <CardContent
-                    className="mt-0 w-full overflow-y-auto px-2 flex-grow"
+                    className="mt-0 w-full overflow-y-auto px-4 lg:px-6 py-4 flex-grow"
                     onScroll={handleScrollEffect}
                 >
-                    <div className='space-y-2 [&::-webkit-scrollbar]:hidden"'>
-                        <div className='mt-2'>
+                    <div className='flex flex-col gap-5 [&::-webkit-scrollbar]:hidden"'>
+                        <div className='flex flex-col gap-2'>
                             <div className="flex items-center cursor-pointer hover:underline group">
                                 <span className="text-neutral-500 font-normal text-base flex items-center gap-x-2">
                                     {renderIcon(taskDetail?.work_type)}
@@ -560,32 +559,73 @@ const EditIssue = ({ issue }) => {
                             </div>
                         )}
 
-                        < div className='my-[0.8rem] pb-0'>
+                        <div className='w-full'>
                             <Controller
                                 name="summary"
                                 control={control}
                                 render={({ field }) => (
-                                    <Input
-                                        {...field}
-                                        type="text"
-                                        placeholder="Your summary"
-                                        // className="text-2xl font-semibold text-neutral-500 border-none h-auto py-2 focus:ring-0"
-                                        className="text-2xl font-semibold text-neutral-500 border-none h-auto py-3 px-2 shadow-none focus-visible:ring-1 hover:bg-neutral-200/40 transition-all"
-                                        onFocus={() => {
-                                            summaryRef.current = field.value; // store old value
-                                        }}
-                                        onBlur={(e) => {
-                                            field.onBlur()
-                                            const newValue = e.target.value
-                                            if (newValue !== summaryRef.current) {
-                                                handleUpdateTask('summary', e.target.value)
-                                            }
-                                        }}
-                                    />
+                                    !isEditingSummary ? (
+                                        <div
+                                            className="text-2xl font-semibold text-neutral-800 py-2 px-3 hover:bg-neutral-200/50 rounded-md cursor-text transition-all min-h-[48px] break-words border border-transparent"
+                                            onClick={() => {
+                                                setTempSummary(field.value);
+                                                setIsEditingSummary(true);
+                                                setTimeout(() => summaryRef.current?.focus(), 50);
+                                            }}
+                                        >
+                                            {field.value || "Your summary"}
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col gap-2 w-full">
+                                            <Input
+                                                ref={(e) => {
+                                                    field.ref(e);
+                                                    summaryRef.current = e;
+                                                }}
+                                                value={tempSummary}
+                                                onChange={(e) => setTempSummary(e.target.value)}
+                                                placeholder="Your summary"
+                                                className="text-2xl font-semibold text-neutral-800 border-2 border-blue-500 h-auto py-2 px-3 shadow-none focus-visible:ring-0 transition-all bg-white"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        field.onChange(tempSummary);
+                                                        handleUpdateTask('summary', tempSummary);
+                                                        setIsEditingSummary(false);
+                                                    } else if (e.key === 'Escape') {
+                                                        setIsEditingSummary(false);
+                                                    }
+                                                }}
+                                            />
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 rounded-md bg-white hover:bg-neutral-100 shadow-sm border border-neutral-200 text-neutral-600 hover:text-neutral-900"
+                                                    onClick={() => {
+                                                        field.onChange(tempSummary);
+                                                        handleUpdateTask('summary', tempSummary);
+                                                        setIsEditingSummary(false);
+                                                    }}
+                                                >
+                                                    <Check size={16} strokeWidth={2.5} />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 rounded-md bg-white hover:bg-neutral-100 shadow-sm border border-neutral-200 text-neutral-600 hover:text-neutral-900"
+                                                    onClick={() => setIsEditingSummary(false)}
+                                                >
+                                                    <X size={16} strokeWidth={2.5} />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )
                                 )}
                             />
                         </div>
-                        <div className='flex items-center gap-2 mt-2'>
+                        <div className='flex items-center flex-wrap gap-3'>
 
                             <div className="flex items-center justify-center">
                                 <Controller
@@ -622,13 +662,13 @@ const EditIssue = ({ issue }) => {
                                 <CommonDropdownMenu triggerIcon={<Plus size={18} />} triggerTooltip='Add or create related work' items={workRelatItem} />
                             </div>
                         </div>
-                        <div>
-                            <Label className="text-neutral-500">Description</Label>
+                        <div className="flex flex-col gap-2">
+                            <Label className="text-neutral-600 font-medium text-sm ml-1">Description</Label>
 
                             {!isEditing ? (
                                 <div
                                     onClick={() => setIsEditing(true)}
-                                    className="mt-2 min-h-[40px] py-2 border-none rounded-md transition cursor-pointer hover:bg-neutral-200/40"
+                                    className="min-h-[60px] py-3 px-3 border border-neutral-200 hover:border-neutral-400/50 rounded-md transition cursor-pointer hover:bg-neutral-100/50"
                                 >
                                     <Controller
                                         name="description"
@@ -636,7 +676,7 @@ const EditIssue = ({ issue }) => {
                                         render={({ field }) => (
                                             field.value ? (
                                                 <div
-                                                    className="text-neutral-500 px-2 font-normal text-sm max-w-none"
+                                                    className="text-neutral-500  px-2 font-normal text-sm max-w-none"
                                                     dangerouslySetInnerHTML={{ __html: field.value }}
                                                 />
                                             ) : (
@@ -688,24 +728,20 @@ const EditIssue = ({ issue }) => {
                         </div>
                     </div>
 
-                    <Card className='mt-4 shadow-none rounded-md  '>
+                    <Card className='mt-6 shadow-sm border-neutral-200 rounded-md'>
                         <CardHeader
-                            className="py-3 px-2 cursor-pointer bg-neutral-200 border border-neutral-300"
+                            className="py-3 px-4 flex flex-row items-center justify-between cursor-pointer bg-neutral-100/80 border-b border-neutral-200 hover:bg-neutral-200/50 transition-colors"
                             onClick={() => setExpandDetails((prev) => !prev)}
                         >
-                            <CardTitle className="flex items-center justify-between">
-                                <span className='text-neutral-500 font-semibold'>
-                                    Details
-                                </span>
-                                {expandDetails === true ? <ChevronDown className='text-neutral-600' /> : <ChevronUp className='text-neutral-600' />}
-                            </CardTitle>
+                            <span className='text-neutral-700 font-medium text-base'>
+                                Details
+                            </span>
+                            {expandDetails === true ? <ChevronDown className='text-neutral-500 h-5 w-5' /> : <ChevronUp className='text-neutral-500 h-5 w-5' />}
                         </CardHeader>
                         {expandDetails && (
-                            <CardContent className="bg-neutral-100 py-3 px-2 border border-neutral-300 text-neutral-500 space-y-2 relative">
-                                <div
-                                    className='space-y-2 '
-                                >
-                                    <Label className='text-sm text-neutral-500 gap-2'>
+                            <CardContent className="bg-neutral-200/10 py-5 px-4 flex flex-col gap-6 relative rounded-b-md">
+                                <div className='flex flex-col gap-1.5'>
+                                    <Label className='text-sm text-neutral-600 font-medium'>
                                         Assignee
                                     </Label>
                                     <Controller
@@ -722,8 +758,8 @@ const EditIssue = ({ issue }) => {
                                     />
                                 </div>
 
-                                <div className='space-y-2 w-full'>
-                                    <Label className='text-sm text-neutral-500 gap-2'>
+                                <div className='flex flex-col gap-1.5 w-full'>
+                                    <Label className='text-sm text-neutral-600 font-medium'>
                                         Labels
                                     </Label>
                                     <Controller
@@ -738,8 +774,8 @@ const EditIssue = ({ issue }) => {
                                     />
                                 </div>
 
-                                <div className='space-y-2 '>
-                                    <Label className='text-sm text-neutral-500 gap-2'>
+                                <div className='flex flex-col gap-1.5'>
+                                    <Label className='text-sm text-neutral-600 font-medium'>
                                         Team
                                     </Label>
                                     <Controller
@@ -758,8 +794,8 @@ const EditIssue = ({ issue }) => {
 
                                 {/* For Report  */}
 
-                                <div className='space-y-2'>
-                                    <Label className='text-sm text-neutral-500 gap-2'>
+                                <div className='flex flex-col gap-1.5'>
+                                    <Label className='text-sm text-neutral-600 font-medium'>
                                         Reporter
                                     </Label>
                                     <Controller
