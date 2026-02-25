@@ -31,10 +31,8 @@ export const miscDataApi = createApi({
                     const { data } = await queryFulfilled;
                     console.log("data", data)
                     const newLabel = data?.data?.createLabels?.label
-                    console.log("newLabel", newLabel)
                     // If creation succeeded
                     if (newLabel) {
-                        console.log("is this working when creating new label")
                         dispatch(
                             taskApi.util.updateQueryData('getLabel', "", (draft) => {
                                 console.log("draft", draft)

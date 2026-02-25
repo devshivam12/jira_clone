@@ -17,9 +17,20 @@ const CommonDropdownMenu = ({
   isLoading = false,
   onOpenChange,
   className = "",
-  defaultOpen,
+  defaultOpen = false,
   open
 }) => {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+
+  const handleOpenChange = (newOpen) => {
+    if (!isControlled) {
+      setInternalOpen(newOpen);
+    }
+    onOpenChange?.(newOpen);
+  };
+
   const renderMenuItem = (item, index) => {
     if (item.type === 'separator') {
       return (
@@ -37,25 +48,34 @@ const CommonDropdownMenu = ({
             {item.icon && <span className="mr-2">{item.icon}</span>}
             <span className="font-medium">{item.label}</span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-48 p-1 rounded-md shadow-lg border">
-            {item.items?.map((subItem, subIndex) => (
-              <React.Fragment key={subItem.id || subIndex}>
-                {subItem.type === 'separator' ? (
-                  <DottedSeparator className="h-px my-1 bg-neutral-200" />
-                ) : (
-                  <DropdownMenuItem
-                    className={`px-3 py-2 cursor-pointer hover:bg-neutral-100 rounded-md ${subItem.className || ''}`}
-                    onSelect={() => {
-                      onItemSelect?.(subItem);
-                      subItem.onSelect?.();
-                    }}
-                  >
-                    {subItem.icon && <span className="mr-2">{subItem.icon}</span>}
-                    {subItem.label}
-                  </DropdownMenuItem>
-                )}
-              </React.Fragment>
-            ))}
+          <DropdownMenuSubContent
+            className="w-48 p-1 rounded-md shadow-lg border"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+
+          >
+            {item.content
+              ? React.cloneElement(item.content, {
+                onClose: () => handleOpenChange(false), // ✅ closes entire dropdown
+              }) : (
+                item.items?.map((subItem, subIndex) => (
+                  <React.Fragment key={subItem.id || subIndex}>
+                    {subItem.type === 'separator' ? (
+                      <DottedSeparator className="h-px my-1 bg-neutral-200" />
+                    ) : (
+                      <DropdownMenuItem
+                        className={`px-3 py-2 cursor-pointer hover:bg-neutral-100 rounded-md ${subItem.className || ''}`}
+                        onSelect={() => {
+                          onItemSelect?.(subItem);
+                          subItem.onSelect?.();
+                        }}
+                      >
+                        {subItem.icon && <span className="mr-2">{subItem.icon}</span>}
+                        {subItem.label}
+                      </DropdownMenuItem>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       );
@@ -83,7 +103,7 @@ const CommonDropdownMenu = ({
   };
 
   return (
-    <DropdownMenu onOpenChange={onOpenChange} defaultOpen={defaultOpen} open={open}>
+    <DropdownMenu onOpenChange={handleOpenChange} defaultOpen={defaultOpen} open={isOpen}>
       <DropdownMenuTrigger asChild>
         <Button size="icon" variant="ghost">
           <TooltipWrapper content={triggerTooltip} disableFocusListener>

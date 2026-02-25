@@ -7,7 +7,7 @@ import { useDispatch } from 'react-redux';
 import { setTaskQuery } from '@/redux/reducers/taskSlice';
 
 
-const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedIssue, userData, projectData }) => {
+const CreateBacklog = ({ createSprint, onIssueClick, userData, projectData }) => {
 
   const { currentProject } = projectData
   const [expanded, setExpanded] = useState(true)
@@ -83,4 +83,4 @@ const CreateBacklog = ({ createSprint, onIssueClick, selectedIssue, setSelectedI
   );
 };
 
-export default CreateBacklog;
+export default React.memo(CreateBacklog);

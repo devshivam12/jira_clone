@@ -51,53 +51,53 @@ export const taskApi = createApi({
                 console.log("Looking for getBacklogList entries:",
                     Object.keys(cacheEntries).filter(key => key.includes('getBacklogList'))
                 );
-                const patchResult = dispatch(
-                    taskApi.util.updateQueryData(
-                        'getTaskById',
-                        {
-                            operationName: "getTaskDetail",
-                            variables: { taskId: taskId }
-                        },
-                        (draft) => {
-                            const task = draft?.data?.getTaskDetail?.data;
-                            if (task) {
-                                // task[key] = value;
-                                // if (key === 'assigneeId') task.assigneeDetail = fullDetail || null;
-                                // if (key === 'reporterId') task.reporterDetail = fullDetail || null;
-                                // if (key === 'teamId') task.teamDetail = fullDetail || null;
-                                switch (key) {
-                                    case 'isFlagged':
-                                        task.isFlagged = (value === 'false' || value === false) ? false : true;
-                                        break;
+                const patchResult = [];
+                const queryEntries = Object.values(state.taskApi.queries);
 
-                                    case 'parentId':
-                                        task.parentId = value
-                                        task.parentDetail = fullDetail || null
-                                        break;
-                                    case 'assigneeId':
-                                        task.assigneeId = value;
-                                        task.assigneeDetail = fullDetail || null;
-                                        break;
-
-                                    case 'reporterId':
-                                        task.reporterId = value;
-                                        task.reporterDetail = fullDetail || null;
-                                        break;
-
-                                    case 'teamId':
-                                        task.teamId = value;
-                                        task.teamDetail = fullDetail || null;
-                                        break;
-
-                                    default:
-                                        task[key] = value;
-                                }
-                            }
-                        }
-                    )
+                const taskByIdQueries = queryEntries.filter(
+                    (entry) => entry?.endpointName === 'getTaskById' && entry?.status === 'fulfilled'
                 );
 
-                const queryEntries = Object.values(state.taskApi.queries);
+                for (const entry of taskByIdQueries) {
+                    if (entry.originalArgs?.variables?.taskId === taskId) {
+                        const patch = dispatch(
+                            taskApi.util.updateQueryData(
+                                'getTaskById',
+                                entry.originalArgs,
+                                (draft) => {
+                                    const task = draft?.data?.getTaskDetail?.data;
+                                    if (task) {
+                                        switch (key) {
+                                            case 'isFlagged':
+                                                task.isFlagged = (value === 'false' || value === false) ? false : true;
+                                                break;
+                                            case 'parentId':
+                                                task.parentId = value
+                                                task.parentDetail = fullDetail || null
+                                                break;
+                                            case 'assigneeId':
+                                                task.assigneeId = value;
+                                                task.assigneeDetail = fullDetail || null;
+                                                break;
+                                            case 'reporterId':
+                                                task.reporterId = value;
+                                                task.reporterDetail = fullDetail || null;
+                                                break;
+                                            case 'teamId':
+                                                task.teamId = value;
+                                                task.teamDetail = fullDetail || null;
+                                                break;
+                                            default:
+                                                task[key] = value;
+                                        }
+                                    }
+                                }
+                            )
+                        );
+                        patchResult.push(patch.undo);
+                    }
+                }
+
                 const backlogQueries = queryEntries.filter(
                     (entry) => entry?.endpointName === 'getBacklogList' && entry?.status === 'fulfilled'
                 );
@@ -159,7 +159,7 @@ export const taskApi = createApi({
                     await queryFulfilled
                 } catch (err) {
                     console.error("Mutation failed, rolling back", err);
-                    patchResult.undo();
+                    patchResult.forEach(undo => undo());
                     listUndos.forEach(undo => undo());
                 }
             }

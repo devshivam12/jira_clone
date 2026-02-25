@@ -1,12 +1,13 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
-const WorkSelector = ({ initialValue, value, workTypes, onChange, ...props }) => {
+const WorkSelector = ({ initialValue, value, workTypes, onChange, open, onOpenChange, ...props }) => {
     const currentValue = value || initialValue;
     const selectedWork = workTypes?.find(type => type.value === currentValue) || null;
 
     const handleValueChange = (val) => {
         onChange?.(val);
+        onOpenChange?.(false)
     };
 
     const handleClear = (e) => {
@@ -34,6 +35,7 @@ const WorkSelector = ({ initialValue, value, workTypes, onChange, ...props }) =>
         <Select
             value={selectedWork?.value || ''}
             onValueChange={handleValueChange}
+            onOpenChange={onOpenChange}
             {...props}
         >
             <SelectTrigger

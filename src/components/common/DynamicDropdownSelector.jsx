@@ -102,7 +102,8 @@ const DynamicDropdownSelector = ({
   label,
   width = null,
   className = "",
-  showDropdown = false
+  showDropdown = false,
+  onClose
 }) => {
   // Validate and normalize slug
   const selectType =
@@ -284,9 +285,9 @@ const DynamicDropdownSelector = ({
 
     setSelectedItem(item);
     if (showDropdown) {
-      onChange?.(item);
+      onChange?.(item, { onClose });
     } else {
-      onChange?.(item);
+      onChange?.(item, { onClose });
       setIsOpen(false);
     }
     setSearchValue("");
@@ -296,7 +297,7 @@ const DynamicDropdownSelector = ({
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
-  }, [onChange, showDropdown]);
+  }, [onChange, showDropdown, onClose]);
 
   // Clear selection handler
   const handleClear = useCallback((e) => {

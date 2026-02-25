@@ -510,6 +510,33 @@ const LazyParentSelector = memo(({ isOpen, onClose, onChange }) => {
 });
 LazyParentSelector.displayName = 'LazyParentSelector';
 
+const LazySprintSelector = memo(({ isOpen, onClose, onChange, projectId }) => {
+    return (
+        <DropdownMenu open={isOpen} onOpenChange={onClose}>
+            <DropdownMenuTrigger asChild>
+                <div className="hidden" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                className="w-64 p-0"
+                align="end"
+                sideOffset={40}
+                alignOffset={10}
+                onClick={(e) => e.stopPropagation()}
+                forceMount={true}
+            >
+                <DynamicDropdownSelector
+                    slug="sprint"
+                    onChange={onChange}
+                    showDropdown={true}
+                    label="Select sprint"
+                    projectId={projectId}
+                />
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+});
+LazySprintSelector.displayName = 'LazySprintSelector';
+
 const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
     // console.log("issue-----------", issue)
     const { currentProject, workType, importance, workFlow } = projectData;
@@ -531,6 +558,7 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
     const [currentFlagTask, setCurrentFlagTask] = useState(null);
     const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
     const [parentDialogState, setParentDialogState] = useState({ isOpen: false, task: null });
+    const [sprintDialogState, setSprintDialogState] = useState({ isOpen: false, task: null });
     const addFlagRef = useRef(null);
     const parentRef = useRef(null);
 
@@ -664,8 +692,11 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                 },
                 {
                     id: 'sprint',
-                    label: 'Move to Sprint X',
-                    onSelect: () => console.log('Move to sprint')
+                    label: 'Move to sprint',
+                    onSelect: (e) => {
+                        e?.stopPropagation?.();
+                        setSprintDialogState({ isOpen: true, task: task });
+                    }
                 },
                 { type: 'separator' },
                 {
@@ -969,6 +1000,21 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                             setParentDialogState({ isOpen: false, task: null });
                         }
                     }}
+                />
+            )}
+            {sprintDialogState.isOpen && (
+                <LazySprintSelector
+                    isOpen={sprintDialogState.isOpen}
+                    onClose={(open) => {
+                        if (!open) setSprintDialogState(prev => ({ ...prev, isOpen: false }));
+                    }}
+                    onChange={(selectedSprint) => {
+                        if (selectedSprint && sprintDialogState.task) {
+                            handleUpdateTask('sprintId', selectedSprint._id, sprintDialogState.task._id, selectedSprint);
+                            setSprintDialogState({ isOpen: false, task: null });
+                        }
+                    }}
+                    projectId={currentProjectId}
                 />
             )}
         </div >

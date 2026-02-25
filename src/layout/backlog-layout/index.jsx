@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -31,12 +31,12 @@ const Backlog = () => {
   const issueId = searchParams.get('issueId')
   const { userData } = useUserData()
   const { currentProject, workType, importance, workFlow } = useProjectData()
-  const defaultProject = {
+  const defaultProject = React.useMemo(() => ({
     currentProject: currentProject,
     workType: workType,
     importance: importance,
     workFlow: workFlow
-  }
+  }), [currentProject, workType, importance, workFlow]);
 
   const selectedIssue = issueId ? true : false
   const [isExpand, setIsExpand] = useState(false);
@@ -58,19 +58,19 @@ const Backlog = () => {
   const [openInsight, setOpenInsight] = useState(false)
   const [backlogSetting, setBacklogSetting] = useState(false)
 
-  const handleCreateSprint = () => {
+  const handleCreateSprint = useCallback(() => {
     const newSprint = {
-      id: sprint.lenght + 1,
+      id: sprint.length + 1,
       name: `SCRUM Sprint ${sprint.length + 1}`
     }
-    setSprint([...sprint, newSprint])
-  }
+    setSprint(prev => [...prev, newSprint])
+  }, [sprint.length]);
 
-  const handleIssueClick = (issue) => {
+  const handleIssueClick = useCallback((issue) => {
     // setSelectedIssue(issue)
     setOpenInsight(false)
     setBacklogSetting(false)
-  }
+  }, []);
   console.log("selectedIssue", selectedIssue)
 
   // ... inside Backlog component ...
@@ -197,7 +197,6 @@ const Backlog = () => {
                 <CreateBacklog
                   onIssueClick={handleIssueClick}
                   createSprint={handleCreateSprint}
-                  selectedIssue={selectedIssue}
                   userData={userData}
                   projectData={defaultProject}
                 />

@@ -91,7 +91,7 @@ const EditIssue = ({ issue }) => {
                 hasVoted: task?.vote?.hasVoted
             })
         }
-    }, [task, reset])
+    }, [task, taskId, reset])
     const dispatch = useDispatch()
     const [updateTask, { isLoading: taskSubmit }] = useUpdateIssueMutation()
     const [getVotes, { isLoading: voteLoading }] = useGetTaskVotesMutation()
@@ -278,6 +278,13 @@ const EditIssue = ({ issue }) => {
         }
     }, [voteDetail.length, fetchVotes])
 
+    const handleSprintChange = useCallback((selectedSprint) => {
+        handleUpdateTask(
+            'sprintId',
+            selectedSprint?._id || null,
+            selectedSprint || null
+        )
+    }, [handleUpdateTask])
 
     const workItemMenuItems = [
         {
@@ -328,6 +335,22 @@ const EditIssue = ({ issue }) => {
             label: 'Create subtask',
         },
         {
+            id: 'add-to-sprint',
+            label: 'Add to sprint',
+            type: 'submenu',
+            content: (
+                <DynamicDropdownSelector
+                    slug="sprint"
+                    onChange={(sprint, { onClose } = {}) => {
+                        handleSprintChange(sprint);
+                        onClose?.();
+                    }}
+                    label="Select sprint"
+                    showDropdown
+                />
+            )
+        },
+        {
             id: 'link-work-item',
             label: 'Link work item',
         },
@@ -343,9 +366,7 @@ const EditIssue = ({ issue }) => {
     ];
 
     const renderIcon = useCallback((item) => {
-        // console.log("item-------", item)
         let work = workType.find(t => t.slug === item)
-        // console.log("work", work)
         if (item && work) {
             return <div className={`w-6 h-6 rounded-md flex items-center justify-center ${work.color}`}>
                 <img
@@ -844,8 +865,8 @@ const EditIssue = ({ issue }) => {
                             </TabsContent>
                         </Tabs>
                     </div>
-                </CardContent >
-            </Card >
+                </CardContent>
+            </Card>
         </form >
     )
 }
