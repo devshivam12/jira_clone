@@ -116,13 +116,14 @@ export const taskApi = createApi({
                                     if (taskToUpdate) {
 
                                         console.log("keykey", key)
+                                        console.log("fullDetail", fullDetail)
                                         switch (key) {
                                             case 'isFlagged':
                                                 taskToUpdate.isFlagged = (value === 'false' || value === false) ? false : true;
                                                 break;
 
                                             case 'parentId':
-                                                taskToUpdate.parentId = value || null;
+                                                taskToUpdate.parentId = value;
                                                 taskToUpdate.parentDetail = fullDetail || null;
                                                 break;
                                             case 'assigneeId':
@@ -143,6 +144,9 @@ export const taskApi = createApi({
                                             default:
                                                 taskToUpdate[key] = value;
                                         }
+                                        console.log("taskToUpdate", taskToUpdate)
+                                        console.log("keykey", key)
+                                        console.log("valuevalue", value)
                                     }
                                 }
                             }

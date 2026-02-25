@@ -1,24 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
-const WorkSelector = ({ initialValue, workTypes, onChange, ...props }) => {
-    const [selectedWork, setSelectedWork] = useState(null);
+const WorkSelector = ({ initialValue, value, workTypes, onChange, ...props }) => {
+    const currentValue = value || initialValue;
+    const selectedWork = workTypes?.find(type => type.value === currentValue) || null;
 
-    useEffect(() => {
-        if (initialValue && workTypes && workTypes.length > 0) {
-            const matchedType = workTypes.find(slug => slug.value === initialValue);
-            if (matchedType) {
-                setSelectedWork(matchedType);
-            } else {
-                setSelectedWork(null);
-            }
-        }
-    }, [initialValue, workTypes]);
-
-    const handleValueChange = (value) => {
-        const selected = workTypes.find(type => type.value === value);
-        setSelectedWork(selected);
-        onChange?.(value);
+    const handleValueChange = (val) => {
+        onChange?.(val);
     };
 
     const handleClear = (e) => {

@@ -292,6 +292,8 @@ const TaskRow = memo(({
         prevProps.task?.isFlagged === nextProps.task?.isFlagged &&
         prevProps.task?.work_type === nextProps.task?.work_type &&
         prevProps.task?.assigneeDetail?._id === nextProps.task?.assigneeDetail?._id &&
+        prevProps.task?.parentDetail?._id === nextProps.task?.parentDetail?._id &&
+        prevProps.task?.parentId === nextProps.task?.parentId &&
         prevProps.virtualRow.start === nextProps.virtualRow.start &&
         prevProps.editingTaskId === nextProps.editingTaskId &&
         prevProps.summaryValue === nextProps.summaryValue &&
@@ -590,14 +592,15 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
 
     const currentProjectId = useMemo(() => currentProject?._id, [currentProject]);
 
-    const handleUpdateTask = useCallback(async (key, value, id) => {
+    const handleUpdateTask = useCallback(async (key, value, id, fullDetail) => {
         try {
             const payload = {
                 operationName: "updateTask",
                 variables: {
                     taskId: id,
                     key: key,
-                    value: value
+                    value: value,
+                    ...(fullDetail !== undefined && { fullDetail })
                 }
             };
             const response = await updateTask(payload).unwrap();
@@ -962,7 +965,7 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                     }}
                     onChange={(selectedParent) => {
                         if (selectedParent && parentDialogState.task) {
-                            handleUpdateTask('parentId', selectedParent._id, parentDialogState.task._id);
+                            handleUpdateTask('parentId', selectedParent._id, parentDialogState.task._id, selectedParent);
                             setParentDialogState({ isOpen: false, task: null });
                         }
                     }}

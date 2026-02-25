@@ -634,10 +634,14 @@ const EditIssue = ({ issue }) => {
                                     render={({ field }) => (
                                         <WorkSelector
                                             initialValue={field.value}
+                                            value={field.value}
                                             workTypes={taskTypes}
                                             open={activeDropdown === 'task_status'}
                                             onOpenChange={toggleTaskStatusDropdown}
-                                            onChange={changeTaskStatus}
+                                            onChange={(val) => {
+                                                field.onChange(val);
+                                                if (val) changeTaskStatus(val);
+                                            }}
                                         />
                                     )}
                                 />
@@ -650,10 +654,14 @@ const EditIssue = ({ issue }) => {
                                     render={({ field }) => (
                                         <WorkSelector
                                             initialValue={field.value}
+                                            value={field.value}
                                             workTypes={importanceTypes}
                                             open={activeDropdown === 'importance'}
                                             onOpenChange={toggleImportanceDropdown}
-                                            onChange={changeImportance}
+                                            onChange={(val) => {
+                                                field.onChange(val);
+                                                if (val) changeImportance(val);
+                                            }}
                                         />
                                     )}
                                 />
