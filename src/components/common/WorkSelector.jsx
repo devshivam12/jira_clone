@@ -2,7 +2,7 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const WorkSelector = ({ initialValue, value, workTypes, onChange, open, onOpenChange, ...props }) => {
-    const currentValue = value || initialValue;
+    const currentValue = value ?? null;
     const selectedWork = workTypes?.find(type => type.value === currentValue) || null;
 
     const handleValueChange = (val) => {

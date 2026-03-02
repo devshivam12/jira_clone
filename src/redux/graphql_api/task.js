@@ -184,6 +184,9 @@ export const taskApi = createApi({
                 method: 'POST',
                 body: payload
             }),
+            invalidatesTags: (result, error, arg) => [
+                { type: 'Task', id: arg.variables.taskId }
+            ],
             async onQueryStarted(payload, { dispatch, queryFulfilled, getState }) {
                 const { taskId, flagPayload } = payload.variables
                 const { isFlagged, reason } = flagPayload

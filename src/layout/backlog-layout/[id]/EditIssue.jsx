@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { format } from 'date-fns'
 import { Label } from '@/components/ui/label'
 
-import { Check, ChevronDown, ChevronUp, Link, Pen, Plus, Share, Share2, ThumbsUp, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Flag, Link, Pen, Plus, Share2, ThumbsUp, X } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { DottedSeparator } from '@/components/dotted-separator'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -25,6 +27,7 @@ import TooltipWrapper from '@/components/common/TooltipWrapper'
 import ManageAvatar from '@/components/common/ManageAvatar'
 import ShowToast from '@/components/common/ShowToast'
 import { useDispatch } from 'react-redux'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const EditIssue = ({ issue }) => {
     const { control, handleSubmit, setValue, watch, reset, getValues } = useForm({
@@ -59,10 +62,9 @@ const EditIssue = ({ issue }) => {
             taskId: taskId
         }
     }, {
-        skip: !taskId
+        skip: !taskId,
     })
     const task = getTask?.data?.getTaskDetail?.data
-
     useEffect(() => {
         if (task) {
             reset({
@@ -135,6 +137,10 @@ const EditIssue = ({ issue }) => {
                 }
             }
             const response = await updateTask(payload).unwrap()
+            // Unflag functionality can rely on this directly
+            if (key === 'isFlagged' && value === false) {
+                ShowToast.success("Flag removed successfully")
+            }
         } catch (error) {
             ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
         }
@@ -411,11 +417,68 @@ const EditIssue = ({ issue }) => {
     }, [openCommand]);
 
     const handleScrollEffect = (e) => {
-        const isScrolled = e.target.scrollTop > 0
-        if (isScrolled !== isScrolled) {
-            setIsScrolled(isScrolled)
+        const scrolled = e.target.scrollTop > 0
+        if (scrolled !== isScrolled) {
+            setIsScrolled(scrolled)
         }
     }
+
+    if (taskFetching || (!task && taskId)) {
+        return (
+            <Card className="flex flex-col h-full rounded-none bg-neutral-50 shadow-none">
+                <div className={`sticky top-0 bg-neutral-100 z-10`}>
+                    <CardHeader className="m-0 pb-0 px-0 pt-2 bg-neutral-50">
+                        <CardTitle>
+                            <div className='flex items-center justify-between px-2 pb-1'>
+                                <div className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md'>
+                                    <Skeleton className="h-4 w-20" />
+                                </div>
+                                <div className='flex items-center gap-2 pr-1'>
+                                    <Skeleton className="h-8 w-14" />
+                                    <Skeleton className="h-8 w-10" />
+                                    <Skeleton className="h-8 w-10" />
+                                    <Skeleton className="h-8 w-10" />
+                                </div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                </div>
+                <DottedSeparator className="h-px my-1 bg-neutral-200" />
+                <CardContent className="mt-0 w-full overflow-y-auto px-4 lg:px-6 py-6 flex-grow flex flex-col gap-6">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-5 w-5 rounded-sm" />
+                            <Skeleton className="h-5 w-32" />
+                        </div>
+                        <Skeleton className="h-10 w-4/5" />
+                    </div>
+
+                    <div className='flex items-center gap-3'>
+                        <Skeleton className="h-9 w-32" />
+                        <Skeleton className="h-9 w-32" />
+                        <Skeleton className="h-9 w-10" />
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-28 w-full" />
+                    </div>
+
+                    <Skeleton className="h-14 w-full mt-4" />
+
+                    <div className='mt-2 flex flex-col gap-4'>
+                        <Skeleton className="h-4 w-16" />
+                        <div className="flex gap-4">
+                            <Skeleton className="h-10 w-24" />
+                            <Skeleton className="h-10 w-24" />
+                        </div>
+                        <Skeleton className="h-24 w-full" />
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
+
     return (
         <form action="">
             <Card className="flex flex-col h-full rounded-none bg-neutral-50 shadow-none">
@@ -528,6 +591,74 @@ const EditIssue = ({ issue }) => {
                                 </span>
                             </div>
                         </div>
+
+                        {/* Flag Banner */}
+                        {task?.flagDetail?.isFlagged && (
+                            <div className="relative rounded-xl overflow-hidden shadow-md border border-amber-200/60">
+                                <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-orange-50/60 to-amber-100/40 pointer-events-none" />
+
+                                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-400 via-orange-400 to-amber-500" />
+
+                                <div className="relative pl-5 pr-4 py-4 flex gap-3">
+                                    <div className="shrink-0 mt-0.5 relative">
+                                        <div className="absolute inset-0 rounded-full bg-amber-300/30 blur-sm scale-150" />
+                                        <Flag className="relative w-5 h-5 text-amber-500" fill="currentColor" />
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-3 mb-2.5">
+                                            <div className="flex">
+                                                <span className="font-semibold text-amber-900 text-sm tracking-wide uppercase">
+                                                    Flagged
+                                                </span>
+                                                {(task.flagDetail?.flaggedBy?.first_name || task.flagDetail?.flaggedAt) && (
+                                                    <span className="text-xs text-amber-700/70 font-normal">
+                                                        {task.flagDetail?.flaggedBy?.first_name && (
+                                                            <>
+                                                                by{" "}
+                                                                <span className="font-semibold text-amber-800">
+                                                                    {`${task.flagDetail.flaggedBy.first_name} ${task.flagDetail.flaggedBy.last_name ?? ""}`}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                        {task.flagDetail?.flaggedAt && (
+                                                            <span className="text-amber-600/60 ml-1">
+                                                                · {format(new Date(task.flagDetail.flaggedAt), "MMM d, yyyy 'at' h:mm a")}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleUpdateTask("isFlagged", false);
+                                                }}
+                                                className="h-7 text-xs px-2.5 shrink-0 text-amber-700 hover:text-red-700 hover:bg-red-50 border border-amber-200 hover:border-red-200 bg-white/60 transition-all duration-200 rounded-lg"
+                                            >
+                                                <X size={12} className="mr-1" />
+                                                Remove
+                                            </Button>
+                                        </div>
+
+                                        {/* Reason */}
+                                        {task.flagDetail?.reason ? (
+                                            <div
+                                                className="text-sm text-amber-900/80 bg-white/50 backdrop-blur-sm rounded-lg px-3 py-2.5 border border-amber-200/40 shadow-sm [&>p]:mb-1.5 [&>p:last-child]:mb-0 break-words leading-relaxed"
+                                                dangerouslySetInnerHTML={{ __html: task.flagDetail.reason }}
+                                            />
+                                        ) : (
+                                            <span className="text-xs text-amber-600/50 italic">No reason provided</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {task?.parentDetail && (
                             <div className="flex items-center cursor-pointer hover:underline group">
                                 <span className="text-neutral-500 font-normal text-base flex items-center gap-x-2">
@@ -655,6 +786,7 @@ const EditIssue = ({ issue }) => {
                                     render={({ field }) => (
                                         <WorkSelector
                                             initialValue={field.value}
+                                            key={field.value}
                                             value={field.value}
                                             workTypes={taskTypes}
                                             open={activeDropdown === 'task_status'}
@@ -676,6 +808,7 @@ const EditIssue = ({ issue }) => {
                                         <WorkSelector
                                             initialValue={field.value}
                                             value={field.value}
+                                            key={field.value}
                                             workTypes={importanceTypes}
                                             open={activeDropdown === 'importance'}
                                             onOpenChange={toggleImportanceDropdown}
