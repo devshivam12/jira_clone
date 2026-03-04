@@ -102,15 +102,15 @@ const Backlog = () => {
 
   }
   return (
-    <div className='flex flex-col h-screen px-4 py-4'>
-      <div className={`grid ${gridColumnsClass} gap-x-2 w-full h-full min-h-0`}>
+    <div className='flex flex-col h-[calc(100vh-56px)]'>
+      <div className={`grid ${gridColumnsClass} w-full h-full min-h-0`}>
         {showEpic && (
-          <div className="hidden lg:block w-full h-full min-h-0 overflow-y-auto">
+          <div className="hidden lg:block w-full h-full min-h-0 overflow-y-auto px-4 py-4">
             <Epic showEpic={showEpic} setShowEpic={setShowEpic} />
           </div>
         )}
 
-        <div className="flex flex-col min-h-0">
+        <div className="flex flex-col min-h-0 px-4 py-4">
 
           <div className='flex flex-col space-y-5'>
             <h1 className="text-neutral-500 text-2xl font-semibold">Backlog</h1>
@@ -206,7 +206,7 @@ const Backlog = () => {
         </div>
 
         {isAnySidebarPanelOpen && (
-          <div className="fixed inset-0 z-50 bg-white w-full h-full flex-shrink-0 lg:static lg:z-auto lg:bg-neutral-50 lg:w-auto">
+          <div className="fixed inset-0 z-50 bg-white w-full h-full flex-shrink-0 lg:static lg:z-auto lg:bg-neutral-50 lg:w-auto border-l border-neutral-200">
 
             {openInsight && (
               <Insight openInsight={openInsight} setOpenInsight={setOpenInsight} />

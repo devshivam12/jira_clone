@@ -352,7 +352,7 @@ const DynamicDropdownSelector = ({
   const componentWidth = width || COMPONENT_CONFIG.defaultWidth;
   if (showDropdown) {
     return (
-      <div className="bg-white rounded-md border border-neutral-200 w-full">
+      <div className="bg-white rounded-md w-full flex flex-col min-h-[220px]">
         {/* Search Input */}
         <div className="py-2 px-2  border-b  border-neutral-200">
           <input
@@ -368,7 +368,7 @@ const DynamicDropdownSelector = ({
 
         {/* Content */}
         {isFetching && page === 1 ? (
-          <div className="py-8 flex items-center justify-center bg-neutral-50">
+          <div className="flex-1 flex items-center justify-center bg-white min-h-[160px]">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
               <span className="text-neutral-500 text-sm">Searching...</span>
@@ -397,7 +397,7 @@ const DynamicDropdownSelector = ({
             )}
           </ScrollArea>
         ) : (
-          <div className="py-8 flex items-center justify-center bg-neutral-50">
+          <div className="flex-1 flex items-center justify-center bg-white min-h-[160px]">
             <div className="text-neutral-500 text-sm">
               {apiError ? 'Error loading data' : config.emptyMessage}
             </div>
@@ -410,7 +410,7 @@ const DynamicDropdownSelector = ({
   const avatarProps = selectedItem ? config.getAvatarProps(selectedItem) : null;
 
   return (
-    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange} modal={false}>
       <PopoverTrigger asChild>
         <div
           ref={triggerRef}
@@ -477,8 +477,9 @@ const DynamicDropdownSelector = ({
           width: triggerRef.current ? `${triggerRef.current.offsetWidth}px` : componentWidth
         }}
       >
+        {/* Content */}
         {isFetching && page === 1 ? (
-          <div className="py-8 flex items-center justify-center bg-neutral-50">
+          <div className="flex-1 flex items-center justify-center bg-white min-h-[160px]">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
               <span className="text-neutral-500 text-sm">Searching...</span>

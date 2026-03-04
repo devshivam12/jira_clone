@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
 import { Label } from '@/components/ui/label'
 
-import { Check, ChevronDown, ChevronUp, Flag, Link, Pen, Plus, Share2, ThumbsUp, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Flag, Link, Pen, Plus, Share2, ThumbsUp, X, Image as ImageIcon, Search, AlignLeft, Send, AlertCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { DottedSeparator } from '@/components/dotted-separator'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import DynamicDropdownSelector from '@/components/common/DynamicDropdownSelector'
 import WorkSelector from '@/components/common/WorkSelector'
 import { useProjectData } from '@/hooks/useProjectData'
@@ -28,6 +29,7 @@ import ManageAvatar from '@/components/common/ManageAvatar'
 import ShowToast from '@/components/common/ShowToast'
 import { useDispatch } from 'react-redux'
 import { Skeleton } from '@/components/ui/skeleton'
+import AddFlag from '@/components/common/AddFlag'
 
 const EditIssue = ({ issue }) => {
     const { control, handleSubmit, setValue, watch, reset, getValues } = useForm({
@@ -107,7 +109,9 @@ const EditIssue = ({ issue }) => {
     const [isEditing, setIsEditing] = useState(false)
     const [isEditingSummary, setIsEditingSummary] = useState(false)
     const [tempSummary, setTempSummary] = useState("")
-    const [activeDropdown, setActiveDropdown] = useState(null);
+    const [activeDropdown, setActiveDropdown] = useState(null)
+    const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false)
+    const [currentFlagTask, setCurrentFlagTask] = useState(null)
 
 
     const taskTypes = useMemo(() => workFlow.map((status, index) => ({
@@ -294,8 +298,22 @@ const EditIssue = ({ issue }) => {
 
     const workItemMenuItems = [
         {
-            id: 'add-flag',
-            label: 'Add flag',
+            id: task?.flagDetail?.isFlagged ? 'remove-flag' : 'add-flag',
+            label: task?.flagDetail?.isFlagged ? 'Remove flag' : 'Add flag',
+            onSelect: () => {
+                if (task?.flagDetail?.isFlagged) {
+                    handleUpdateTask('isFlagged', false)
+                } else {
+                    setCurrentFlagTask({
+                        _id: taskId,
+                        workType: task?.work_type,
+                        project_key: task?.project_key,
+                        taskNumber: task?.taskNumber,
+                        summary: task?.summary
+                    })
+                    setIsFlagDialogOpen(true)
+                }
+            }
         },
         {
             id: vote.hasVoted ? 'remove-vote' : 'add-vote',
@@ -444,7 +462,7 @@ const EditIssue = ({ issue }) => {
                     </CardHeader>
                 </div>
                 <DottedSeparator className="h-px my-1 bg-neutral-200" />
-                <CardContent className="mt-0 w-full overflow-y-auto px-4 lg:px-6 py-6 flex-grow flex flex-col gap-6">
+                <CardContent className="mt-0 w-full overflow-y-auto px-4 lg:px-6 py-6 flex-grow flex flex-col gap-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-neutral-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-neutral-400">
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-2">
                             <Skeleton className="h-5 w-5 rounded-sm" />
@@ -481,25 +499,19 @@ const EditIssue = ({ issue }) => {
 
     return (
         <form action="">
-            <Card className="flex flex-col h-full rounded-none bg-neutral-50 shadow-none">
+            <Card className="flex flex-col h-full rounded-none bg-neutral-50 shadow-none relative">
                 <div className={`sticky top-0 bg-neutral-100 z-10 ${isScrolled ? 'shadow-sm' : ''}`}>
                     <CardHeader className="m-0 pb-0 px-0 pt-2 bg-neutral-50">
                         <CardTitle >
-                            <div className='flex items-center justify-between px-2'>
-                                <div
-                                    className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md group'
-                                >
+                            <div className='flex items-center justify-between px-2 h-12'>
+                                <div className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md group flex items-center h-full'>
                                     {task?.parentDetail === null && (
-                                        <DropdownMenu open={openParent} onOpenChange={setOpenParent}>
+                                        <DropdownMenu open={openParent} onOpenChange={setOpenParent} modal={false}>
                                             <DropdownMenuTrigger asChild>
-                                                <div
-                                                    className="cursor-pointer"
-                                                >
+                                                <div className="cursor-pointer flex items-center">
                                                     <p className='flex items-center gap-2'>
                                                         <Plus className='flex items-center justify-center w-3 h-3 font-normal text-neutral-500 cursor-pointer' />
-                                                        <span
-                                                            className='text-xs text-neutral-500'
-                                                        >
+                                                        <span className='text-xs text-neutral-500'>
                                                             Add epic
                                                         </span>
                                                     </p>
@@ -522,9 +534,9 @@ const EditIssue = ({ issue }) => {
                                         </DropdownMenu>
                                     )}
                                 </div>
-                                <div className='flex items-center'>
-                                    <div className="w-14 flex justify-center overflow-hidden rounded-md" >
-                                        {vote.count > 0 && (
+                                <div className='flex items-center h-full gap-1'>
+                                    {vote.count > 0 && (
+                                        <div className="flex justify-center items-center">
                                             <CommonDropdownMenu
                                                 triggerIcon={
                                                     <Button
@@ -543,22 +555,86 @@ const EditIssue = ({ issue }) => {
                                                 isLoading={voteLoading}
                                                 onOpenChange={handleVoteOpen}
                                             />
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
 
-
-                                    {/* </div> */}
-                                    <div className="w-10 flex justify-center">
-                                        <Button variant="default" size="icon" type="button">
+                                    {task?.flagDetail?.isFlagged && (
+                                        <div className="flex justify-center items-center">
+                                            <Popover modal={false}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        type="button"
+                                                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                    >
+                                                        <Flag size={20} fill="currentColor" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent
+                                                    align="end"
+                                                    side="bottom"
+                                                    sideOffset={12}
+                                                    className="w-80 p-0 border border-red-100/80 shadow-xl rounded-xl overflow-hidden bg-white z-[60]"
+                                                >
+                                                    <div className="bg-red-50/80 px-4 py-3 border-b border-red-100 flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <Flag size={16} className="text-red-500" fill="currentColor" />
+                                                            <h4 className="text-sm font-semibold text-red-900">
+                                                                Flagged
+                                                            </h4>
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 px-2.5 text-xs text-red-700 hover:text-red-800 hover:bg-white border border-transparent hover:border-red-200 shadow-sm"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleUpdateTask("isFlagged", false);
+                                                            }}
+                                                        >
+                                                            Remove flag
+                                                        </Button>
+                                                    </div>
+                                                    <div className="p-4 text-sm bg-white">
+                                                        {(task.flagDetail?.flaggedBy?.first_name || task.flagDetail?.flaggedAt) && (
+                                                            <div className="mb-3 flex items-center flex-wrap gap-x-1.5 gap-y-1 text-xs text-neutral-500">
+                                                                {task.flagDetail?.flaggedBy?.first_name && (
+                                                                    <span className="font-medium text-neutral-700">
+                                                                        By {task.flagDetail.flaggedBy.first_name} {task.flagDetail.flaggedBy.last_name ?? ""}
+                                                                    </span>
+                                                                )}
+                                                                {task.flagDetail?.flaggedAt && task.flagDetail?.flaggedBy?.first_name && (
+                                                                    <span>•</span>
+                                                                )}
+                                                                {task.flagDetail?.flaggedAt && (
+                                                                    <span>{format(new Date(task.flagDetail.flaggedAt), "MMM d, yyyy")}</span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        {task.flagDetail?.reason ? (
+                                                            <div
+                                                                className="text-neutral-600 leading-relaxed break-words"
+                                                                dangerouslySetInnerHTML={{ __html: task.flagDetail.reason }}
+                                                            />
+                                                        ) : (
+                                                            <span className="text-neutral-500 italic">No reason provided</span>
+                                                        )}
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-center items-center">
+                                        <Button variant="ghost" size="icon" type="button" className="text-neutral-500 hover:text-neutral-700">
                                             <Share2 size={20} />
                                         </Button>
                                     </div>
-                                    <div className="w-10 flex justify-center">
+                                    <div className="flex justify-center items-center">
                                         <CommonDropdownMenu items={workItemMenuItems} />
-
                                     </div>
-                                    <div className="w-10 flex justify-center">
-                                        <Button variant="default" size="icon" type="button" onClick={handleClose}>
+                                    <div className="flex justify-center items-center">
+                                        <Button variant="ghost" size="icon" type="button" onClick={handleClose} className="text-neutral-500 hover:text-neutral-700">
                                             <X size={20} />
                                         </Button>
                                     </div>
@@ -592,72 +668,7 @@ const EditIssue = ({ issue }) => {
                             </div>
                         </div>
 
-                        {/* Flag Banner */}
-                        {task?.flagDetail?.isFlagged && (
-                            <div className="relative rounded-xl overflow-hidden shadow-md border border-amber-200/60">
-                                <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-orange-50/60 to-amber-100/40 pointer-events-none" />
 
-                                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-400 via-orange-400 to-amber-500" />
-
-                                <div className="relative pl-5 pr-4 py-4 flex gap-3">
-                                    <div className="shrink-0 mt-0.5 relative">
-                                        <div className="absolute inset-0 rounded-full bg-amber-300/30 blur-sm scale-150" />
-                                        <Flag className="relative w-5 h-5 text-amber-500" fill="currentColor" />
-                                    </div>
-
-                                    {/* Content */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between gap-3 mb-2.5">
-                                            <div className="flex">
-                                                <span className="font-semibold text-amber-900 text-sm tracking-wide uppercase">
-                                                    Flagged
-                                                </span>
-                                                {(task.flagDetail?.flaggedBy?.first_name || task.flagDetail?.flaggedAt) && (
-                                                    <span className="text-xs text-amber-700/70 font-normal">
-                                                        {task.flagDetail?.flaggedBy?.first_name && (
-                                                            <>
-                                                                by{" "}
-                                                                <span className="font-semibold text-amber-800">
-                                                                    {`${task.flagDetail.flaggedBy.first_name} ${task.flagDetail.flaggedBy.last_name ?? ""}`}
-                                                                </span>
-                                                            </>
-                                                        )}
-                                                        {task.flagDetail?.flaggedAt && (
-                                                            <span className="text-amber-600/60 ml-1">
-                                                                · {format(new Date(task.flagDetail.flaggedAt), "MMM d, yyyy 'at' h:mm a")}
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    handleUpdateTask("isFlagged", false);
-                                                }}
-                                                className="h-7 text-xs px-2.5 shrink-0 text-amber-700 hover:text-red-700 hover:bg-red-50 border border-amber-200 hover:border-red-200 bg-white/60 transition-all duration-200 rounded-lg"
-                                            >
-                                                <X size={12} className="mr-1" />
-                                                Remove
-                                            </Button>
-                                        </div>
-
-                                        {/* Reason */}
-                                        {task.flagDetail?.reason ? (
-                                            <div
-                                                className="text-sm text-amber-900/80 bg-white/50 backdrop-blur-sm rounded-lg px-3 py-2.5 border border-amber-200/40 shadow-sm [&>p]:mb-1.5 [&>p:last-child]:mb-0 break-words leading-relaxed"
-                                                dangerouslySetInnerHTML={{ __html: task.flagDetail.reason }}
-                                            />
-                                        ) : (
-                                            <span className="text-xs text-amber-600/50 italic">No reason provided</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
                         {task?.parentDetail && (
                             <div className="flex items-center cursor-pointer hover:underline group">
@@ -666,7 +677,7 @@ const EditIssue = ({ issue }) => {
                                     {task.parentDetail.summary}
 
                                     <div className="flex items-center gap-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                        <DropdownMenu open={openParent} onOpenChange={setOpenParent}>
+                                        <DropdownMenu open={openParent} onOpenChange={setOpenParent} modal={false}>
                                             <TooltipWrapper content={"Change parent"}>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant='default' size="icon" type="button"
@@ -1000,6 +1011,23 @@ const EditIssue = ({ issue }) => {
                     </div>
                 </CardContent>
             </Card>
+            {currentFlagTask && (
+                <AddFlag
+                    isOpen={isFlagDialogOpen}
+                    setIsOpen={setIsFlagDialogOpen}
+                    taskInfo={currentFlagTask}
+                    isFlagged={true}
+                    onConfirm={(reason) => {
+                        handleUpdateTask('isFlagged', true, currentFlagTask._id)
+                        setIsFlagDialogOpen(false)
+                        setCurrentFlagTask(null)
+                    }}
+                    onCancel={() => {
+                        setIsFlagDialogOpen(false)
+                        setCurrentFlagTask(null)
+                    }}
+                />
+            )}
         </form >
     )
 }

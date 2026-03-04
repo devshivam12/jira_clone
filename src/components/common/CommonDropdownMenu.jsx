@@ -49,13 +49,12 @@ const CommonDropdownMenu = ({
             <span className="font-medium">{item.label}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent
-            className="w-48 p-1 rounded-md shadow-lg border"
+            className={`rounded-md shadow-xl border ${item.content ? 'w-fit p-0 min-w-64 max-w-sm' : 'w-48 p-1'}`}
             onCloseAutoFocus={(e) => e.preventDefault()}
-
           >
             {item.content
               ? React.cloneElement(item.content, {
-                onClose: () => handleOpenChange(false), // ✅ closes entire dropdown
+                onClose: () => handleOpenChange(false),
               }) : (
                 item.items?.map((subItem, subIndex) => (
                   <React.Fragment key={subItem.id || subIndex}>
@@ -103,7 +102,7 @@ const CommonDropdownMenu = ({
   };
 
   return (
-    <DropdownMenu onOpenChange={handleOpenChange} defaultOpen={defaultOpen} open={isOpen}>
+    <DropdownMenu onOpenChange={handleOpenChange} defaultOpen={defaultOpen} open={isOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button size="icon" variant="ghost">
           <TooltipWrapper content={triggerTooltip} disableFocusListener>

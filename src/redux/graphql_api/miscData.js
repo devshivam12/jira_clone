@@ -29,13 +29,13 @@ export const miscDataApi = createApi({
             async onQueryStarted(name, { dispatch, queryFulfilled }) {
                 try {
                     const { data } = await queryFulfilled;
-                    console.log("data", data)
+                    // console.log("data", data)
                     const newLabel = data?.data?.createLabels?.label
                     // If creation succeeded
                     if (newLabel) {
                         dispatch(
                             taskApi.util.updateQueryData('getLabel', "", (draft) => {
-                                console.log("draft", draft)
+                                // console.log("draft", draft)
                                 draft.data.getClientLabels.push(newLabel);
                             })
                         );

@@ -41,16 +41,19 @@ export const taskApi = createApi({
                     }
                 }
             },
+            invalidatesTags: (result, error, arg) => [
+                { type: 'Task', id: arg.variables.taskId }
+            ],
             async onQueryStarted(payload, { dispatch, queryFulfilled, getState }) {
                 const { taskId, key, value, fullDetail } = payload.variables
-                console.log("taskIdtaskIdtaskIdtaskId", taskId)
+                // console.log("taskIdtaskIdtaskIdtaskId", taskId)
                 const state = getState();
                 const cacheEntries = state.taskApi.queries;
 
-                console.log("All cache entries:", cacheEntries);
-                console.log("Looking for getBacklogList entries:",
-                    Object.keys(cacheEntries).filter(key => key.includes('getBacklogList'))
-                );
+                // console.log("All cache entries:", cacheEntries);
+                // console.log("Looking for getBacklogList entries:",
+                //     Object.keys(cacheEntries).filter(key => key.includes('getBacklogList'))
+                // );
                 const patchResult = [];
                 const queryEntries = Object.values(state.taskApi.queries);
 
@@ -69,7 +72,16 @@ export const taskApi = createApi({
                                     if (task) {
                                         switch (key) {
                                             case 'isFlagged':
-                                                task.isFlagged = (value === 'false' || value === false) ? false : true;
+                                                const isNowFlagged = (value === 'false' || value === false) ? false : true;
+                                                task.isFlagged = isNowFlagged;
+                                                if (isNowFlagged) {
+                                                    task.flagDetail = task.flagDetail || {};
+                                                    task.flagDetail.isFlagged = true;
+                                                } else {
+                                                    if (task.flagDetail) {
+                                                        task.flagDetail.isFlagged = false;
+                                                    }
+                                                }
                                                 break;
                                             case 'parentId':
                                                 task.parentId = value
@@ -115,8 +127,8 @@ export const taskApi = createApi({
                                     const taskToUpdate = taskList.find((t) => t._id === taskId);
                                     if (taskToUpdate) {
 
-                                        console.log("keykey", key)
-                                        console.log("fullDetail", fullDetail)
+                                        // console.log("keykey", key)
+                                        // console.log("fullDetail", fullDetail)
                                         switch (key) {
                                             case 'isFlagged':
                                                 taskToUpdate.isFlagged = (value === 'false' || value === false) ? false : true;
@@ -144,9 +156,9 @@ export const taskApi = createApi({
                                             default:
                                                 taskToUpdate[key] = value;
                                         }
-                                        console.log("taskToUpdate", taskToUpdate)
-                                        console.log("keykey", key)
-                                        console.log("valuevalue", value)
+                                        // console.log("taskToUpdate", taskToUpdate)
+                                        // console.log("keykey", key)
+                                        // console.log("valuevalue", value)
                                     }
                                 }
                             }
@@ -212,7 +224,7 @@ export const taskApi = createApi({
                         entry?.endpointName === 'getBacklogList' &&
                         entry?.status === 'fulfilled'
                 );
-                console.log("backlogQueries", backlogQueries)
+                // console.log("backlogQueries", backlogQueries)
                 const listUndos = [];
                 for (const entry of backlogQueries) {
                     const patch = dispatch(
@@ -221,10 +233,10 @@ export const taskApi = createApi({
                             entry.originalArgs,
                             (draft) => {
                                 const taskList = draft?.data?.getBacklogData?.data;
-                                console.log("taskListtaskListtaskList", taskList)
+                                // console.log("taskListtaskListtaskList", taskList)
                                 if (Array.isArray(taskList)) {
                                     const taskToUpdate = taskList.find((t) => t._id === taskId);
-                                    console.log("taskToUpdate", taskToUpdate)
+                                    // console.log("taskToUpdate", taskToUpdate)
                                     if (taskToUpdate) {
                                         taskToUpdate.isFlagged = true;
                                     }
