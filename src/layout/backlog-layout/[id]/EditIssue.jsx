@@ -443,9 +443,9 @@ const EditIssue = ({ issue }) => {
 
     if (taskFetching || (!task && taskId)) {
         return (
-            <Card className="flex flex-col h-full rounded-none bg-neutral-50 shadow-none">
-                <div className={`sticky top-0 bg-neutral-100 z-10`}>
-                    <CardHeader className="m-0 pb-0 px-0 pt-2 bg-neutral-50">
+            <Card className="flex flex-col h-full rounded-none bg-white shadow-none border-none">
+                <div className={`sticky top-0 bg-white z-10`}>
+                    <CardHeader className="m-0 pb-0 px-0 pt-2 bg-white">
                         <CardTitle>
                             <div className='flex items-center justify-between px-2 pb-1'>
                                 <div className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md'>
@@ -499,9 +499,9 @@ const EditIssue = ({ issue }) => {
 
     return (
         <form action="">
-            <Card className="flex flex-col h-full rounded-none bg-neutral-50 shadow-none relative">
-                <div className={`sticky top-0 bg-neutral-100 z-10 ${isScrolled ? 'shadow-sm' : ''}`}>
-                    <CardHeader className="m-0 pb-0 px-0 pt-2 bg-neutral-50">
+            <Card className="flex flex-col h-full rounded-none bg-white shadow-none relative border-none">
+                <div className={`sticky top-0 bg-white z-10 ${isScrolled ? 'shadow-sm' : ''}`}>
+                    <CardHeader className="m-0 pb-0 px-0 pt-2 bg-white">
                         <CardTitle >
                             <div className='flex items-center justify-between px-2 h-12'>
                                 <div className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md group flex items-center h-full'>

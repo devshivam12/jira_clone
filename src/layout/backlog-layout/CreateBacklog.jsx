@@ -78,7 +78,7 @@ const CreateBacklog = ({ createSprint, onIssueClick, userData, projectData }) =>
         projectData={projectData}
       />
 
-      <SprintTable />
+      <SprintTable projectData={projectData} />
     </Card>
   );
 };

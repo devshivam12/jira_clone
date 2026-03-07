@@ -80,11 +80,11 @@ const Backlog = () => {
   let gridColumnsClass = 'grid-cols-[minmax(0,1fr)]';
 
   if (showEpic && isAnySidebarPanelOpen) {
-    gridColumnsClass = 'grid-cols-1 lg:grid-cols-[256px_minmax(0,1fr)_320px]';
+    gridColumnsClass = 'grid-cols-1 lg:grid-cols-[256px_minmax(0,1fr)_480px]';
   } else if (showEpic && !isAnySidebarPanelOpen) {
     gridColumnsClass = 'grid-cols-1 lg:grid-cols-[256px_minmax(0,1fr)]';
   } else if (!showEpic && isAnySidebarPanelOpen) {
-    gridColumnsClass = 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]';
+    gridColumnsClass = 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_480px]';
   } else {
     gridColumnsClass = 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)]';
   }
@@ -206,7 +206,7 @@ const Backlog = () => {
         </div>
 
         {isAnySidebarPanelOpen && (
-          <div className="fixed inset-0 z-50 bg-white w-full h-full flex-shrink-0 lg:static lg:z-auto lg:bg-neutral-50 lg:w-auto border-l border-neutral-200">
+          <div className="fixed inset-0 z-50 bg-white w-full h-full flex-shrink-0 lg:static lg:z-auto lg:bg-white lg:w-auto border-l border-neutral-200 shadow-sm">
 
             {openInsight && (
               <Insight openInsight={openInsight} setOpenInsight={setOpenInsight} />
