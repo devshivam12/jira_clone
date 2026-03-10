@@ -3,13 +3,15 @@ import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight, ClipboardX, Flag, Pencil, MoreHorizontal, Pen } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardX, Flag, Pencil, MoreHorizontal, Pen, Settings2 } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import IssueRowSkeleton from "./IssueRowSkeleton";
 import { useSearchParams } from "react-router-dom";
 import { useUpdateIssueMutation } from "@/redux/graphql_api/task";
 import ManageAvatar from "../common/ManageAvatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import CommonDropdownMenu from "../common/CommonDropdownMenu";
 import AddFlag from "../common/AddFlag";
 import WorkSelector from "../common/WorkSelector";
@@ -17,6 +19,7 @@ import DynamicDropdownSelector from "../common/DynamicDropdownSelector";
 import ShowToast from "../common/ShowToast";
 import TooltipWrapper from "../common/TooltipWrapper";
 import TaskRow from './task-row';
+import StatusBar from "../common/StatusBar";
 
 const ROW_HEIGHT = 56;
 
@@ -87,7 +90,7 @@ const LazySprintSelector = memo(({ isOpen, onClose, onChange, projectId }) => {
 });
 LazySprintSelector.displayName = 'LazySprintSelector';
 
-const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
+const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
     // console.log("issue-----------", issue)
     const { currentProject, workType, importance, workFlow } = projectData;
 
@@ -112,41 +115,26 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
     const addFlagRef = useRef(null);
     const parentRef = useRef(null);
 
-    // Removed expensive useEffect that synced props to state on every render/change.
-    // Derived state is now handled in TaskRow or on-the-fly where needed.
-
-    const rowVirtualizer = useVirtualizer({
-        count: (issue?.length ?? 0) + (isLoading ? 5 : 0),
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => ROW_HEIGHT,
-        overscan: 5,
-        enabled: true,
+    // Initialize state from localStorage
+    const storageKey = `project_groupby_status_${currentProject?._id}`;
+    const [groupByStatus, setGroupByStatus] = useState(() => {
+        const saved = localStorage.getItem(storageKey);
+        return saved ? JSON.parse(saved) : false;
     });
-    const virtualItems = rowVirtualizer.getVirtualItems()
-    const lastLoadIndexRef = useRef(-1);
 
+    // Update localStorage when state changes
     useEffect(() => {
-        if (!virtualItems.length || isLoading) return
+        localStorage.setItem(storageKey, JSON.stringify(groupByStatus));
+    }, [groupByStatus, storageKey]);
 
-        const leastVisible = virtualItems[virtualItems.length - 1]
-        const prefetchThreshhold = 20
-        const triggerPoint = issue.length - prefetchThreshhold;
+    const [expandedGroups, setExpandedGroups] = useState({});
 
-        // Only trigger if we haven't already triggered for this threshold
-        if (leastVisible.index >= triggerPoint &&
-            hasMore &&
-            lastLoadIndexRef.current < triggerPoint) {
-            lastLoadIndexRef.current = triggerPoint;
-            onLoadMore()
-        }
-    }, [virtualItems, issue.length, hasMore, onLoadMore, isLoading])
-
-    const workTypeMap = useMemo(() => {
-        return new Map(workType.map((status, index) => [
-            status.slug,
-            { id: index + 1, name: status.name, value: status.slug, color: status.color, icon: status.icon }
-        ]));
-    }, [workType]);
+    const toggleGroupExpand = useCallback((statusValue) => {
+        setExpandedGroups(prev => ({
+            ...prev,
+            [statusValue]: prev[statusValue] === false ? true : false
+        }));
+    }, []);
 
     const taskTypes = useMemo(() =>
         workFlow.map((status, index) => ({
@@ -168,8 +156,121 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
         [importance]
     );
 
-    const currentProjectId = useMemo(() => currentProject?._id, [currentProject]);
+    const flattenedItems = useMemo(() => {
+        if (!groupByStatus || !issue || issue.length === 0) return issue;
 
+        const grouped = {};
+        for (let i = 0; i < taskTypes.length; i++) {
+            grouped[taskTypes[i].value] = [];
+        }
+        
+        const unmapped = [];
+
+        for (let i = 0; i < issue.length; i++) {
+            const task = issue[i];
+            if (task.task_status && grouped[task.task_status] !== undefined) {
+                grouped[task.task_status].push(task);
+            } else {
+                unmapped.push(task);
+            }
+        }
+
+        const flatList = [];
+        for (let i = 0; i < taskTypes.length; i++) {
+            const type = taskTypes[i];
+            const tasksOfThisType = grouped[type.value];
+            if (tasksOfThisType && tasksOfThisType.length > 0) {
+                const isExpanded = expandedGroups[type.value] !== false;
+                flatList.push({ isHeader: true, statusValue: type.value, statusName: type.name, statusColor: type.color, count: tasksOfThisType.length, isExpanded });
+                if (isExpanded) {
+                    // Spread is fine here as chunks are typically small, but push.apply or another for loop could be used. 
+                    // Using a loop to strictly avoid any large stack trace issues from spread operator on huge arrays
+                    for (let j = 0; j < tasksOfThisType.length; j++) {
+                        flatList.push(tasksOfThisType[j]);
+                    }
+                }
+            }
+        }
+
+        if (unmapped.length > 0) {
+            const isExpanded = expandedGroups['Unmapped'] !== false;
+            flatList.push({ isHeader: true, statusValue: 'Unmapped', statusName: 'Unmapped', statusColor: 'bg-gray-200', count: unmapped.length, isExpanded });
+            if (isExpanded) {
+                for (let j = 0; j < unmapped.length; j++) {
+                    flatList.push(unmapped[j]);
+                }
+            }
+        }
+
+        return flatList;
+    }, [issue, groupByStatus, taskTypes, expandedGroups]);
+
+
+    const itemsToRender = groupByStatus ? flattenedItems : issue;
+    // Removed expensive useEffect that synced props to state on every render/change.
+    // Derived state is now handled in TaskRow or on-the-fly where needed.
+
+    const rowVirtualizer = useVirtualizer({
+        count: (itemsToRender?.length ?? 0) + (isLoading ? 5 : 0),
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => ROW_HEIGHT,
+        overscan: 5,
+        enabled: true,
+    });
+    const virtualItems = rowVirtualizer.getVirtualItems()
+    const lastLoadIndexRef = useRef(null);
+
+    useEffect(() => {
+        if (!virtualItems.length || isLoading || !itemsToRender) return;
+
+        const leastVisible = virtualItems[virtualItems.length - 1];
+        const prefetchThreshhold = 20;
+        const triggerPoint = itemsToRender.length - prefetchThreshhold;
+
+        if (groupByStatus) {
+            const currentItem = itemsToRender[leastVisible.index];
+            if (currentItem && !currentItem.isHeader) {
+                let nextHeaderIndex = -1;
+                for (let i = leastVisible.index + 1; i < itemsToRender.length; i++) {
+                    if (itemsToRender[i].isHeader) {
+                        nextHeaderIndex = i;
+                        break;
+                    }
+                }
+                
+                const groupEndIndex = nextHeaderIndex !== -1 ? nextHeaderIndex - 1 : itemsToRender.length - 1;
+                const triggerPointGroup = groupEndIndex - prefetchThreshhold;
+                // Unique key for preventing multiple calls for the same group's specific boundary
+                const triggerKey = `group-${currentItem.task_status}-${groupEndIndex}`;
+
+                if (leastVisible.index >= triggerPointGroup &&
+                    hasMore &&
+                    lastLoadIndexRef.current !== triggerKey) {
+                    lastLoadIndexRef.current = triggerKey;
+                    onLoadMore(currentItem.task_status || 'Unmapped');
+                }
+            }
+        } else {
+            // Normal (ungrouped) trigger
+            if (leastVisible.index >= triggerPoint &&
+                hasMore &&
+                lastLoadIndexRef.current !== triggerPoint) {
+                lastLoadIndexRef.current = triggerPoint;
+                onLoadMore();
+            }
+        }
+    }, [virtualItems, itemsToRender, hasMore, onLoadMore, isLoading, groupByStatus]);
+
+    const workTypeMap = useMemo(() => {
+        return new Map(workType.map((status, index) => [
+            status.slug,
+            { id: index + 1, name: status.name, value: status.slug, color: status.color, icon: status.icon }
+        ]));
+    }, [workType]);
+
+
+
+    const currentProjectId = useMemo(() => currentProject?._id, [currentProject]);
     const handleUpdateTask = useCallback(async (key, value, id, fullDetail) => {
         try {
             const payload = {
@@ -415,8 +516,8 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
         }
     }, []);
 
-    const showEmptyState = !isLoading && (!issue || issue.length === 0);
-    const showInitialSkeleton = isLoading && (!issue || issue.length === 0);
+    const showEmptyState = !isLoading && (!itemsToRender || itemsToRender.length === 0);
+    const showInitialSkeleton = isLoading && (!itemsToRender || itemsToRender.length === 0);
 
     return (
         <div className="rounded-xl border bg-white overflow-hidden cursor-default">
@@ -425,11 +526,36 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                     <Button variant="ghost" size="icon" onClick={onToggleExpand}>
                         {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </Button>
+                    <span className="font-semibold text-neutral-600 text-sm">Backlog <span className="text-gray-400 font-normal ml-1">({issue?.length || 0} issues)</span></span>
+                    <StatusBar statusCount={statusCount} taskTypes={taskTypes} />
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                     <Button size="sm" variant="advanceMuted">
-                        Create task
+                        Create sprint
                     </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost">
+                                <TooltipWrapper content={"More actions"} disableFocusListener>
+                                    <MoreHorizontal className="w-5 h-5 text-neutral-500" />
+                                </TooltipWrapper>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-48" align="end">
+                            <div className="p-3">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="group-by-status" className="text-sm font-medium text-neutral-700 cursor-pointer">
+                                        Group by Status
+                                    </Label>
+                                    <Switch
+                                        id="group-by-status"
+                                        checked={groupByStatus}
+                                        onCheckedChange={setGroupByStatus}
+                                    />
+                                </div>
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 
@@ -464,7 +590,7 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                             >
                                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                                     // Check if this index is beyond actual data (skeleton row)
-                                    const isSkeletonRow = virtualRow.index >= (issue?.length ?? 0);
+                                    const isSkeletonRow = virtualRow.index >= (itemsToRender?.length ?? 0);
 
                                     if (isSkeletonRow) {
                                         return (
@@ -484,8 +610,40 @@ const BacklogTable = ({ issue, onLoadMore, hasMore, isLoading, expanded, onToggl
                                         );
                                     }
 
-                                    const task = issue[virtualRow.index];
+                                    const task = itemsToRender[virtualRow.index];
                                     if (!task) return null;
+
+                                    if (task.isHeader) {
+                                        return (
+                                            <div
+                                                key={`header-${task.statusName}-${virtualRow.index}`}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    height: `${ROW_HEIGHT}px`,
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                }}
+                                                className="flex items-center px-4 py-2 bg-transparent cursor-pointer hover:bg-neutral-50 transition-colors"
+                                                onClick={() => toggleGroupExpand(task.statusValue)}
+                                            >
+                                                <div className="flex items-center gap-2 pt-4">
+                                                    {task.isExpanded ? (
+                                                        <ChevronDown size={18} className="text-neutral-500 hover:text-neutral-700" />
+                                                    ) : (
+                                                        <ChevronRight size={18} className="text-neutral-500 hover:text-neutral-700" />
+                                                    )}
+                                                    <span className="text-[13px] font-semibold text-neutral-700 uppercase">
+                                                        {task.statusName}
+                                                    </span>
+                                                    <span className="px-[6px] py-[2px] rounded-full text-[11px] font-semibold bg-neutral-200 text-neutral-600 leading-none flex items-center justify-center">
+                                                        {task.count}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
 
                                     return (
                                         <TaskRow

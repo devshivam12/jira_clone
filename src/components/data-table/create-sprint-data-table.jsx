@@ -15,15 +15,16 @@ import { useSearchParams } from "react-router-dom";
 import TaskRow from './task-row';
 import ShowToast from "../common/ShowToast";
 import AddFlag from "../common/AddFlag";
+import StatusBar from "../common/StatusBar";
 
 // ✨ 1. CREATE A NEW COMPONENT FOR THE LIST ITEM
-const SprintItem = ({ 
-  sprint, expanded, onToggleExpand, onEditSprint, onDragEnd, onDragStart, 
-  currentProjectId, workTypeMap, taskTypes, importanceTypes, 
+const SprintItem = ({
+  sprint, expanded, onToggleExpand, onEditSprint, onDragEnd, onDragStart,
+  currentProjectId, workTypeMap, taskTypes, importanceTypes,
   editingTaskId, summaryValues, assigneeStates, addFlagRef,
   onRowClick, onSummaryClick, onSummaryChange, onSummaryKeyDown, onSummaryBlur,
-  onAvatarClick, onAssigneeChange, toggleAssigneeOpen, changeTaskStatus, 
-  changeImportance, getWorkItemMenuItems 
+  onAvatarClick, onAssigneeChange, toggleAssigneeOpen, changeTaskStatus,
+  changeImportance, getWorkItemMenuItems
 }) => {
   // ✅ CORRECT: The hook is now called at the top level of its own component.
   const controls = useDragControls();
@@ -33,7 +34,7 @@ const SprintItem = ({
   const parentRef = useRef(null);
 
   const rowVirtualizer = useVirtualizer({
-    count: sprint.tasks?.length ?? 0,
+    count: sprint.tasks?.data?.length ?? 0,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 10,
@@ -66,6 +67,7 @@ const SprintItem = ({
             {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
           </Button>
           <span className="font-medium text-neutral-500 text-lg">{sprint.sprintName}</span>
+
           {hasDate ? (
             <span className="text-sm text-gray-500">{sprint.date}</span>
           ) : (
@@ -77,8 +79,10 @@ const SprintItem = ({
               Add date <PencilLine size={13} />
             </Button>
           )}
+
         </div>
         <div className="flex items-center gap-4">
+          <StatusBar statusCount={sprint.statusCount} taskTypes={taskTypes} />
           <Button size="sm" variant="advanceMuted" onClick={() => alert(`Completed ${sprint.sprintName}`)}>
             Complete sprint
           </Button>
@@ -126,7 +130,7 @@ const SprintItem = ({
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
         >
-          {sprint.tasks && sprint.tasks.length > 0 ? (
+          {sprint.tasks && sprint?.tasks?.data?.length > 0 ? (
             <div
               ref={parentRef}
               className="max-h-[300px] overflow-auto border-t"
@@ -140,7 +144,7 @@ const SprintItem = ({
                 }}
               >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const task = sprint.tasks[virtualRow.index];
+                  const task = sprint?.tasks?.data[virtualRow.index];
                   if (!task) return null;
 
                   return (
@@ -390,6 +394,7 @@ export default function SprintTable({ projectData }) {
       date: sprint.startDate && sprint.endDate ? `${formattedDate(sprint.startDate)} - ${formattedDate(sprint.endDate)}` : null,
       status: sprint.status,
       tasks: sprint.tasks || [],
+      statusCount: sprint.tasks?.statusCount || []
     }));
   }, [getSprint, formattedDate]);
 
@@ -461,7 +466,7 @@ export default function SprintTable({ projectData }) {
           axis="y"
           values={sprints}
           onReorder={(newOrder) => setSprints(newOrder)}
-          className="space-y-8"
+          className="space-y-4"
         >
 
           {sprints.map((sprint) => (
