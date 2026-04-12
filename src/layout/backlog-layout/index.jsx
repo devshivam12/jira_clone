@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { setSearchQuery } from '@/redux/reducers/taskSlice';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -15,7 +17,6 @@ import Insight from '../Insight';
 import TooltipWrapper from '@/components/common/TooltipWrapper';
 import BacklogLayoutSetting from '../BacklogLayoutSetting';
 import EditIssue from './[id]/EditIssue';
-import { useSelector } from 'react-redux';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useUserData } from '@/hooks/useUserData';
 import { useProjectData } from '@/hooks/useProjectData';
@@ -39,6 +40,8 @@ const Backlog = () => {
   }), [currentProject, workType, importance, workFlow]);
 
   const selectedIssue = issueId ? true : false;
+  const dispatch = useDispatch();
+  const [localSearch, setLocalSearch] = useState("");
   const [isExpand, setIsExpand] = useState(false);
   const [showEpic, setShowEpic] = useState(false);
   const [sprint, setSprint] = useState([
@@ -53,6 +56,13 @@ const Backlog = () => {
 
   const [openInsight, setOpenInsight] = useState(false)
   const [backlogSetting, setBacklogSetting] = useState(false)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      dispatch(setSearchQuery(localSearch));
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [localSearch, dispatch]);
 
   const handleCreateSprint = useCallback(() => {
     const newSprint = {
@@ -109,7 +119,7 @@ const Backlog = () => {
               <h1 className="text-[24px] font-semibold text-neutral-800 tracking-tight leading-tight">
                 Backlog
               </h1>
-              
+
               <div className='flex items-center gap-x-2'>
                 <TooltipWrapper content="Backlog insight">
                   <button
@@ -145,6 +155,8 @@ const Backlog = () => {
                   className={`h-9 pl-9 bg-white border-neutral-300 rounded focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all duration-300 ${isExpand ? 'w-[250px]' : 'w-[200px]'} shadow-sm hover:bg-neutral-50`}
                   onFocus={() => setIsExpand(true)}
                   onBlur={() => setIsExpand(false)}
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
                 />
               </div>
 

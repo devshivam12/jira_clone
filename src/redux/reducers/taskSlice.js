@@ -1,7 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-    taskListQuery : {}
+    taskListQuery : {},
+    statusCount: [],
+    searchQuery: ""
 };
 
 const tasksSlice = createSlice({
@@ -10,11 +12,19 @@ const tasksSlice = createSlice({
     reducers: {
         setTaskQuery : (state, action) => {
             state.taskListQuery = action.payload
+        },
+        setStatusCount: (state, action) => {
+            state.statusCount = action.payload;
+        },
+        setSearchQuery: (state, action) => {
+            state.searchQuery = action.payload;
         }
     }
 });
 export default tasksSlice.reducer;
 export const {
-    setTaskQuery
+    setTaskQuery,
+    setStatusCount,
+    setSearchQuery
 } = tasksSlice.actions;
 

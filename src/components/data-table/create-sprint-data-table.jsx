@@ -12,6 +12,8 @@ import { useProjectData } from "@/hooks/useProjectData";
 import CreateSprint from "@/layout/backlog-layout/common-component/CreateSprint";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useSearchParams } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import TaskRow from './task-row';
 import ShowToast from "../common/ShowToast";
 import AddFlag from "../common/AddFlag";
@@ -24,7 +26,7 @@ const SprintItem = ({
   editingTaskId, summaryValues, assigneeStates, addFlagRef,
   onRowClick, onSummaryClick, onSummaryChange, onSummaryKeyDown, onSummaryBlur,
   onAvatarClick, onAssigneeChange, toggleAssigneeOpen, changeTaskStatus,
-  changeImportance, getWorkItemMenuItems
+  changeImportance, getWorkItemMenuItems, searchQuery
 }) => {
   // ✅ CORRECT: The hook is now called at the top level of its own component.
   const controls = useDragControls();
@@ -33,8 +35,76 @@ const SprintItem = ({
   const ROW_HEIGHT = 56;
   const parentRef = useRef(null);
 
+  const [groupByStatus, setGroupByStatus] = useState(() => {
+    const saved = localStorage.getItem(`sprint_groupby_status_${sprint.id}`);
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`sprint_groupby_status_${sprint.id}`, JSON.stringify(groupByStatus));
+  }, [groupByStatus, sprint.id]);
+
+  const [expandedGroups, setExpandedGroups] = useState({});
+
+  const toggleGroupExpand = useCallback((statusValue) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [statusValue]: prev[statusValue] === false ? true : false
+    }));
+  }, []);
+
+  const flattenedItems = useMemo(() => {
+    const issue = sprint.tasks?.data || [];
+    if (!groupByStatus || issue.length === 0) return issue;
+
+    const grouped = {};
+    for (let i = 0; i < taskTypes.length; i++) {
+      grouped[taskTypes[i].value] = [];
+    }
+
+    const unmapped = [];
+
+    for (let i = 0; i < issue.length; i++) {
+      const task = issue[i];
+      if (task.task_status && grouped[task.task_status] !== undefined) {
+        grouped[task.task_status].push(task);
+      } else {
+        unmapped.push(task);
+      }
+    }
+
+    const flatList = [];
+    for (let i = 0; i < taskTypes.length; i++) {
+      const type = taskTypes[i];
+      const tasksOfThisType = grouped[type.value];
+      if (tasksOfThisType && tasksOfThisType.length > 0) {
+        const isExpanded = expandedGroups[type.value] !== false;
+        flatList.push({ isHeader: true, statusValue: type.value, statusName: type.name, statusColor: type.color, count: tasksOfThisType.length, isExpanded });
+        if (isExpanded) {
+          for (let j = 0; j < tasksOfThisType.length; j++) {
+            flatList.push(tasksOfThisType[j]);
+          }
+        }
+      }
+    }
+
+    if (unmapped.length > 0) {
+      const isExpanded = expandedGroups['Unmapped'] !== false;
+      flatList.push({ isHeader: true, statusValue: 'Unmapped', statusName: 'Unmapped', statusColor: 'bg-gray-200', count: unmapped.length, isExpanded });
+      if (isExpanded) {
+        for (let j = 0; j < unmapped.length; j++) {
+          flatList.push(unmapped[j]);
+        }
+      }
+    }
+
+    return flatList;
+  }, [sprint.tasks, groupByStatus, taskTypes, expandedGroups]);
+
+  const itemsToRender = groupByStatus ? flattenedItems : (sprint.tasks?.data || []);
+
   const rowVirtualizer = useVirtualizer({
-    count: sprint.tasks?.data?.length ?? 0,
+    count: itemsToRender.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 10,
@@ -52,75 +122,108 @@ const SprintItem = ({
       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       className="rounded-xl border bg-white overflow-hidden cursor-default"
     >
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
-        <div className="flex items-center gap-2">
-          <div
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              controls.start(e);
-            }}
-            className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
-          >
-            <GripVertical size={18} />
-          </div>
-          <Button variant="ghost" size="icon" onClick={onToggleExpand}>
-            {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-          </Button>
-          <span className="font-medium text-neutral-500 text-lg">{sprint.sprintName}</span>
+      <div className="flex flex-col bg-gray-50 border-b">
+        <div className="flex flex-wrap items-center justify-between px-3 sm:px-4 py-3 gap-y-3 gap-x-4">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] overflow-hidden">
+            <div
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                controls.start(e);
+              }}
+              className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing shrink-0"
+            >
+              <GripVertical size={18} />
+            </div>
+            <Button variant="ghost" size="icon" onClick={onToggleExpand} className="shrink-0 h-8 w-8">
+              {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+            </Button>
+            <span className="font-medium text-neutral-600 text-[15px] sm:text-lg truncate">{sprint.sprintName}</span>
 
+            {hasDate ? (
+              <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap hidden md:inline-block ml-2 shrink-0">{sprint.date}</span>
+            ) : (
+              <Button
+                size="xs"
+                variant="advanceMuted"
+                onClick={() => alert(`Add date for ${sprint.sprintName}`)}
+                className="hidden md:flex ml-2 shrink-0"
+              >
+                Add date <PencilLine size={13} />
+              </Button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 shrink-0 overflow-x-auto min-w-0">
+            <div className="shrink-0 flex items-center pr-1 lg:pr-2">
+              <StatusBar statusCount={sprint.statusCount} taskTypes={taskTypes} />
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button size="sm" variant="advanceMuted" onClick={() => alert(`Completed ${sprint.sprintName}`)} className="shrink-0 h-8 px-3 text-xs sm:text-sm">
+                Complete sprint
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="ghost" className="h-8 w-8">
+                    <TooltipWrapper content={"More actions"} disableFocusListener>
+                      <MoreHorizontal className="w-4 h-4" />
+                    </TooltipWrapper>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-48 rounded-sm"
+                  align="end"
+                  sideOffset={13}
+                >
+                  <div className="p-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`group-by-status-${sprint.id}`} className="text-sm font-medium text-neutral-700 cursor-pointer">
+                        Group by Status
+                      </Label>
+                      <Switch
+                        id={`group-by-status-${sprint.id}`}
+                        checked={groupByStatus}
+                        onCheckedChange={setGroupByStatus}
+                      />
+                    </div>
+                  </div>
+                  <DropdownMenuItem
+                    className="gap-2 py-3 px-3 cursor-pointer"
+                    onSelect={onEditSprint}
+                  >
+                    <span className="text-neutral-500 font-medium">Edit sprint</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    className="gap-2 py-3 px-3 cursor-pointer"
+                    onSelect={onEditSprint}
+                  >
+                    <span className="text-neutral-500 font-medium">Delete sprint</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    className="gap-2 py-3 px-3 cursor-pointer"
+                    onSelect={onEditSprint}
+                  >
+                    <span className="text-neutral-500 font-medium">Reorder sprint</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+
+        {/* Date on mobile */}
+        <div className="md:hidden flex items-center px-[42px] pb-3 -mt-3">
           {hasDate ? (
-            <span className="text-sm text-gray-500">{sprint.date}</span>
+            <span className="text-xs text-gray-400">{sprint.date}</span>
           ) : (
-            <Button
-              size="xs"
-              variant="advanceMuted"
+            <span
+              className="text-[11px] text-blue-500 cursor-pointer hover:underline flex items-center gap-1"
               onClick={() => alert(`Add date for ${sprint.sprintName}`)}
             >
-              Add date <PencilLine size={13} />
-            </Button>
+              Add date <PencilLine size={10} />
+            </span>
           )}
-
-        </div>
-        <div className="flex items-center gap-4">
-          <StatusBar statusCount={sprint.statusCount} taskTypes={taskTypes} />
-          <Button size="sm" variant="advanceMuted" onClick={() => alert(`Completed ${sprint.sprintName}`)}>
-            Complete sprint
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost">
-                <TooltipWrapper content={"More actions"} disableFocusListener>
-                  <MoreHorizontal className="w-4 h-4" />
-                </TooltipWrapper>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              className="w-(--radix-dropdown-menu-trigger-width) min-w-30 rounded-sm"
-              align="end"
-              sideOffset={13}
-            >
-              <DropdownMenuItem
-                className="gap-2 py-3 px-3 cursor-pointer"
-                onSelect={onEditSprint}
-              >
-                <span className="text-neutral-500 font-medium">Edit sprint</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                className="gap-2 py-3 px-3 cursor-pointer"
-                onSelect={onEditSprint}
-              >
-                <span className="text-neutral-500 font-medium">Delete sprint</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                className="gap-2 py-3 px-3 cursor-pointer"
-                onSelect={onEditSprint}
-              >
-                <span className="text-neutral-500 font-medium">Reorder sprint</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
       {expanded && (
@@ -144,8 +247,40 @@ const SprintItem = ({
                 }}
               >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const task = sprint?.tasks?.data[virtualRow.index];
+                  const task = itemsToRender[virtualRow.index];
                   if (!task) return null;
+
+                  if (task.isHeader) {
+                    return (
+                      <div
+                        key={`header-${sprint.id}-${task.statusName}-${virtualRow.index}`}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${ROW_HEIGHT}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        className="flex items-center px-4 py-2 bg-transparent cursor-pointer hover:bg-neutral-50 transition-colors"
+                        onClick={() => toggleGroupExpand(task.statusValue)}
+                      >
+                        <div className="flex items-center gap-2 pt-4">
+                          {task.isExpanded ? (
+                            <ChevronDown size={18} className="text-neutral-500 hover:text-neutral-700" />
+                          ) : (
+                            <ChevronRight size={18} className="text-neutral-500 hover:text-neutral-700" />
+                          )}
+                          <span className="text-[13px] font-semibold text-neutral-700 uppercase">
+                            {task.statusName}
+                          </span>
+                          <span className="px-[6px] py-[2px] rounded-full text-[11px] font-semibold bg-neutral-200 text-neutral-600 leading-none flex items-center justify-center">
+                            {task.count}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
 
                   return (
                     <TaskRow
@@ -171,6 +306,7 @@ const SprintItem = ({
                       changeTaskStatus={changeTaskStatus}
                       changeImportance={changeImportance}
                       getWorkItemMenuItems={getWorkItemMenuItems}
+                      searchQuery={searchQuery}
                     />
                   );
                 })}
@@ -191,7 +327,7 @@ const SprintItem = ({
 };
 
 // ✨ 2. UPDATE THE PARENT COMPONENT
-export default function SprintTable({ projectData }) {
+export default function SprintTable({ projectData, searchQuery, filteredSprints }) {
   const [expanded, setExpanded] = useState({});
   const { data: getSprint } = useGetSprintDetailsWithTasksQuery();
   const [reorderSprint] = useReorderSprintMutation();
@@ -401,10 +537,22 @@ export default function SprintTable({ projectData }) {
   const [sprints, setSprints] = useState(() => initialSprints);
 
   useEffect(() => {
-    if (initialSprints.length > 0) {
-      setSprints(initialSprints);
+    if (searchQuery) {
+      const fdMap = new Map((filteredSprints || []).map(fs => [fs.sprintId, fs.tasks]));
+      const updated = initialSprints.map(s => {
+        const fTasks = fdMap.get(s.id) || [];
+        return {
+          ...s,
+          tasks: { data: fTasks }
+        }
+      });
+      setSprints(updated);
+    } else {
+      if (initialSprints.length > 0) {
+        setSprints(initialSprints);
+      }
     }
-  }, [initialSprints]);
+  }, [searchQuery, filteredSprints, initialSprints]);
 
   useEffect(() => {
     const expandedState = initialSprints.reduce((acc, s) => {
@@ -497,6 +645,7 @@ export default function SprintTable({ projectData }) {
               changeTaskStatus={changeTaskStatus}
               changeImportance={changeImportance}
               getWorkItemMenuItems={getWorkItemMenuItems}
+              searchQuery={searchQuery}
             />
           ))}
         </Reorder.Group>

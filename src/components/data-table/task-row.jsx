@@ -11,6 +11,20 @@ import TooltipWrapper from "../common/TooltipWrapper";
 
 const ROW_HEIGHT = 56;
 
+const highlightText = (text, highlight) => {
+    if (!highlight || !highlight.trim() || !text) {
+        return text;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return parts.map((part, index) =>
+        part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={index} className="bg-yellow-200 text-black rounded px-[2px]">{part}</span>
+        ) : (
+            part
+        )
+    );
+};
+
 const ParentWorkTypeIcon = memo(({ workTypeMap }) => {
     // console.log("workTypeMap", workTypeMap)
     const matchEpic = useMemo(() => {
@@ -57,7 +71,8 @@ const TaskRow = memo(({
     toggleAssigneeOpen,
     changeTaskStatus,
     changeImportance,
-    getWorkItemMenuItems
+    getWorkItemMenuItems,
+    searchQuery
 }) => {
     const matchWorkType = useMemo(() => {
         const result = workTypeMap?.get(task?.work_type)
@@ -177,7 +192,7 @@ const TaskRow = memo(({
                                 className="truncate block flex-1"
                                 title={task?.summary}
                             >
-                                {task?.summary}
+                                {searchQuery ? highlightText(task?.summary, searchQuery) : task?.summary}
                             </span>
                             <Button
                                 size="icon"
@@ -301,7 +316,8 @@ const TaskRow = memo(({
         prevProps.workTypeMap === nextProps.workTypeMap &&
         prevProps.taskTypes === nextProps.taskTypes &&
         prevProps.importanceTypes === nextProps.importanceTypes &&
-        prevProps.currentProjectId === nextProps.currentProjectId
+        prevProps.currentProjectId === nextProps.currentProjectId &&
+        prevProps.searchQuery === nextProps.searchQuery
     );
 });
 

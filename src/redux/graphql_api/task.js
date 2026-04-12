@@ -256,6 +256,13 @@ export const taskApi = createApi({
                 }
 
             }
+        }),
+
+        filterTask: builder.mutation({
+            query: (payload) => ({
+                method: "POST",
+                body: payload
+            })
         })
     })
 })
@@ -267,5 +274,6 @@ export const {
     useGetTaskByIdQuery,
     useGetTaskVotesMutation,
     useAddVotesMutation,
-    useAddFlagMutation
+    useAddFlagMutation,
+    useFilterTaskMutation
 } = taskApi

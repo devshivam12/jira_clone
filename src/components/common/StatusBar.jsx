@@ -36,8 +36,8 @@ const StatusBar = memo(({ statusCount, taskTypes }) => {
     const doneCount = doneSegment ? doneSegment.count : 0;
 
     return (
-        <div className="flex items-center gap-3 ml-4">
-            <div className="flex w-48 sm:w-56 h-[8px] rounded-full overflow-hidden bg-gray-200">
+        <div className="flex items-center gap-2 lg:gap-3 ml-auto sm:ml-4">
+            <div className="hidden sm:flex w-24 md:w-36 lg:w-48 xl:w-56 h-[6px] lg:h-[8px] rounded-full overflow-hidden bg-neutral-200/60 dark:bg-neutral-800 shadow-inner">
                 {segments.map((segment, index) => {
                     const isHex = segment.color?.startsWith('#');
                     return (
@@ -45,19 +45,29 @@ const StatusBar = memo(({ statusCount, taskTypes }) => {
                             <div 
                                 style={{ 
                                     width: `${segment.percentage}%`,
-                                    backgroundColor: isHex ? segment.color : undefined
+                                    backgroundColor: isHex ? segment.color : undefined,
+                                    boxShadow: isHex ? `0 0 8px ${segment.color}80` : undefined,
                                 }} 
-                                className={`h-full transition-all duration-300 hover:opacity-80 border-r border-white last:border-r-0 ${!isHex ? (segment.color || 'bg-gray-400') : ''}`}
+                                className={`h-full transition-all duration-500 ease-out hover:brightness-110 border-r border-white/20 last:border-r-0 ${!isHex ? (segment.color || 'bg-gray-400') : ''}`}
                             />
                         </TooltipWrapper>
                     );
                 })}
             </div>
-            <div className="flex items-center text-[13px] font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-sm">
-                <span className="text-neutral-700">{doneCount}</span>
-                <span className="mx-0.5">/</span>
-                <span>{totalCount}</span>
-            </div>
+            
+            <TooltipWrapper content={`${doneCount} done out of ${totalCount} total`} disableFocusListener>
+                <div className="hidden sm:flex items-center justify-center text-[11px] lg:text-[12px] font-semibold text-neutral-600 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm px-2 py-0.5 rounded-md backdrop-blur-sm whitespace-nowrap">
+                    <span className="text-emerald-600 dark:text-emerald-500">{doneCount}</span>
+                    <span className="mx-[2px] text-neutral-400 font-light">/</span>
+                    <span className="text-neutral-500">{totalCount}</span>
+                </div>
+            </TooltipWrapper>
+
+            <TooltipWrapper content={`${totalCount} total task${totalCount !== 1 ? 's' : ''}`} disableFocusListener>
+                <div className="flex sm:hidden items-center justify-center h-7 w-7 text-[12px] font-bold text-neutral-700 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 shadow-sm rounded-full">
+                    {totalCount}
+                </div>
+            </TooltipWrapper>
         </div>
     );
 });

@@ -90,7 +90,7 @@ const LazySprintSelector = memo(({ isOpen, onClose, onChange, projectId }) => {
 });
 LazySprintSelector.displayName = 'LazySprintSelector';
 
-const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData }) => {
+const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData, searchQuery, paginationToken }) => {
     // console.log("issue-----------", issue)
     const { currentProject, workType, importance, workFlow } = projectData;
 
@@ -211,7 +211,7 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
     // Derived state is now handled in TaskRow or on-the-fly where needed.
 
     const rowVirtualizer = useVirtualizer({
-        count: (itemsToRender?.length ?? 0) + (isLoading ? 5 : 0),
+        count: (itemsToRender?.length ?? 0) + (isLoading ? 5 : (hasMore ? 1 : 0)),
         getScrollElement: () => parentRef.current,
         estimateSize: () => ROW_HEIGHT,
         overscan: 5,
@@ -221,15 +221,22 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
     const lastLoadIndexRef = useRef(null);
 
     useEffect(() => {
-        if (!virtualItems.length || isLoading || !itemsToRender) return;
+        if (!virtualItems.length || isLoading) return;
 
         const leastVisible = virtualItems[virtualItems.length - 1];
         const prefetchThreshhold = 20;
-        const triggerPoint = itemsToRender.length - prefetchThreshhold;
+        const triggerPoint = (itemsToRender?.length ?? 0) - prefetchThreshhold;
+        
+        const currentTokenId = `token_${paginationToken}_len_${itemsToRender?.length ?? 0}`;
 
         if (groupByStatus) {
             const currentItem = itemsToRender[leastVisible.index];
-            if (currentItem && !currentItem.isHeader) {
+            if (!currentItem && leastVisible.index >= (itemsToRender?.length ?? 0) && hasMore) {
+                if (lastLoadIndexRef.current !== currentTokenId) {
+                    lastLoadIndexRef.current = currentTokenId;
+                    onLoadMore();
+                }
+            } else if (currentItem && !currentItem.isHeader) {
                 let nextHeaderIndex = -1;
                 for (let i = leastVisible.index + 1; i < itemsToRender.length; i++) {
                     if (itemsToRender[i].isHeader) {
@@ -241,7 +248,7 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
                 const groupEndIndex = nextHeaderIndex !== -1 ? nextHeaderIndex - 1 : itemsToRender.length - 1;
                 const triggerPointGroup = groupEndIndex - prefetchThreshhold;
                 // Unique key for preventing multiple calls for the same group's specific boundary
-                const triggerKey = `group-${currentItem.task_status}-${groupEndIndex}`;
+                const triggerKey = `group-${currentItem.task_status}-${groupEndIndex}-${currentTokenId}`;
 
                 if (leastVisible.index >= triggerPointGroup &&
                     hasMore &&
@@ -254,12 +261,12 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
             // Normal (ungrouped) trigger
             if (leastVisible.index >= triggerPoint &&
                 hasMore &&
-                lastLoadIndexRef.current !== triggerPoint) {
-                lastLoadIndexRef.current = triggerPoint;
+                lastLoadIndexRef.current !== currentTokenId) {
+                lastLoadIndexRef.current = currentTokenId;
                 onLoadMore();
             }
         }
-    }, [virtualItems, itemsToRender, hasMore, onLoadMore, isLoading, groupByStatus]);
+    }, [virtualItems, itemsToRender, hasMore, onLoadMore, isLoading, groupByStatus, paginationToken]);
 
     const workTypeMap = useMemo(() => {
         return new Map(workType.map((status, index) => [
@@ -516,46 +523,53 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
         }
     }, []);
 
-    const showEmptyState = !isLoading && (!itemsToRender || itemsToRender.length === 0);
+    const showEmptyState = !isLoading && (!itemsToRender || itemsToRender.length === 0) && !hasMore;
     const showInitialSkeleton = isLoading && (!itemsToRender || itemsToRender.length === 0);
 
     return (
         <div className="rounded-xl border bg-white overflow-hidden cursor-default">
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={onToggleExpand}>
+            <div className="flex flex-wrap items-center justify-between px-3 sm:px-4 py-3 bg-gray-50 border-b gap-y-3 gap-x-4">
+                <div className="flex items-center gap-2 flex-1 min-w-[200px] overflow-hidden">
+                    <Button variant="ghost" size="icon" onClick={onToggleExpand} className="shrink-0 h-8 w-8">
                         {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </Button>
-                    <span className="font-semibold text-neutral-600 text-sm">Backlog <span className="text-gray-400 font-normal ml-1">({issue?.length || 0} issues)</span></span>
-                    <StatusBar statusCount={statusCount} taskTypes={taskTypes} />
+                    <span className="font-semibold text-neutral-600 text-sm whitespace-nowrap truncate">
+                        Backlog <span className="text-gray-400 font-normal ml-1">({issue?.length || 0} issues)</span>
+                    </span>
                 </div>
-                <div className="flex items-center gap-2 sm:gap-4">
-                    <Button size="sm" variant="advanceMuted">
-                        Create sprint
-                    </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button size="icon" variant="ghost">
-                                <TooltipWrapper content={"More actions"} disableFocusListener>
-                                    <MoreHorizontal className="w-5 h-5 text-neutral-500" />
-                                </TooltipWrapper>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-48" align="end">
-                            <div className="p-3">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="group-by-status" className="text-sm font-medium text-neutral-700 cursor-pointer">
-                                        Group by Status
-                                    </Label>
-                                    <Switch
-                                        id="group-by-status"
-                                        checked={groupByStatus}
-                                        onCheckedChange={setGroupByStatus}
-                                    />
+
+                <div className="flex items-center justify-end gap-2 shrink-0 overflow-x-auto">
+                     <div className="shrink-0 flex items-center pr-1 lg:pr-2">
+                         <StatusBar statusCount={statusCount} taskTypes={taskTypes} />
+                     </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Button size="sm" variant="advanceMuted" className="shrink-0 h-8 px-3 text-xs sm:text-sm">
+                            Create sprint
+                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-8 w-8">
+                                    <TooltipWrapper content={"More actions"} disableFocusListener>
+                                        <MoreHorizontal className="w-5 h-5 text-neutral-500" />
+                                    </TooltipWrapper>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-48" align="end">
+                                <div className="p-3">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="group-by-status" className="text-sm font-medium text-neutral-700 cursor-pointer">
+                                            Group by Status
+                                        </Label>
+                                        <Switch
+                                            id="group-by-status"
+                                            checked={groupByStatus}
+                                            onCheckedChange={setGroupByStatus}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
             </div>
 
@@ -669,6 +683,7 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
                                             changeTaskStatus={changeTaskStatus}
                                             changeImportance={changeImportance}
                                             getWorkItemMenuItems={getWorkItemMenuItems}
+                                            searchQuery={searchQuery}
                                         />
                                     );
                                 })}
