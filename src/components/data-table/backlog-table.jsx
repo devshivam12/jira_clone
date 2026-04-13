@@ -224,7 +224,7 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
         if (!virtualItems.length || isLoading) return;
 
         const leastVisible = virtualItems[virtualItems.length - 1];
-        const prefetchThreshhold = 20;
+        const prefetchThreshhold = 2;
         const triggerPoint = (itemsToRender?.length ?? 0) - prefetchThreshhold;
         
         const currentTokenId = `token_${paginationToken}_len_${itemsToRender?.length ?? 0}`;

@@ -5,12 +5,15 @@ import BacklogTable from '@/components/data-table/backlog-table'
 import { useGetBacklogListQuery, useFilterTaskMutation } from '@/redux/graphql_api/task';
 import { useDispatch, useSelector } from 'react-redux';
 import { setTaskQuery, setStatusCount } from '@/redux/reducers/taskSlice';
+import CreateSprint from './common-component/CreateSprint';
+import { Plus } from 'lucide-react';
 
 
 const CreateBacklog = ({ createSprint, onIssueClick, userData, projectData }) => {
 
   const { currentProject } = projectData
   const [expanded, setExpanded] = useState(true)
+  const [isCreateSprintOpen, setIsCreateSprintOpen] = useState(false)
   const LIMIT = 100
   const [allIssue, setAllIssue] = useState([])
   const [page, setPage] = useState(1)
@@ -85,34 +88,49 @@ const CreateBacklog = ({ createSprint, onIssueClick, userData, projectData }) =>
   }, [taskFetching]);
 
   useEffect(() => {
+    let isActive = true;
+    let promise;
+
     if (searchQuery) {
       loadingRef.current = true;
-      filterTask({
+      promise = filterTask({
         operationName: 'filterTask',
         variables: {
           searchquery: searchQuery,
           selectedfilter: '',
           cursor: null
         }
-      }).then((res) => {
-        const result = res?.data?.data?.filterTask
-        console.log("resultresultresultresult", result)
+      });
+      
+      promise.then((res) => {
+        if (!isActive) return;
+        const result = res?.data?.data?.filterTask;
         if (result) {
-          setFilteredIssue(result.backlog || [])
-          setFilteredSprints(result.sprints || [])
-          setCursor(result.cursor)
-          setHasMore(result.hasMore)
+          setFilteredIssue(result.backlog || []);
+          setFilteredSprints(result.sprints || []);
+          setCursor(result.cursor);
+          setHasMore(result.hasMore);
         }
       }).finally(() => {
-        loadingRef.current = false;
+        if (isActive) {
+          loadingRef.current = false;
+        }
       });
     } else {
-      setFilteredIssue([])
-      setFilteredSprints([])
-      setCursor(null)
-      setHasMore(true)
+      loadingRef.current = false;
+      setFilteredIssue([]);
+      setFilteredSprints([]);
+      setCursor(null);
+      setHasMore(true);
     }
-  }, [searchQuery]);
+
+    return () => {
+      isActive = false;
+      if (promise) {
+        promise.abort();
+      }
+    };
+  }, [searchQuery, filterTask]);
 
   const loadMore = useCallback((status) => {
     if (taskFetching || loadingRef.current) {
@@ -210,17 +228,35 @@ const CreateBacklog = ({ createSprint, onIssueClick, userData, projectData }) =>
       />
 
       {/* Decorative and Interactive Separator */}
-      <div className="relative flex items-center py-4 sm:py-6 group">
-        <div className="flex-grow border-t border-dashed border-gray-300 transition-colors group-hover:border-blue-300"></div>
-        <div className="px-4 text-xs font-semibold uppercase tracking-widest text-gray-400 group-hover:text-blue-500 transition-colors bg-white absolute left-1/2 transform -translate-x-1/2 rounded-full ring-4 ring-white shadow-sm duration-300">
-          Sprints
+      {displayIssues.length > 0 && (
+        <div 
+          className="relative flex items-center py-4 sm:py-6 group cursor-pointer" 
+          onClick={() => setIsCreateSprintOpen(true)}
+        >
+          <div className="flex-grow border-t border-dashed border-gray-300 transition-colors group-hover:border-blue-300"></div>
+          <div className="flex items-center gap-1 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-gray-400 group-hover:text-blue-500 transition-colors bg-white absolute left-1/2 transform -translate-x-1/2 rounded-full ring-4 ring-white shadow-sm duration-300">
+            Sprints
+            <span className="flex items-center justify-center rounded-full p-[2px] bg-gray-100 text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300 ml-1">
+               <Plus size={14} strokeWidth={2.5} />
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       <SprintTable
         projectData={projectData}
         searchQuery={searchQuery}
         filteredSprints={filteredSprints}
+        onLoadMore={searchQuery ? loadMoreSearch : () => {}}
+        hasMore={searchQuery ? hasMore : false}
+        isLoading={searchQuery ? isFiltering : false}
+        paginationToken={searchQuery ? (cursor ? JSON.stringify(cursor) : 'null') : null}
+      />
+
+      <CreateSprint 
+        isOpen={isCreateSprintOpen} 
+        onClose={() => setIsCreateSprintOpen(false)} 
+        sprintId={null} 
       />
     </Card>
   );

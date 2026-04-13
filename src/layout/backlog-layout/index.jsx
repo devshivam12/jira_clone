@@ -60,7 +60,7 @@ const Backlog = () => {
   useEffect(() => {
     const handler = setTimeout(() => {
       dispatch(setSearchQuery(localSearch));
-    }, 200);
+    }, 500);
     return () => clearTimeout(handler);
   }, [localSearch, dispatch]);
 

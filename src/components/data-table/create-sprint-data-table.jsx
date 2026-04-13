@@ -18,6 +18,7 @@ import TaskRow from './task-row';
 import ShowToast from "../common/ShowToast";
 import AddFlag from "../common/AddFlag";
 import StatusBar from "../common/StatusBar";
+import IssueRowSkeleton from "./IssueRowSkeleton";
 
 // ✨ 1. CREATE A NEW COMPONENT FOR THE LIST ITEM
 const SprintItem = ({
@@ -26,7 +27,8 @@ const SprintItem = ({
   editingTaskId, summaryValues, assigneeStates, addFlagRef,
   onRowClick, onSummaryClick, onSummaryChange, onSummaryKeyDown, onSummaryBlur,
   onAvatarClick, onAssigneeChange, toggleAssigneeOpen, changeTaskStatus,
-  changeImportance, getWorkItemMenuItems, searchQuery
+  changeImportance, getWorkItemMenuItems, searchQuery,
+  onLoadMore, hasMore, isLoading, paginationToken
 }) => {
   // ✅ CORRECT: The hook is now called at the top level of its own component.
   const controls = useDragControls();
@@ -104,11 +106,32 @@ const SprintItem = ({
   const itemsToRender = groupByStatus ? flattenedItems : (sprint.tasks?.data || []);
 
   const rowVirtualizer = useVirtualizer({
-    count: itemsToRender.length,
+    count: itemsToRender.length + (isLoading ? 5 : hasMore ? 1 : 0),
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 10,
   });
+
+  const lastLoadIndexRef = useRef(null);
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+
+  useEffect(() => {
+    if (!virtualItems.length || isLoading) return;
+
+    const leastVisible = virtualItems[virtualItems.length - 1];
+    const prefetchThreshhold = 2;
+    const triggerPoint = itemsToRender.length - prefetchThreshhold;
+    
+    const currentTokenId = `token_${paginationToken}_len_${itemsToRender.length}`;
+
+    if (leastVisible.index >= triggerPoint && hasMore && lastLoadIndexRef.current !== currentTokenId) {
+      lastLoadIndexRef.current = currentTokenId;
+      if (onLoadMore) {
+        onLoadMore();
+      }
+    }
+  }, [virtualItems, itemsToRender, hasMore, onLoadMore, isLoading, paginationToken]);
 
   return (
     <Reorder.Item
@@ -247,6 +270,25 @@ const SprintItem = ({
                 }}
               >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const isSkeletonRow = virtualRow.index >= itemsToRender.length;
+                  if (isSkeletonRow) {
+                    return (
+                      <div
+                        key={`sprint-skeleton-${sprint.id}-${virtualRow.index}`}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${ROW_HEIGHT}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        <IssueRowSkeleton />
+                      </div>
+                    );
+                  }
+
                   const task = itemsToRender[virtualRow.index];
                   if (!task) return null;
 
@@ -327,7 +369,7 @@ const SprintItem = ({
 };
 
 // ✨ 2. UPDATE THE PARENT COMPONENT
-export default function SprintTable({ projectData, searchQuery, filteredSprints }) {
+export default function SprintTable({ projectData, searchQuery, filteredSprints, onLoadMore, hasMore, isLoading, paginationToken }) {
   const [expanded, setExpanded] = useState({});
   const { data: getSprint } = useGetSprintDetailsWithTasksQuery();
   const [reorderSprint] = useReorderSprintMutation();
@@ -646,6 +688,10 @@ export default function SprintTable({ projectData, searchQuery, filteredSprints 
               changeImportance={changeImportance}
               getWorkItemMenuItems={getWorkItemMenuItems}
               searchQuery={searchQuery}
+              onLoadMore={onLoadMore}
+              hasMore={hasMore}
+              isLoading={isLoading}
+              paginationToken={paginationToken}
             />
           ))}
         </Reorder.Group>
