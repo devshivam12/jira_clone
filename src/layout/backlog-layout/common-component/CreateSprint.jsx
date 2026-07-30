@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -57,14 +57,14 @@ const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
   const defaultStartTime = "12:00 AM";
   const defaultEndTime = "12:00 PM"
   const isInitialRender = useRef()
-  const projectOptions = allProjects.map((item) => {
+  const projectOptions = useMemo(() => allProjects.map((item) => {
     return {
       value: item._id,
       label: item.name,
       icon: item.project_icon,
-      isDefault: item._id === currentProject._id
+      isDefault: item._id === currentProject?._id
     }
-  })
+  }), [allProjects, currentProject?._id])
   console.log("projectOptions", projectOptions)
 
   const { register, setValue, watch, getValues, handleSubmit, control, formState: { errors }, reset } = useForm({

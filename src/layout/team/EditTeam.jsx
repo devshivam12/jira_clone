@@ -383,7 +383,7 @@ const EditTeam = () => {
       </Card>
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-6">
         {/* Left column (smaller width) */}
         <div className="md:col-span-1 space-y-5">
           <div className='flex items-center justify-between'>
@@ -715,7 +715,7 @@ const EditTeam = () => {
 
         {/* Right column (larger width) */}
         <div className="md:col-span-3 space-y-5">
-          <div className='flex items-center justify-end gap-x-2'>
+          <div className='flex flex-wrap items-center justify-end gap-2'>
 
             {
               userData?.role === "Admin" && (
@@ -826,7 +826,7 @@ const EditTeam = () => {
                   </TooltipWrapper>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {
                     teamData?.data?.projectDetails.map((project, index) => (
                       <div className='relative group'>
@@ -980,7 +980,7 @@ const EditTeam = () => {
 
       {/* Confirmation Dialog for Project Removal */}
       <AlertDialog open={confirmDialog.isOpen} onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, isOpen: open }))}>
-        <AlertDialogContent className="w-96">
+        <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-neutral-500 flex items-center gap-x-4">
               <div className='bg-yellow-300 rounded-md h-6 w-6 p-0 text-yellow-900 flex items-center justify-center'>

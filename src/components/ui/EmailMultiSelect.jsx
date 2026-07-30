@@ -20,6 +20,9 @@ import { useAddPeopleMutation, useCreateTeamMutation, useSearchMemberQuery } fro
 import { useGetRolesQuery } from "@/redux/api/authApi";
 import ShowToast from "../common/ShowToast";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const validateEmail = (email) => EMAIL_REGEX.test(email);
+
 export const EmailMultiSelect = ({
   slug,
   isOpen,
@@ -34,7 +37,6 @@ export const EmailMultiSelect = ({
   // State for both modes
   const [inputValue, setInputValue] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [teamName, setTeamName] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
@@ -44,22 +46,20 @@ export const EmailMultiSelect = ({
   const [teamMembers, setTeamMembers] = useState([]);
 
   const shouldFetchRole = isOpen && isForPeople
-  console.log("shouldFetchRole", shouldFetchRole)
   // API hooks
   const [addPeople, { isLoading: isAddingPeople }] = useAddPeopleMutation();
   const [addTeam, { isLoading: isCreatingTeam }] = useCreateTeamMutation();
-  console.log("isForPeople", isForPeople)
   const { data: roleData } = useGetRolesQuery(undefined, {
     skip: !shouldFetchRole
   });
   const { data: memberResponse, isFetching } = useSearchMemberQuery(
     isForTeam && isDropdownOpen && debouncedSearchTerm.trim() ? debouncedSearchTerm : undefined,
-    { skip: isForPeople }
+    { skip: !isOpen || !isForTeam || !isDropdownOpen || !debouncedSearchTerm.trim() }
   );
 
   // Role options
   const roleOptions = useMemo(() => {
-    return roleData?.data[0]?.roles?.map(role => ({
+    return roleData?.data?.[0]?.roles?.map(role => ({
       value: role?.slug,
       label: role?.role
     })) || [];
@@ -105,10 +105,6 @@ export const EmailMultiSelect = ({
   const hasAtSymbol = useMemo(() => inputValue.includes('@'), [inputValue]);
   const displayValues = isForPeople ? emails : teamMembers;
 
-  const validateEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
   const isValidInput = useMemo(() => {
     return isForPeople ? validateEmail(inputValue) : inputValue.trim() !== "";
   }, [inputValue, isForPeople]);
@@ -137,29 +133,28 @@ export const EmailMultiSelect = ({
   };
 
   const addEmail = (email) => {
-    if (!validateEmail(email)) return;
-    if (!emails.includes(email)) {
-      setEmails([...emails, email]);
-    }
+    const trimmed = email.trim();
+    if (!validateEmail(trimmed)) return;
+    setEmails(prev => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
     setInputValue("");
     setIsDropdownOpen(false);
   };
 
   const addTeamMember = (member) => {
     if (!member.label?.trim()) return;
-    if (!teamMembers.some(m => m.value === member.value)) {
-      setTeamMembers([...teamMembers, member]);
-    }
+    setTeamMembers(prev =>
+      prev.some(m => m.value === member.value) ? prev : [...prev, member]
+    );
     setInputValue("");
     setIsDropdownOpen(false);
   };
 
   const removeItem = (item) => {
     if (isForPeople) {
-      setEmails(emails.filter(e => e !== item));
+      setEmails(prev => prev.filter(e => e !== item));
     } else {
       // if (item.isCurrentUser) return; // Prevent removing default user
-      setTeamMembers(teamMembers.filter(m => m.value !== item.value));
+      setTeamMembers(prev => prev.filter(m => m.value !== item.value));
     }
   };
 
@@ -213,7 +208,7 @@ export const EmailMultiSelect = ({
     setEmails([]);
     setTeamMembers(isForTeam && userData ? [{
       label: `${userData.first_name} ${userData.last_name}`,
-      value: userData._id,
+      value: userData.member_id,
       email: userData.email,
       isCurrentUser: true
     }] : []);
@@ -257,20 +252,23 @@ export const EmailMultiSelect = ({
 
           <div className="mb-4">
             <div className="flex flex-wrap gap-2 items-center p-2 border border-neutral-300 w-full rounded-md bg-neutral-100 ">
-              {displayValues?.map(item => (
-                <Badge
-                  key={isForPeople ? item : item.value}
-                  className="flex items-center gap-1 bg-neutral-500"
-                >
-                  {isForPeople ? item : item.label}
-                  {/* {(!isForPeople) && ( */}
-                  <XCircle
-                    className="h-4 w-4 cursor-pointer"
-                    onClick={() => removeItem(item)}
-                  />
-                  {/* )} */}
-                </Badge>
-              ))}
+              {displayValues?.map(item => {
+                const chipLabel = isForPeople ? item : item.label;
+                return (
+                  <Badge
+                    key={isForPeople ? item : item.value}
+                    className="flex items-center gap-1 bg-neutral-500 max-w-[200px] px-2 py-1"
+                  >
+                    <span className="truncate" title={chipLabel}>
+                      {chipLabel}
+                    </span>
+                    <XCircle
+                      className="h-4 w-4 shrink-0 cursor-pointer hover:text-neutral-200"
+                      onClick={() => removeItem(item)}
+                    />
+                  </Badge>
+                );
+              })}
               <input
                 type={isForPeople ? "email" : "text"}
                 value={inputValue}
@@ -342,8 +340,8 @@ export const EmailMultiSelect = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {roleOptions.map((role, index) => (
-                      <SelectItem key={index} value={role.value}>
+                    {roleOptions.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
                         {role.label}
                       </SelectItem>
                     ))}

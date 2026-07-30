@@ -1,10 +1,36 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Flower2, Plus, X } from 'lucide-react'
-import React from 'react'
+import { Plus, X } from 'lucide-react'
+import React, { useMemo, useState } from 'react'
 
 import EpicImage from '../../assets/epic-image.svg'
+import InlineCreateTaskRow from '@/components/data-table/inline-create-task-row'
 
-const Epic = ({ showEpic, setShowEpic }) => {
+const Epic = ({ showEpic, setShowEpic, projectData }) => {
+    const { currentProject, workFlow, importance } = projectData || {};
+    const currentProjectId = currentProject?._id;
+
+    const [showCreateRow, setShowCreateRow] = useState(false);
+
+    const taskTypes = useMemo(() =>
+        (workFlow || []).map((status, index) => ({
+            id: index + 1,
+            name: status.name,
+            value: status.slug,
+            color: status.color
+        })),
+        [workFlow]
+    );
+
+    const importanceTypes = useMemo(() =>
+        (importance || []).map((imp, index) => ({
+            id: index + 1,
+            name: imp.name,
+            value: imp.slug,
+            color: imp.color
+        })),
+        [importance]
+    );
+
     return (
         <div className='w-full h-full'>
             <Card className="w-full sm:max-w-md lg:w-[250px] h-auto bg-neutral-100 shadow-sm rounded-lg py-2 px-3 border border-neutral-200">
@@ -35,12 +61,27 @@ const Epic = ({ showEpic, setShowEpic }) => {
                         </p>
                     </div>
 
-                    <div className='mt-10 cursor-pointer py-2 px-2 hover:bg-neutral-200 rounded-sm'>
-                        <p className='flex items-center justify-center gap-2'>
-                            <Plus className='text-neutral-500' size={20} />
-                            <span className='text-sm '>Create Epic</span>
-                        </p>
-                    </div>
+                    {showCreateRow ? (
+                        <div className='mt-6 rounded-md border border-neutral-200 bg-white'>
+                            <InlineCreateTaskRow
+                                projectId={currentProjectId}
+                                workType="epic"
+                                statusOptions={taskTypes}
+                                importanceOptions={importanceTypes}
+                                onClose={() => setShowCreateRow(false)}
+                            />
+                        </div>
+                    ) : (
+                        <div
+                            className='mt-10 cursor-pointer py-2 px-2 hover:bg-neutral-200 rounded-sm'
+                            onClick={() => setShowCreateRow(true)}
+                        >
+                            <p className='flex items-center justify-center gap-2'>
+                                <Plus className='text-neutral-500' size={20} />
+                                <span className='text-sm '>Create Epic</span>
+                            </p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

@@ -1,7 +1,17 @@
 import React, { memo } from "react";
 import TooltipWrapper from "./TooltipWrapper";
 
-const StatusBar = memo(({ statusCount, taskTypes }) => {
+const StatusBar = memo(({ statusCount, taskTypes, isLoading }) => {
+    if (isLoading) {
+        return (
+            <div className="flex items-center gap-2 lg:gap-3 ml-auto sm:ml-4">
+                <div className="hidden sm:flex w-24 md:w-36 lg:w-48 xl:w-56 h-[6px] lg:h-[8px] rounded-full overflow-hidden bg-neutral-200/60 dark:bg-neutral-800 shadow-inner animate-pulse"></div>
+                <div className="hidden sm:flex items-center justify-center h-[22px] w-10 bg-neutral-200/80 dark:bg-neutral-800 rounded-md animate-pulse"></div>
+                <div className="flex sm:hidden items-center justify-center h-7 w-7 bg-neutral-200/80 dark:bg-neutral-800 rounded-full animate-pulse"></div>
+            </div>
+        );
+    }
+
     if (!statusCount) return null;
 
     let statusCountsMap = {};

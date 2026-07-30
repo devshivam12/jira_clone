@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -52,19 +52,21 @@ const RichTextEditor = ({
         }
     },[showMore])
     
+    const extensions = useMemo(() => [
+        StarterKit,
+        Placeholder.configure({
+            placeholder: placeholder,
+        }),
+        Table.configure({
+            resizable: true,
+        }),
+        TableRow,
+        TableHeader,
+        TableCell,
+    ], [placeholder]);
+
     const editor = useEditor({
-        extensions: [
-            StarterKit,
-            Placeholder.configure({
-                placeholder: placeholder,
-            }),
-            Table.configure({
-                resizable: true,
-            }),
-            TableRow,
-            TableHeader,
-            TableCell,
-        ],
+        extensions,
         content: content,
         onUpdate: ({ editor }) => {
             if (onChange) {
@@ -85,6 +87,12 @@ const RichTextEditor = ({
             canRedo: ctx.editor?.can().redo() ?? false,
         }),
     })
+
+    useEffect(() => {
+        if (editor && content !== editor.getHTML()) {
+            editor.commands.setContent(content);
+        }
+    }, [content, editor]);
 
     if (!editor) return null
 

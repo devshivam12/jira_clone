@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { format } from 'date-fns'
 import { Label } from '@/components/ui/label'
 
@@ -16,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import DynamicDropdownSelector from '@/components/common/DynamicDropdownSelector'
 import WorkSelector from '@/components/common/WorkSelector'
 import { useProjectData } from '@/hooks/useProjectData'
-import { taskApi, useAddVotesMutation, useGetTaskByIdQuery, useGetTaskVotesMutation, useUpdateIssueMutation } from '@/redux/graphql_api/task'
+import { taskApi, useAddVotesMutation, useDeleteTaskMutation, useGetTaskByIdQuery, useGetTaskVotesMutation, useUpdateIssueMutation } from '@/redux/graphql_api/task'
 import CommonDropdownMenu from '@/components/common/CommonDropdownMenu'
 import LabelSelector from '@/components/common/LabelSelector'
 import RichTextEditor from '@/components/ui/richTextEditor'
@@ -30,6 +31,7 @@ import ShowToast from '@/components/common/ShowToast'
 import { useDispatch } from 'react-redux'
 import { Skeleton } from '@/components/ui/skeleton'
 import AddFlag from '@/components/common/AddFlag'
+import DeleteTaskDialog from '@/components/common/DeleteTaskDialog'
 
 const EditIssue = ({ issue }) => {
     const { control, handleSubmit, setValue, watch, reset, getValues } = useForm({
@@ -112,6 +114,8 @@ const EditIssue = ({ issue }) => {
     const [activeDropdown, setActiveDropdown] = useState(null)
     const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false)
     const [currentFlagTask, setCurrentFlagTask] = useState(null)
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+    const [deleteTask, { isLoading: deleteLoading }] = useDeleteTaskMutation()
 
 
     const taskTypes = useMemo(() => workFlow.map((status, index) => ({
@@ -324,7 +328,19 @@ const EditIssue = ({ issue }) => {
         { type: 'separator' },
         {
             id: 'add-parent',
-            label: "Add parent"
+            label: task?.parentDetail ? "Change parent" : "Add parent",
+            type: 'submenu',
+            content: (
+                <DynamicDropdownSelector
+                    slug="parent"
+                    onChange={(parent, { onClose } = {}) => {
+                        handleSelectEpic(parent);
+                        onClose?.();
+                    }}
+                    label="Select epic"
+                    showDropdown
+                />
+            )
         },
         {
             id: 'clone',
@@ -340,7 +356,9 @@ const EditIssue = ({ issue }) => {
         },
         {
             id: 'delete',
-            label: 'Delete'
+            label: 'Delete',
+            danger: true,
+            onSelect: () => setIsDeleteDialogOpen(true)
         },
         { type: 'separator' },
         {
@@ -408,6 +426,28 @@ const EditIssue = ({ issue }) => {
             return params;
         })
     }
+
+    const handleDeleteTask = useCallback(async (reason) => {
+        try {
+            const payload = {
+                operationName: "deleteTask",
+                variables: {
+                    taskId: taskId,
+                    reason: reason
+                }
+            }
+            const response = await deleteTask(payload).unwrap()
+            if (response?.data?.deleteTask?.status === 200) {
+                ShowToast.success("Task moved to archive")
+                setIsDeleteDialogOpen(false)
+                handleClose()
+            } else {
+                ShowToast.error(response?.data?.deleteTask?.message || "Could not delete the task")
+            }
+        } catch (error) {
+            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
+        }
+    }, [taskId, deleteTask])
 
     const handleClickOutside = (event) => {
         if (commandRef.current && !commandRef.current.contains(event.target)) {
@@ -498,8 +538,8 @@ const EditIssue = ({ issue }) => {
     }
 
     return (
-        <form action="">
-            <Card className="flex flex-col h-full rounded-none bg-white shadow-none relative border-none">
+        <form action="" className="h-full flex flex-col min-h-0">
+            <Card className="flex flex-col h-full min-h-0 rounded-none bg-white shadow-none relative border-none">
                 <div className={`sticky top-0 bg-white z-10 ${isScrolled ? 'shadow-sm' : ''}`}>
                     <CardHeader className="m-0 pb-0 px-0 pt-2 bg-white">
                         <CardTitle >
@@ -538,7 +578,7 @@ const EditIssue = ({ issue }) => {
                                     {vote.count > 0 && (
                                         <div className="flex justify-center items-center">
                                             <CommonDropdownMenu
-                                                triggerIcon={
+                                                trigger={
                                                     <Button
                                                         size="sm"
                                                         variant="teritary"
@@ -645,7 +685,7 @@ const EditIssue = ({ issue }) => {
                 </div>
                 <DottedSeparator className="h-px my-1 bg-neutral-200" />
                 <CardContent
-                    className="mt-0 w-full overflow-y-auto px-4 lg:px-6 py-4 flex-grow"
+                    className="mt-0 w-full overflow-y-auto overscroll-contain px-4 lg:px-6 py-4 flex-grow min-h-0"
                     onScroll={handleScrollEffect}
                 >
                     <div className='flex flex-col gap-5 [&::-webkit-scrollbar]:hidden"'>
@@ -728,29 +768,52 @@ const EditIssue = ({ issue }) => {
                                 control={control}
                                 render={({ field }) => (
                                     !isEditingSummary ? (
+                                        // Show only a short preview (2 lines) by default so a long
+                                        // summary does not take over the panel. Clicking opens the
+                                        // full summary in an auto-growing field where the whole text
+                                        // is visible and editable.
                                         <div
-                                            className="text-2xl font-semibold text-neutral-800 py-2 px-3 hover:bg-neutral-200/50 rounded-md cursor-text transition-all min-h-[48px] break-words border border-transparent"
+                                            title={field.value || ""}
+                                            className="text-2xl leading-snug font-semibold text-neutral-800 py-2 px-3 hover:bg-neutral-200/50 rounded-md cursor-text transition-all min-h-[48px] break-words border border-transparent line-clamp-2"
                                             onClick={() => {
                                                 setTempSummary(field.value);
                                                 setIsEditingSummary(true);
-                                                setTimeout(() => summaryRef.current?.focus(), 50);
+                                                setTimeout(() => {
+                                                    const el = summaryRef.current;
+                                                    if (el) {
+                                                        el.focus();
+                                                        // Grow to fit the full summary on open.
+                                                        el.style.height = 'auto';
+                                                        el.style.height = `${el.scrollHeight}px`;
+                                                    }
+                                                }, 50);
                                             }}
                                         >
                                             {field.value || "Your summary"}
                                         </div>
                                     ) : (
                                         <div className="flex flex-col gap-2 w-full">
-                                            <Input
+                                            <Textarea
                                                 ref={(e) => {
                                                     field.ref(e);
                                                     summaryRef.current = e;
                                                 }}
                                                 value={tempSummary}
-                                                onChange={(e) => setTempSummary(e.target.value)}
+                                                rows={1}
+                                                onChange={(e) => {
+                                                    setTempSummary(e.target.value);
+                                                    // Keep the field tall enough to show the whole summary.
+                                                    e.target.style.height = 'auto';
+                                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                                }}
                                                 placeholder="Your summary"
-                                                className="text-2xl font-semibold text-neutral-800 border-2 border-blue-500 h-auto py-2 px-3 shadow-none focus-visible:ring-0 transition-all bg-white"
+                                                // text-2xl and md:text-2xl together stop the base Textarea's
+                                                // md:text-sm from shrinking the summary on wider screens.
+                                                className="text-2xl md:text-2xl leading-snug font-semibold text-neutral-800 border-2 border-blue-500 py-2 px-3 shadow-none focus-visible:ring-0 transition-all bg-white resize-none min-h-[48px] overflow-hidden break-words"
                                                 onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                        // Enter saves, Shift+Enter adds a new line.
+                                                        e.preventDefault();
                                                         field.onChange(tempSummary);
                                                         handleUpdateTask('summary', tempSummary);
                                                         setIsEditingSummary(false);
@@ -1028,6 +1091,19 @@ const EditIssue = ({ issue }) => {
                     }}
                 />
             )}
+            <DeleteTaskDialog
+                isOpen={isDeleteDialogOpen}
+                setIsOpen={setIsDeleteDialogOpen}
+                taskInfo={{
+                    _id: taskId,
+                    project_key: task?.project_key,
+                    taskNumber: task?.taskNumber,
+                    summary: task?.summary,
+                    work_type: task?.work_type
+                }}
+                onConfirm={handleDeleteTask}
+                isLoading={deleteLoading}
+            />
         </form >
     )
 }

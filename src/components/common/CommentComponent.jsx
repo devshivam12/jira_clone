@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { CKEditor } from '@ckeditor/ckeditor5-react';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import RichTextEditor from '@/components/ui/richTextEditor';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -37,15 +36,6 @@ const CommentComponent = ({ userData }) => {
             {/* Custom CSS to override CKEditor Colors */}
             <style dangerouslySetInnerHTML={{
                 __html: `
-                :root {
-                    --ck-color-base-border: #e5e7eb; /* neutral-200 */
-                    --ck-color-focus-border: #3b82f6; /* blue-500 */
-                    --ck-color-shadow: rgba(59, 130, 246, 0.1);
-                    --ck-border-radius: 6px;
-                }
-                .ck-editor__editable_inline {
-                    min-height: 100px;
-                }
                 .no-scrollbar::-webkit-scrollbar { display: none; }
             `}} />
 
@@ -64,17 +54,11 @@ const CommentComponent = ({ userData }) => {
                     ) : (
                         <div className="animate-in fade-in zoom-in-95 duration-200">
                             <div className="rounded-md overflow-hidden bg-white shadow-sm ring-1 ring-blue-500/30">
-                                <CKEditor
-                                    editor={ClassicEditor}
-                                    data={commentData}
-                                    onReady={editor => editor.focus()}
-                                    onChange={(event, editor) => setCommentData(editor.getData())}
-                                    config={{
-                                        // Standard classic build doesn't include emoji dropdown by default, 
-                                        // so we use standard toolbar plus your quick suggestions.
-                                        toolbar: ['bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote'],
-                                        placeholder: 'Type your message or use suggestions below...'
-                                    }}
+                                <RichTextEditor
+                                    content={commentData}
+                                    onChange={setCommentData}
+                                    placeholder="Type your message or use suggestions below..."
+                                    minHeight="100px"
                                 />
                                 <div className="flex justify-end gap-2 p-2 bg-neutral-50 border-t border-neutral-200">
                                     <Button variant="default" size="xs" onClick={() => setIsEditing(false)}>Cancel</Button>

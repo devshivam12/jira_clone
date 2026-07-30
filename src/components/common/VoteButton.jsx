@@ -34,7 +34,7 @@ const VoteButton = ({
             {/* Dropdown with voters */}
             {vote?.count > 0 && (
                 <CommonDropdownMenu
-                    triggerIcon={
+                    trigger={
                         <Button
                             variant={vote?.hasVoted ? "secondary" : "outline"}
                             size="icon"

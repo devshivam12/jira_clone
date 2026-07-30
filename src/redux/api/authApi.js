@@ -38,6 +38,21 @@ export const apiAuth = createApi({
             }),
             invalidatesTags: ['User']
         }),
+        verifyOtp: build.mutation({
+            query: (body) => ({
+                url: '/user/auth/verify-otp',
+                method: 'POST',
+                body
+            }),
+            invalidatesTags: ['User']
+        }),
+        resendOtp: build.mutation({
+            query: (body) => ({
+                url: '/user/auth/resend-otp',
+                method: 'POST',
+                body
+            })
+        }),
         logout: build.mutation({
             query: () => ({
                 url: '/user/auth/logout',
@@ -62,6 +77,8 @@ export const apiAuth = createApi({
 export const {
     useRegisterMutation,
     useLoginMutation,
+    useVerifyOtpMutation,
+    useResendOtpMutation,
     useLogoutMutation,
     useVerifyUserQuery,
     useGetRolesQuery

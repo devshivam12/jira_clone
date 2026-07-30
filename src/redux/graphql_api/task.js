@@ -14,6 +14,13 @@ export const taskApi = createApi({
             }),
             invalidatesTags: ['Task']
         }),
+        quickCreateTask: builder.mutation({
+            query: (payload) => ({
+                method: 'POST',
+                body: payload
+            }),
+            invalidatesTags: ['Task']
+        }),
         getBacklogList: builder.query({
             query: (payload) => ({
                 method: 'POST',
@@ -263,17 +270,45 @@ export const taskApi = createApi({
                 method: "POST",
                 body: payload
             })
+        }),
+
+        deleteTask: builder.mutation({
+            query: (payload) => ({
+                method: "POST",
+                body: payload
+            }),
+            invalidatesTags: ['Task']
+        }),
+
+        restoreTask: builder.mutation({
+            query: (payload) => ({
+                method: "POST",
+                body: payload
+            }),
+            invalidatesTags: ['Task']
+        }),
+
+        getArchivedTasks: builder.query({
+            query: (payload) => ({
+                method: "POST",
+                body: payload
+            })
         })
     })
 })
 
 export const {
     useCreateTaskMutation,
+    useQuickCreateTaskMutation,
     useGetBacklogListQuery,
     useUpdateIssueMutation,
     useGetTaskByIdQuery,
     useGetTaskVotesMutation,
     useAddVotesMutation,
     useAddFlagMutation,
-    useFilterTaskMutation
+    useFilterTaskMutation,
+    useDeleteTaskMutation,
+    useRestoreTaskMutation,
+    useGetArchivedTasksQuery,
+    useLazyGetArchivedTasksQuery
 } = taskApi

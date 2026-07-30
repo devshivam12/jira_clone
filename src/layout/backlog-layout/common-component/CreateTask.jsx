@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
+import React, { useEffect, useMemo, useState } from 'react';
 import { cn } from "@/lib/utils";
 import {
     Dialog,
@@ -11,32 +10,34 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useProjectData } from '@/hooks/useProjectData';
-import AutoComplete from '@/components/ui/autocomplete';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { useUserData } from '@/hooks/useUserData';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import ShowToast from '@/components/common/ShowToast';
 import ButtonLoader from '@/components/ui/buttonLoader';
-import { ChevronDown, Loader2 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DottedSeparator } from '@/components/dotted-separator';
-import { Badge } from '@/components/ui/badge';
 import DynamicDropdownSelector from '@/components/common/DynamicDropdownSelector';
-import { useGetAllMemberListQuery } from '@/redux/api/company/team';
 import LabelSelector from '@/components/common/LabelSelector';
 import { useCreateTaskMutation } from '@/redux/graphql_api/task';
 import UtilityStaticDropdown from '@/components/common/UtilityDropdownSelector';
 
-const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, workFlow, templateData, userData }) => {
+const buildDefaultValues = (projectId = "") => ({
+    projectId,
+    work_type: "",
+    task_status: "",
+    summary: null,
+    description: null,
+    assigneeId: null,
+    labels: [],
+    teamId: null,
+    sprintId: null,
+    importance: "",
+    createdBy: null,
+    reporterId: null,
+});
 
-    // const { allProjects, currentProject, workType, workFlow, templateData } = useProjectData()
-    console.log("templateData", templateData)
-    // const { userData } = useUserData()
-    console.log("userData", userData)
+const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, workFlow, templateData, userData }) => {
 
     const [createTask, { isLoading: taskLoading }] = useCreateTaskMutation()
 
@@ -47,65 +48,52 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
     const [parentValue, setParentValue] = useState(null)
     const [teamValue, setTeamValue] = useState(null)
     const [label, setLabel] = useState(null)
-    const [projectId, setProjectId] = useState(currentProject._id)
+    const [projectId, setProjectId] = useState(currentProject?._id ?? null)
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const [localUserData, setLocalUserData] = useState(null);
-
-    console.log("workType", workType)
-    const projectOptions = allProjects.map((item) => {
-        return {
+    const projectOptions = useMemo(
+        () => (allProjects ?? []).map((item) => ({
             value: item._id,
             label: item.name,
             icon: item.project_icon,
-            isDefault: item._id === currentProject._id
-        }
-    })
-    console.log("projectOptions", projectOptions)
-    const workTypeOptions = workType.map((item) => {
-        return {
-            value: item.slug,
-            label: item.name,
-            icon: item.icon,
-            color: item.color,
-            isDefault: item.slug === 'epic'
-        }
-    })
+            isDefault: item._id === currentProject?._id,
+        })),
+        [allProjects, currentProject]
+    );
 
-    const taskImportance = templateData?.fields?.importance.map((item) => {
-        return {
-            value: item.slug,
-            label: item.name,
-            color: item.color,
-            isDefault: item.slug === 'high'
-        }
-    })
-    console.log("taskImportance", taskImportance)
-    const workFlowOptions = workFlow.map((item) => {
-        return {
+    const workTypeOptions = useMemo(
+        () => (workType ?? []).map((item) => ({
             value: item.slug,
             label: item.name,
             icon: item.icon,
             color: item.color,
-            isDefault: item.slug === 'to_do'
-        }
-    })
-    console.log("workFlowOptions", workFlowOptions)
-    const { register, setValue, watch, getValues, handleSubmit, control, formState: { errors }, reset } = useForm({
-        defaultValues: {
-            projectId: currentProject?._id || "",
-            work_type: "",
-            task_status: "",
-            summary: null,
-            description: null,
-            assigneeId: null,
-            labels: [],
-            teamId: null,
-            sprintId: null,
-            importance: "",
-            createdBy: null,
-            reporterId: null,
-        }
+            isDefault: item.slug === 'epic',
+        })),
+        [workType]
+    );
+
+    const taskImportance = useMemo(
+        () => (templateData?.fields?.importance ?? []).map((item) => ({
+            value: item.slug,
+            label: item.name,
+            color: item.color,
+            isDefault: item.slug === 'high',
+        })),
+        [templateData]
+    );
+
+    const workFlowOptions = useMemo(
+        () => (workFlow ?? []).map((item) => ({
+            value: item.slug,
+            label: item.name,
+            icon: item.icon,
+            color: item.color,
+            isDefault: item.slug === 'to_do',
+        })),
+        [workFlow]
+    );
+
+    const { register, setValue, handleSubmit, control, formState: { errors }, reset } = useForm({
+        defaultValues: buildDefaultValues(currentProject?._id),
     });
     const watchProjectId = useWatch({ control, name: 'projectId' })
     useEffect(() => {
@@ -119,28 +107,16 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
     useEffect(() => {
         if (!isOpen) {
             // Reset form
-            reset({
-                projectId: currentProject?._id || "",
-                work_type: "",
-                task_status: "",
-                summary: null,
-                description: null,
-                assigneeId: null,
-                labels: [],
-                teamId: null,
-                sprintId: null,
-                importance: "",
-                createdBy: null,
-                reporterId: null,
-            });
+            reset(buildDefaultValues(currentProject?._id));
 
             // Reset local state
             setLeaderValue(null);
             setReporterValue(null);
             setSprintValue(null);
+            setParentValue(null);
             setTeamValue(null);
             setLabel(null);
-            setProjectId(currentProject._id);
+            setProjectId(currentProject?._id ?? null);
             setOpenETA(false);
         }
     }, [isOpen, reset, currentProject]);
@@ -205,10 +181,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                         }`,
                 variables: taskData
             }
-            console.log("taskData", taskData)
             const result = await createTask(payload).unwrap()
-            console.log("result", result)
-            console.log("result?.data?.data", result?.data)
             if (result?.data?.createTask?.status === 201) {
                 ShowToast.success(result?.data?.createTask?.message)
                 onClose()
@@ -216,19 +189,18 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                 ShowToast.error(result?.data?.createTask?.message)
             }
         } catch (error) {
-            console.log("error", error)
             ShowToast.error(error?.message)
         }
     }
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="sm:max-w-[600px] pointer-events-auto px-0 transition-none bg-neutral-50">
+                <DialogContent className="w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] sm:max-w-[600px] pointer-events-auto px-0 transition-none bg-neutral-50">
                     <DialogHeader className="sticky top-0 px-4 pb-4 border-b">
                         <DialogTitle className="text-neutral-500 pb-0 mb-0">Create</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit(onSubmit)}>
-                        <ScrollArea className="h-72 ">
+                        <ScrollArea className="h-[60vh] max-h-[420px]">
 
                             <div className="grid px-4 ">
                                 <div className='mb-4'>
@@ -356,7 +328,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                 </div>
 
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-full sm:w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Assignee
                                     </Label>
@@ -368,14 +340,14 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                     />
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-full sm:w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Labels
                                     </Label>
                                     <LabelSelector onChange={setLabel} />
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-full sm:w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Team
                                     </Label>
@@ -386,7 +358,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                     />
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-full sm:w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Parent
                                     </Label>
@@ -398,7 +370,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                     />
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-full sm:w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Sprint
                                     </Label>
@@ -413,7 +385,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
 
                                 <div className="flex flex-col gap-y-2 mb-4">
                                     <Label className="text-neutral-600 text-sm font-normal">Expected end date</Label>
-                                    <div className="flex w-[300px] border border-neutral-300 rounded-md overflow-hidden">
+                                    <div className="flex w-full sm:w-[300px] border border-neutral-300 rounded-md overflow-hidden">
                                         <Controller
                                             name="startDate"
                                             control={control}
@@ -421,7 +393,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                                 <Popover open={openETA} onOpenChange={setOpenETA}>
                                                     <PopoverTrigger asChild>
                                                         <button type="button" className="flex-1 p-2 text-neutral-600 font-normal text-left hover:bg-neutral-200/40">
-                                                            {field.value ? new Date(field.value).toLocaleDateString("en-US") : "03/03/2003"}
+                                                            {field.value ? new Date(field.value).toLocaleDateString("en-US") : "Select date"}
                                                         </button>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-auto p-0" align="start">
@@ -434,7 +406,7 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                                     </div>
                                 </div>
 
-                                <div className="flex items-start flex-col gap-y-2 mb-4 w-80">
+                                <div className="flex items-start flex-col gap-y-2 mb-4 w-full sm:w-80">
                                     <Label className="text-neutral-600 text-sm font-normal">
                                         Reporter
                                     </Label>
@@ -449,22 +421,21 @@ const CreateTask = ({ isOpen, onClose, allProjects, currentProject, workType, wo
                             </div>
                         </ScrollArea>
                         <DialogFooter className="px-4 border-t pt-4 mb-0">
-                            <div className='flex items-center justify-end gap-2'>
+                            <div className='flex flex-col-reverse sm:flex-row items-center justify-end gap-2 w-full'>
                                 <ButtonLoader
                                     variant="default"
                                     type="button"
-                                    // onClick={handleCancel}
-                                    disable={taskLoading}
-                                    className="w-full"
+                                    disabled={taskLoading}
+                                    className="w-full sm:w-auto"
                                     onClick={() => onClose()}
                                 >
-                                    Cancle
+                                    Cancel
                                 </ButtonLoader>
                                 <ButtonLoader
                                     variant="teritary"
                                     type="submit"
                                     isLoading={taskLoading}
-                                    className="w-full"
+                                    className="w-full sm:w-auto"
                                 >
                                     Create
                                 </ButtonLoader>

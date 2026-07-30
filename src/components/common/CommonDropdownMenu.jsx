@@ -11,6 +11,7 @@ const CommonDropdownMenu = ({
   items = [],
   onItemSelect,
   triggerIcon = <MoreHorizontal className="w-4 h-4 text-neutral-500" />,
+  trigger,
   triggerTooltip = "More actions",
   align = "end",
   sideOffset = 13,
@@ -104,11 +105,15 @@ const CommonDropdownMenu = ({
   return (
     <DropdownMenu onOpenChange={handleOpenChange} defaultOpen={defaultOpen} open={isOpen} modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button size="icon" variant="ghost">
-          <TooltipWrapper content={triggerTooltip} disableFocusListener>
-            {triggerIcon}
-          </TooltipWrapper>
-        </Button>
+        {trigger ? (
+          trigger
+        ) : (
+          <Button size="icon" variant="ghost">
+            <TooltipWrapper content={triggerTooltip} disableFocusListener>
+              {triggerIcon}
+            </TooltipWrapper>
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent
         className={`min-w-44 rounded-sm ${className}`}

@@ -285,7 +285,11 @@ const TaskRow = memo(({
 
             {/* Actions Menu */}
             <div className="w-[50px] min-w-[50px] max-w-[50px] text-center p-1 sm:p-2 flex items-center justify-center">
-                <div data-no-row-click onClick={handleStopPropagation}>
+                {/* onPointerDown is stopped here too, not just onClick. In the sprint
+                    list this row sits inside a framer-motion Reorder.Item, and stopping
+                    the pointer event keeps the drag layer from swallowing the click that
+                    opens the actions menu. It is harmless in the backlog list. */}
+                <div data-no-row-click onClick={handleStopPropagation} onPointerDown={handleStopPropagation}>
                     <LazyActionMenu
                         getItems={getWorkItemMenuItems}
                         task={task}
@@ -355,6 +359,8 @@ const LazyWorkSelector = memo(({ initialValue, workTypes, onChange }) => {
     return (
         <WorkSelector
             initialValue={initialValue}
+            value={initialValue}
+            key={initialValue}
             workTypes={workTypes}
             defaultOpen={true}
             onOpenChange={(open) => {

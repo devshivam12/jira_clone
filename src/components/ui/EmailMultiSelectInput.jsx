@@ -1,6 +1,5 @@
 // components/ui/TeamMultiSelect/index.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Search, XCircle, Check } from "lucide-react";
 
@@ -22,12 +21,9 @@ export const EmailMultiSelectInput = ({
 }) => {
     const isForProject = slug === 'add_project'
     const isForPeople = slug === 'add_member'
-    console.log('isForProject', isForProject)
-    console.log("isForPeople", isForPeople)
     // State
     const [inputValue, setInputValue] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
     const [debouncedSearchProject, setDebouncedSearchProject] = useState("");
     const [teamMembers, setTeamMembers] = useState([]);
@@ -35,12 +31,17 @@ export const EmailMultiSelectInput = ({
 
     // API hooks
     const { data: memberResponse, isFetching: memberFetching } = useSearchMemberQuery(
-        isDropdownOpen && isForPeople && debouncedSearchTerm.trim() ? debouncedSearchTerm : undefined
+        isDropdownOpen && isForPeople && debouncedSearchTerm.trim() ? debouncedSearchTerm : undefined,
+        {
+            skip: !isOpen || !isForPeople || !isDropdownOpen || !debouncedSearchTerm.trim()
+        }
     );
 
     const { data: allProjectData, isFetching: projectLoading } = useGetAllCompanyProjectQuery({
         allData: true,
         search: debouncedSearchProject.trim() ? debouncedSearchProject : undefined
+    }, {
+        skip: !isOpen || !isForProject
     });
 
     // Member suggestions
@@ -63,16 +64,13 @@ export const EmailMultiSelectInput = ({
 
     // Reset when dialog closes
     useEffect(() => {
-        // if (!isOpen) {
-            if (isForPeople) {
-                setTeamMembers([]);
-                setInputValue("");
-            } else {
-                setSelectedProject(null);
-                setInputValue("");
-            }
-        // }
-    }, [isForPeople, isForProject]);
+        if (!isOpen) {
+            setTeamMembers([]);
+            setSelectedProject(null);
+            setInputValue("");
+            setIsDropdownOpen(false);
+        }
+    }, [isOpen]);
 
     // Debounce search term
     useEffect(() => {
@@ -110,9 +108,9 @@ export const EmailMultiSelectInput = ({
 
     const addTeamMember = (member) => {
         if (!member.label?.trim()) return;
-        if (!teamMembers.some(m => m.value === member.value)) {
-            setTeamMembers([...teamMembers, member]);
-        }
+        setTeamMembers(prev =>
+            prev.some(m => m.value === member.value) ? prev : [...prev, member]
+        );
         setInputValue("");
         setIsDropdownOpen(false);
     };
@@ -125,7 +123,7 @@ export const EmailMultiSelectInput = ({
 
     const removeItem = (item) => {
         if (isForPeople) {
-            setTeamMembers(teamMembers.filter(m => m.value !== item.value));
+            setTeamMembers(prev => prev.filter(m => m.value !== item.value));
         } else {
             setSelectedProject(null);
             setInputValue("");
@@ -133,13 +131,10 @@ export const EmailMultiSelectInput = ({
     };
 
     const resetForm = () => {
-        if (isForPeople) {
-            setTeamMembers([]);
-            setInputValue("");
-            onOpenChange(false);
-        }
-        setTeamMembers([])
+        setTeamMembers([]);
+        setSelectedProject(null);
         setInputValue("");
+        setIsDropdownOpen(false);
         onOpenChange(false);
     };
 
@@ -199,10 +194,15 @@ export const EmailMultiSelectInput = ({
                     {isForPeople ? (
                         <div className="flex flex-wrap gap-2 items-center p-2 border border-neutral-300 w-full rounded-md bg-neutral-100">
                             {teamMembers.map(item => (
-                                <Badge key={item.value} className="flex items-center gap-1 bg-neutral-500">
-                                    {item.label}
+                                <Badge
+                                    key={item.value}
+                                    className="flex items-center gap-1 bg-neutral-500 max-w-[180px] px-2 py-1"
+                                >
+                                    <span className="truncate" title={item.label}>
+                                        {item.label}
+                                    </span>
                                     <XCircle
-                                        className="h-4 w-4 cursor-pointer"
+                                        className="h-4 w-4 shrink-0 cursor-pointer hover:text-neutral-200"
                                         onClick={() => removeItem(item)}
                                     />
                                 </Badge>
@@ -226,10 +226,12 @@ export const EmailMultiSelectInput = ({
                         <div className="flex items-center p-2 border border-neutral-300 w-full rounded-md bg-neutral-100">
                             {selectedProject ? (
                                 <div className="flex items-center justify-between w-full">
-                                    <Badge className="flex items-center gap-1 bg-neutral-500">
-                                        {selectedProject.label}
+                                    <Badge className="flex items-center gap-1 bg-neutral-500 max-w-[240px] px-2 py-1">
+                                        <span className="truncate" title={selectedProject.label}>
+                                            {selectedProject.label}
+                                        </span>
                                         <XCircle
-                                            className="h-4 w-4 cursor-pointer"
+                                            className="h-4 w-4 shrink-0 cursor-pointer hover:text-neutral-200"
                                             onClick={() => removeItem(selectedProject)}
                                         />
                                     </Badge>

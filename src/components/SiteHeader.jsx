@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import UserButton from './auth/UserButton'
-import MobileSidebar from './MobileSidebar'
 import {
     Tabs,
     TabsContent,
@@ -12,7 +11,6 @@ import {
     NavigationMenuItem,
     NavigationMenuLink,
     NavigationMenuList,
-    navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import {
     DropdownMenu,
@@ -20,25 +18,16 @@ import {
     DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, ClipboardList, FolderOpenDot, ListPlus, PanelRightOpen, Plus, Search, SidebarIcon } from "lucide-react"
+import { ChevronDown, ClipboardList, FolderOpenDot, ListPlus, PanelRightOpen, Plus, Search } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Link, useNavigate } from 'react-router-dom'
 import { Input } from './ui/input'
 import { RiTeamFill } from 'react-icons/ri'
-import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog'
-import { Label } from './ui/label'
-import { MultiSelect } from './ui/MultiSelect'
 import { EmailMultiSelect } from './ui/EmailMultiSelect'
-
-import { useToast } from '@/hooks/use-toast'
-import ButtonLoader from './ui/buttonLoader'
 import { DottedSeparator } from './dotted-separator'
-import { Select, SelectContent, SelectGroup, SelectTrigger, SelectValue, SelectItem } from './ui/select'
-import { useGetRolesQuery } from '@/redux/api/authApi'
 import { useSidebar } from './ui/sidebar'
 import { useProjectData } from '@/hooks/useProjectData'
 import CreateSprint from '@/layout/backlog-layout/common-component/CreateSprint'
@@ -50,38 +39,29 @@ const SiteHeader = () => {
     const [isWorked, setIsWork] = useState(false)
     const [isTeam, setIsTeam] = useState(false)
     const [createButton, setCreateButton] = useState(false)
-    // const [isOpen, setIsOpen] = useState(false)
-    // const [isOpen,setIsOpen ] = useState({
-    //     key : '',
-    //     value : false
-    // })
 
     const { toggleSidebar } = useSidebar()
     const { allProjects, currentProject, workType, workFlow, templateData } = useProjectData()
     const { userData } = useUserData()
-    console.log("currentPropject", currentProject)
-    console.log("templateData", templateData)
-    console.log("workType", workType)
-
-    // const epicIcon = workType.find(icon => icon.slug === 'epic')?.icon || "";
-    // const epicColor = workType.find(icon => icon.slug === 'epic')?.color || "";
-    // const taskColor = workType.find(icon => icon.slug === 'task')?.color || ""
-    // const taskIcon = workType.find(icon => icon.slug === 'task')?.icon || ""
 
     const [dialogState, setDialogState] = useState({
         isOpen: false,
         slug: null
     });
 
-    const openDialog = (slug) => {
+    const openDialog = useCallback((slug) => {
         setDialogState({
             isOpen: true,
             slug
         });
-    };
+    }, []);
+
+    const closeDialog = useCallback((open) => {
+        setDialogState(prev => ({ ...prev, isOpen: open }));
+    }, []);
 
     const navigate = useNavigate()
-    console.log("dialogState", dialogState)
+
     return (
         <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background ">
             <div className="flex h-[--header-height] items-center gap-2 px-4">
@@ -388,14 +368,14 @@ const SiteHeader = () => {
             <EmailMultiSelect
                 slug={dialogState.slug}
                 isOpen={dialogState.isOpen && ['for_team', 'for_people'].includes(dialogState.slug)}
-                onOpenChange={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
+                onOpenChange={closeDialog}
                 userData={userData}
             />
-            <CreateSprint isOpen={dialogState.isOpen && dialogState.slug === 'sprint'} onClose={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))} />
+            <CreateSprint isOpen={dialogState.isOpen && dialogState.slug === 'sprint'} onClose={closeDialog} />
 
             <CreateTask
                 isOpen={dialogState.isOpen && dialogState.slug === 'issue'}
-                onClose={(open) => setDialogState(prev => ({ ...prev, isOpen: open }))}
+                onClose={closeDialog}
                 userData={userData}
                 allProjects={allProjects}
                 currentProject={currentProject}

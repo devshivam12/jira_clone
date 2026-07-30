@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 import AppSidebar from '@/components/AppSidebar'
 import SiteHeader from '@/components/SiteHeader'
+import DashboardBreadcrumb from '@/components/common/DashboardBreadcrumb'
 
 const DashboardLayout = () => {
     return (
@@ -16,6 +17,10 @@ const DashboardLayout = () => {
                 <div className="flex flex-1">
                     <AppSidebar />
                     <SidebarInset>
+                        {/* Shows on the standard dashboard pages (Team, People,
+                            Projects). Project workspace routes render their own
+                            breadcrumb inside ProjectLayout, so this stays hidden there. */}
+                        <DashboardBreadcrumb />
                         <div className="flex flex-1 flex-col gap-4 pr-4 pl-4 ">
                             <Outlet />
                         </div>

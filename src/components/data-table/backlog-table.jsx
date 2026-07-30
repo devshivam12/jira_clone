@@ -3,23 +3,25 @@ import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight, ClipboardX, Flag, Pencil, MoreHorizontal, Pen, Settings2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardX, Flag, Pencil, MoreHorizontal, Pen, Settings2, Loader2 } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import IssueRowSkeleton from "./IssueRowSkeleton";
 import { useSearchParams } from "react-router-dom";
-import { useUpdateIssueMutation } from "@/redux/graphql_api/task";
+import { useUpdateIssueMutation, useDeleteTaskMutation } from "@/redux/graphql_api/task";
 import ManageAvatar from "../common/ManageAvatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import CommonDropdownMenu from "../common/CommonDropdownMenu";
 import AddFlag from "../common/AddFlag";
+import DeleteTaskDialog from "../common/DeleteTaskDialog";
 import WorkSelector from "../common/WorkSelector";
 import DynamicDropdownSelector from "../common/DynamicDropdownSelector";
 import ShowToast from "../common/ShowToast";
 import TooltipWrapper from "../common/TooltipWrapper";
 import TaskRow from './task-row';
 import StatusBar from "../common/StatusBar";
+import InlineCreateTaskRow from "./inline-create-task-row";
 
 const ROW_HEIGHT = 56;
 
@@ -90,21 +92,14 @@ const LazySprintSelector = memo(({ isOpen, onClose, onChange, projectId }) => {
 });
 LazySprintSelector.displayName = 'LazySprintSelector';
 
-const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData, searchQuery, paginationToken }) => {
+const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expanded, onToggleExpand, onEditSprint, userData, projectData, searchQuery, paginationToken, onCreateSprintClick }) => {
     // console.log("issue-----------", issue)
     const { currentProject, workType, importance, workFlow } = projectData;
-
-    // Performance measurement
-    const renderStartTime = performance.now();
-
-    useEffect(() => {
-        const renderDuration = performance.now() - renderStartTime;
-        // console.log(`BacklogTable render time: ${renderDuration.toFixed(2)}ms`);
-    });
 
     const [updateTask, { isLoading: isUpdating }] = useUpdateIssueMutation();
     const [searchParams, setSearchParams] = useSearchParams();
 
+    const [showCreateRow, setShowCreateRow] = useState(false);
     const [editingTaskId, setEditingTaskId] = useState(null);
     const [summaryValues, setSummaryValues] = useState({});
     const [assigneeStates, setAssigneeStates] = useState({});
@@ -112,6 +107,8 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
     const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
     const [parentDialogState, setParentDialogState] = useState({ isOpen: false, task: null });
     const [sprintDialogState, setSprintDialogState] = useState({ isOpen: false, task: null });
+    const [deleteDialogState, setDeleteDialogState] = useState({ isOpen: false, task: null });
+    const [deleteTask, { isLoading: deleteLoading }] = useDeleteTaskMutation();
     const addFlagRef = useRef(null);
     const parentRef = useRef(null);
 
@@ -178,16 +175,21 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
         const flatList = [];
         for (let i = 0; i < taskTypes.length; i++) {
             const type = taskTypes[i];
-            const tasksOfThisType = grouped[type.value];
-            if (tasksOfThisType && tasksOfThisType.length > 0) {
-                const isExpanded = expandedGroups[type.value] !== false;
-                flatList.push({ isHeader: true, statusValue: type.value, statusName: type.name, statusColor: type.color, count: tasksOfThisType.length, isExpanded });
-                if (isExpanded) {
-                    // Spread is fine here as chunks are typically small, but push.apply or another for loop could be used. 
+            const tasksOfThisType = grouped[type.value] || [];
+            const isExpanded = expandedGroups[type.value] !== false;
+            // Always show a header for every workflow status so the full set of
+            // statuses is present, even when a status currently has no issues.
+            flatList.push({ isHeader: true, statusValue: type.value, statusName: type.name, statusColor: type.color, count: tasksOfThisType.length, isExpanded });
+            if (isExpanded) {
+                if (tasksOfThisType.length > 0) {
                     // Using a loop to strictly avoid any large stack trace issues from spread operator on huge arrays
                     for (let j = 0; j < tasksOfThisType.length; j++) {
                         flatList.push(tasksOfThisType[j]);
                     }
+                } else {
+                    // Placeholder row so an empty (but expanded) group still
+                    // occupies a virtualized row and shows a hint.
+                    flatList.push({ isEmptyPlaceholder: true, statusValue: type.value });
                 }
             }
         }
@@ -211,7 +213,7 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
     // Derived state is now handled in TaskRow or on-the-fly where needed.
 
     const rowVirtualizer = useVirtualizer({
-        count: (itemsToRender?.length ?? 0) + (isLoading ? 5 : (hasMore ? 1 : 0)),
+        count: (itemsToRender?.length ?? 0) + (isLoading && itemsToRender?.length > 0 ? 1 : 0),
         getScrollElement: () => parentRef.current,
         estimateSize: () => ROW_HEIGHT,
         overscan: 5,
@@ -231,6 +233,10 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
 
         if (groupByStatus) {
             const currentItem = itemsToRender[leastVisible.index];
+            
+            const isScrolled = parentRef.current && parentRef.current.scrollTop > 0;
+            if (!isScrolled && leastVisible.index < 10) return; // Prevent initial auto-fetch if no scroll and few items
+
             if (!currentItem && leastVisible.index >= (itemsToRender?.length ?? 0) && hasMore) {
                 if (lastLoadIndexRef.current !== currentTokenId) {
                     lastLoadIndexRef.current = currentTokenId;
@@ -259,11 +265,15 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
             }
         } else {
             // Normal (ungrouped) trigger
-            if (leastVisible.index >= triggerPoint &&
-                hasMore &&
-                lastLoadIndexRef.current !== currentTokenId) {
-                lastLoadIndexRef.current = currentTokenId;
-                onLoadMore();
+            
+            const isScrolled = parentRef.current && parentRef.current.scrollTop > 0;
+            const reachedBottom = leastVisible.index >= triggerPoint;
+            
+            if (reachedBottom && hasMore && (isScrolled || leastVisible.index >= 10)) {
+                if (lastLoadIndexRef.current !== currentTokenId) {
+                    lastLoadIndexRef.current = currentTokenId;
+                    onLoadMore();
+                }
             }
         }
     }, [virtualItems, itemsToRender, hasMore, onLoadMore, isLoading, groupByStatus, paginationToken]);
@@ -297,6 +307,29 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
             throw error;
         }
     }, [updateTask]);
+
+    const handleDeleteTask = useCallback(async (reason) => {
+        const task = deleteDialogState.task;
+        if (!task) return;
+        try {
+            const payload = {
+                operationName: "deleteTask",
+                variables: {
+                    taskId: task._id,
+                    reason: reason
+                }
+            };
+            const response = await deleteTask(payload).unwrap();
+            if (response?.data?.deleteTask?.status === 200) {
+                ShowToast.success("Task moved to archive");
+                setDeleteDialogState({ isOpen: false, task: null });
+            } else {
+                ShowToast.error(response?.data?.deleteTask?.message || "Could not delete the task");
+            }
+        } catch (error) {
+            ShowToast.error(`Something is wrong, Please check after sometime ${error}`);
+        }
+    }, [deleteDialogState.task, deleteTask]);
 
     const handleRowClick = useCallback((e, id) => {
         if (e.target.closest('[data-no-row-click]')) return;
@@ -408,7 +441,10 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
             id: 'delete',
             label: 'Delete',
             danger: true,
-            onSelect: () => console.log('Delete')
+            onSelect: (e) => {
+                e?.stopPropagation?.();
+                setDeleteDialogState({ isOpen: true, task: task });
+            }
         }
     ], [copyLinkKey, handleUpdateTask]);
 
@@ -540,10 +576,21 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
 
                 <div className="flex items-center justify-end gap-2 shrink-0 overflow-x-auto">
                      <div className="shrink-0 flex items-center pr-1 lg:pr-2">
-                         <StatusBar statusCount={statusCount} taskTypes={taskTypes} />
+                         <StatusBar statusCount={statusCount} taskTypes={taskTypes} isLoading={showInitialSkeleton} />
                      </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        <Button size="sm" variant="advanceMuted" className="shrink-0 h-8 px-3 text-xs sm:text-sm">
+                        <Button
+                            size="sm"
+                            variant="advanceMuted"
+                            className="shrink-0 h-8 px-3 text-xs sm:text-sm"
+                            onClick={() => {
+                                if (!expanded) onToggleExpand();
+                                setShowCreateRow(true);
+                            }}
+                        >
+                            Create task
+                        </Button>
+                        <Button size="sm" variant="advanceMuted" className="shrink-0 h-8 px-3 text-xs sm:text-sm" onClick={onCreateSprintClick}>
                             Create sprint
                         </Button>
                         <DropdownMenu>
@@ -602,14 +649,14 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
                                     position: 'relative',
                                 }}
                             >
-                                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                {virtualItems.map((virtualRow) => {
                                     // Check if this index is beyond actual data (skeleton row)
                                     const isSkeletonRow = virtualRow.index >= (itemsToRender?.length ?? 0);
 
                                     if (isSkeletonRow) {
                                         return (
                                             <div
-                                                key={`skeleton-${virtualRow.index}`}
+                                                key={`loading-more-${virtualRow.index}`}
                                                 style={{
                                                     position: 'absolute',
                                                     top: 0,
@@ -618,8 +665,13 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
                                                     height: `${ROW_HEIGHT}px`,
                                                     transform: `translateY(${virtualRow.start}px)`,
                                                 }}
+                                                className="flex justify-center items-center"
                                             >
-                                                <IssueRowSkeleton />
+                                                <div className="flex items-center gap-[5px] bg-white px-4 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.1)] border border-gray-50">
+                                                    <div className="w-[6px] h-[6px] rounded-full bg-gradient-to-tr from-blue-500 to-blue-600 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                                    <div className="w-[6px] h-[6px] rounded-full bg-gradient-to-tr from-indigo-500 to-indigo-600 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                                    <div className="w-[6px] h-[6px] rounded-full bg-gradient-to-tr from-purple-500 to-purple-600 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                </div>
                                             </div>
                                         );
                                     }
@@ -659,6 +711,25 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
                                         );
                                     }
 
+                                    if (task.isEmptyPlaceholder) {
+                                        return (
+                                            <div
+                                                key={`empty-${task.statusValue}-${virtualRow.index}`}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    height: `${ROW_HEIGHT}px`,
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                }}
+                                                className="flex items-center pl-12 pr-4 text-sm italic text-neutral-400"
+                                            >
+                                                No issues in this status
+                                            </div>
+                                        );
+                                    }
+
                                     return (
                                         <TaskRow
                                             key={task._id}
@@ -689,6 +760,15 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
                                 })}
                             </div>
                         </div>
+                    )}
+                    {showCreateRow && (
+                        <InlineCreateTaskRow
+                            projectId={currentProjectId}
+                            workType="task"
+                            statusOptions={taskTypes}
+                            importanceOptions={importanceTypes}
+                            onClose={() => setShowCreateRow(false)}
+                        />
                     )}
                 </div>
             )}
@@ -740,6 +820,21 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
                     projectId={currentProjectId}
                 />
             )}
+            <DeleteTaskDialog
+                isOpen={deleteDialogState.isOpen}
+                setIsOpen={(open) => {
+                    if (!open) setDeleteDialogState({ isOpen: false, task: null });
+                }}
+                taskInfo={{
+                    _id: deleteDialogState.task?._id,
+                    project_key: deleteDialogState.task?.project_key,
+                    taskNumber: deleteDialogState.task?.taskNumber,
+                    summary: deleteDialogState.task?.summary,
+                    work_type: deleteDialogState.task?.work_type
+                }}
+                onConfirm={handleDeleteTask}
+                isLoading={deleteLoading}
+            />
         </div >
     );
 };

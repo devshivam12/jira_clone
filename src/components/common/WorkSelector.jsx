@@ -35,6 +35,7 @@ const WorkSelector = ({ initialValue, value, workTypes, onChange, open, onOpenCh
         <Select
             value={selectedWork?.value || ''}
             onValueChange={handleValueChange}
+            {...(open !== undefined ? { open } : {})}
             onOpenChange={onOpenChange}
             {...props}
         >
