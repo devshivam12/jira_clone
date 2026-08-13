@@ -10,6 +10,7 @@ import { team } from "./api/company/team"
 import { sprintApi } from "./graphql_api/sprint"
 import { taskApi } from "./graphql_api/task"
 import { miscDataApi } from "./graphql_api/miscData"
+import { timelineApi } from "./graphql_api/timeline"
 import tasksReducer from "./reducers/taskSlice"
 
 const projectPersistConfig = {
@@ -37,7 +38,8 @@ const store = configureStore({
         [team.reducerPath]: team.reducer,
         [sprintApi.reducerPath]: sprintApi.reducer,
         [taskApi.reducerPath] : taskApi.reducer,
-        [miscDataApi.reducerPath] : miscDataApi.reducer     
+        [miscDataApi.reducerPath] : miscDataApi.reducer,
+        [timelineApi.reducerPath] : timelineApi.reducer
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
@@ -45,7 +47,7 @@ const store = configureStore({
                 // Ignore redux-persist action types
                 ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
             },
-        }).concat(api.middleware, apiAuth.middleware, team.middleware, sprintApi.middleware, taskApi.middleware, miscDataApi.middleware)
+        }).concat(api.middleware, apiAuth.middleware, team.middleware, sprintApi.middleware, taskApi.middleware, miscDataApi.middleware, timelineApi.middleware)
 
 })
 

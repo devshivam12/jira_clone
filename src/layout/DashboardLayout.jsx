@@ -14,14 +14,20 @@ const DashboardLayout = () => {
         <div className="[--header-height:calc(theme(spacing.14))]">
             <SidebarProvider className="flex flex-col">
                 <SiteHeader />
-                <div className="flex flex-1">
+                <div className="flex flex-1 min-w-0">
                     <AppSidebar />
-                    <SidebarInset>
+                    {/* min-w-0 is required. SidebarInset is flex-1, and a flex
+                        item defaults to min-width:auto, so without this it
+                        refuses to shrink below its content. A wide page (the
+                        timeline chart) then stretches the whole layout past the
+                        viewport and the sidebar + page header scroll away
+                        sideways with it. */}
+                    <SidebarInset className="min-w-0 overflow-x-hidden">
                         {/* Shows on the standard dashboard pages (Team, People,
                             Projects). Project workspace routes render their own
                             breadcrumb inside ProjectLayout, so this stays hidden there. */}
                         <DashboardBreadcrumb />
-                        <div className="flex flex-1 flex-col gap-4 pr-4 pl-4 ">
+                        <div className="flex flex-1 flex-col gap-4 pr-4 pl-4 min-w-0">
                             <Outlet />
                         </div>
                     </SidebarInset>

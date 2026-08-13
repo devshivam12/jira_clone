@@ -32,6 +32,7 @@ import { useDispatch } from 'react-redux'
 import { Skeleton } from '@/components/ui/skeleton'
 import AddFlag from '@/components/common/AddFlag'
 import DeleteTaskDialog from '@/components/common/DeleteTaskDialog'
+import ChildIssuesSection from '@/components/common/ChildIssuesSection'
 
 const EditIssue = ({ issue }) => {
     const { control, handleSubmit, setValue, watch, reset, getValues } = useForm({
@@ -426,6 +427,16 @@ const EditIssue = ({ issue }) => {
             return params;
         })
     }
+
+    // Clicking a child in the list below swaps the panel over to that item,
+    // the same way a row click anywhere else opens one.
+    const handleOpenChild = useCallback((childId) => {
+        setSearchParams((prev) => {
+            const params = new URLSearchParams(prev);
+            params.set("issueId", childId);
+            return params;
+        })
+    }, [setSearchParams])
 
     const handleDeleteTask = useCallback(async (reason) => {
         try {
@@ -963,6 +974,12 @@ const EditIssue = ({ issue }) => {
                             )}
                         </div>
                     </div>
+
+                    <ChildIssuesSection
+                        taskId={taskId}
+                        projectId={currentProject?._id}
+                        onOpenChild={handleOpenChild}
+                    />
 
                     <Card className='mt-6 shadow-sm border-neutral-200 rounded-md'>
                         <CardHeader

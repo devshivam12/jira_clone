@@ -21,6 +21,9 @@ const InlineCreateTaskRow = ({
     importanceOptions = [],
     onClose,
     onCreated,
+    // Extra fields merged into the create payload (e.g. startDate/dueDate/color
+    // when this row is used to create an epic bar from the Timeline view).
+    extraVariables = {},
 }) => {
     const [quickCreateTask, { isLoading }] = useQuickCreateTaskMutation();
 
@@ -66,6 +69,7 @@ const InlineCreateTaskRow = ({
                     importance,
                     assigneeId: assignee?._id || null,
                     ...(sprintId ? { sprintId } : {}),
+                    ...extraVariables,
                 },
             };
 
@@ -85,7 +89,7 @@ const InlineCreateTaskRow = ({
         } catch (error) {
             ShowToast.error(error?.message || "Could not create the task");
         }
-    }, [summary, status, importance, assignee, projectId, workType, sprintId, quickCreateTask, onCreated]);
+    }, [summary, status, importance, assignee, projectId, workType, sprintId, extraVariables, quickCreateTask, onCreated]);
 
     const handleKeyDown = useCallback((e) => {
         if (e.key === "Enter") {

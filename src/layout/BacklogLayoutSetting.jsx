@@ -1,6 +1,6 @@
 import { DottedSeparator } from '@/components/dotted-separator'
 import { Switch } from '@/components/ui/switch'
-import { LayoutList, LayoutGrid } from 'lucide-react'
+import { LayoutList, LayoutGrid, PanelLeft } from 'lucide-react'
 import React from 'react'
 import SidePanel from '@/components/common/SidePanel'
 
@@ -12,7 +12,7 @@ const fields = [
     { title: "Assignee", swtich_id: "assignee", defaultChecked: true }
 ]
 
-const BacklogLayoutSetting = ({ backlogSetting, setBacklogSetting, setShowEpic, showEpic, viewMode = 'list', setViewMode }) => {
+const BacklogLayoutSetting = ({ backlogSetting, setBacklogSetting, setShowEpic, showEpic, viewMode = 'list', setViewMode, epicView = 'panel', setEpicView }) => {
     return (
         <SidePanel title="View settings" onClose={() => setBacklogSetting(false)}>
             <div className="p-5 space-y-6">
@@ -49,6 +49,28 @@ const BacklogLayoutSetting = ({ backlogSetting, setBacklogSetting, setShowEpic, 
                         </div>
                         <Switch id="show-epic" checked={showEpic} onCheckedChange={(checked) => setShowEpic(checked)} />
                     </div>
+
+                    {/* How those epics are shown. The list view fills the main
+                        area, so it replaces the backlog and sprint tables while
+                        it is open. */}
+                    {showEpic && (
+                        <div className="flex p-1 bg-neutral-100 rounded-lg">
+                            <button
+                                onClick={() => setEpicView?.('panel')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-1.5 px-3 text-xs font-medium rounded-md transition-all ${epicView === 'panel' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                            >
+                                <PanelLeft size={14} />
+                                Panel
+                            </button>
+                            <button
+                                onClick={() => setEpicView?.('list')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-1.5 px-3 text-xs font-medium rounded-md transition-all ${epicView === 'list' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                            >
+                                <LayoutList size={14} />
+                                List
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <DottedSeparator />

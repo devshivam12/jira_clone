@@ -9,7 +9,8 @@ import { DottedSeparator } from '@/components/dotted-separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
-import Epic from './Epic';
+import EpicPanel from './epic-panel/EpicPanel';
+import EpicListView from './epic-panel/EpicListView';
 import CreateBacklog from './CreateBacklog';
 import { ChartSpline, Ellipsis, Maximize, Maximize2, Search, Settings2, Share2, X } from 'lucide-react';
 import Share from '../Share';
@@ -75,6 +76,23 @@ const Backlog = () => {
     if (viewModeStorageKey) localStorage.setItem(viewModeStorageKey, mode);
   }, [viewModeStorageKey]);
 
+  // How the epics are shown: 'panel' is the narrow column beside the backlog,
+  // 'list' is the full width list of epics with their tasks. Remembered per
+  // project, like the layout above.
+  const epicViewStorageKey = currentProject?._id ? `project_epic_view_${currentProject._id}` : null;
+  const [epicView, setEpicView] = useState('panel');
+
+  useEffect(() => {
+    if (!epicViewStorageKey) return;
+    const saved = localStorage.getItem(epicViewStorageKey);
+    setEpicView(saved === 'list' ? 'list' : 'panel');
+  }, [epicViewStorageKey]);
+
+  const handleEpicViewChange = useCallback((view) => {
+    setEpicView(view);
+    if (epicViewStorageKey) localStorage.setItem(epicViewStorageKey, view);
+  }, [epicViewStorageKey]);
+
   useEffect(() => {
     const handler = setTimeout(() => {
       dispatch(setSearchQuery(localSearch));
@@ -97,13 +115,20 @@ const Backlog = () => {
 
   const isAnySidebarPanelOpen = openInsight || backlogSetting || selectedIssue;
 
+  // The two epic views never show at the same time. In list view the epics
+  // take over the main area, so the narrow column is not drawn, and the
+  // backlog and sprint tables are unmounted while it is open - one long list
+  // on screen instead of three.
+  const showEpicSidebar = showEpic && epicView === 'panel';
+  const showEpicList = showEpic && epicView === 'list';
+
   let gridColumnsClass = 'grid-cols-1';
 
-  if (showEpic && isAnySidebarPanelOpen) {
+  if (showEpicSidebar && isAnySidebarPanelOpen) {
     gridColumnsClass = 'lg:grid-cols-[260px_minmax(400px,1fr)_480px]';
-  } else if (showEpic && !isAnySidebarPanelOpen) {
+  } else if (showEpicSidebar && !isAnySidebarPanelOpen) {
     gridColumnsClass = 'lg:grid-cols-[260px_minmax(0,1fr)]';
-  } else if (!showEpic && isAnySidebarPanelOpen) {
+  } else if (!showEpicSidebar && isAnySidebarPanelOpen) {
     gridColumnsClass = 'lg:grid-cols-[minmax(400px,1fr)_480px]';
   } else {
     gridColumnsClass = 'lg:grid-cols-[minmax(0,1fr)]';
@@ -123,14 +148,27 @@ const Backlog = () => {
   return (
     <div className='flex flex-col h-full bg-white'>
       <div className={`grid ${gridColumnsClass} grid-rows-[minmax(0,1fr)] w-full h-full min-h-0 divide-x divide-neutral-200`}>
-        {showEpic && (
+        {showEpicSidebar && (
           <div className="hidden lg:flex flex-col w-full h-full min-h-0 bg-neutral-50/50">
-            <div className="flex-1 overflow-y-auto px-4 py-6">
-              <Epic showEpic={showEpic} setShowEpic={setShowEpic} projectData={defaultProject} />
+            <div className="flex-1 min-h-0 p-3">
+              <EpicPanel
+                projectData={defaultProject}
+                onClose={() => setShowEpic(false)}
+                onViewChange={handleEpicViewChange}
+              />
             </div>
           </div>
         )}
 
+        {showEpicList ? (
+          <div className="flex flex-col min-h-0 relative min-w-0">
+            <EpicListView
+              projectData={defaultProject}
+              onViewChange={handleEpicViewChange}
+              onClose={() => setShowEpic(false)}
+            />
+          </div>
+        ) : (
         <div className="flex flex-col min-h-0 relative min-w-0">
           <div className="flex-none px-6 py-6 pb-4 border-b border-transparent">
             <div className="flex items-center justify-between mb-5">
@@ -255,6 +293,7 @@ const Backlog = () => {
             />
           </div>
         </div>
+        )}
 
         {isAnySidebarPanelOpen && (
           <div className="fixed inset-0 z-[60] bg-white w-full h-full lg:static lg:z-auto lg:w-auto shadow-xl lg:shadow-[none] transition-all">
@@ -269,6 +308,8 @@ const Backlog = () => {
                 showEpic={showEpic}
                 viewMode={viewMode}
                 setViewMode={handleViewModeChange}
+                epicView={epicView}
+                setEpicView={handleEpicViewChange}
               />
             )}
             {selectedIssue && !openInsight && !backlogSetting && (
