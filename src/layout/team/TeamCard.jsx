@@ -26,7 +26,6 @@ const TeamCard = () => {
     // console.log("userData?.member_id", userData?.member_id)
 
     const { data, isLoading } = useGetTeamDetailsQuery();
-    console.log("data", data)
 
     const defaultColors = useMemo(() => {
         if (currentProject?.template?.fields?.work_type) {
@@ -34,7 +33,6 @@ const TeamCard = () => {
         }
     }, [currentProject])
 
-    console.log("defaultColor", defaultColors)
 
     const getTeamColor = (index) => {
         return defaultColors[index % defaultColors.length] || 'bg-blue-300'

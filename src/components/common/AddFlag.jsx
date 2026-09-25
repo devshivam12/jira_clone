@@ -10,9 +10,12 @@ import ButtonLoader from '../ui/buttonLoader'
 import { useDispatch, useSelector } from 'react-redux'
 import { taskApi } from '@/redux/graphql_api/task'
 
-const AddFlag = forwardRef(({ isOpen, setIsOpen, taskInfo, isFlagged }, ref) => {
+// `onFlagged` is optional and exists for lists that hold their own copy of a
+// task rather than reading it from the RTK cache this mutation patches - the
+// epic task dialog on the Timeline is one. They are told the flag went through
+// so they can change their own row.
+const AddFlag = forwardRef(({ isOpen, setIsOpen, taskInfo, isFlagged, onFlagged }, ref) => {
     const taskQuery = useSelector((state) => state.taskSlice.taskListQuery)
-    console.log("taskQuery", taskQuery)
     const [addFlag, { isLoading }] = useAddFlagMutation()
     const { workType } = useProjectData()
     const dispatch = useDispatch()
@@ -33,7 +36,6 @@ const AddFlag = forwardRef(({ isOpen, setIsOpen, taskInfo, isFlagged }, ref) => 
 
     const handleAddFlag = async (data, isFlagged) => {
         try {
-            console.log("taskInfo", taskInfo)
             const payload = {
                 operationName: "addFlag",
                 variables: {
@@ -46,14 +48,13 @@ const AddFlag = forwardRef(({ isOpen, setIsOpen, taskInfo, isFlagged }, ref) => 
             }
 
             const response = await addFlag(payload).unwrap()
-            console.log("response", response)
             if (response?.data?.addFlag?.status === true) {
                 reset()
                 setIsOpen(false)
+                onFlagged?.(isFlagged)
             }
         } catch (error) {
             ShowToast.error("Something went wrong on our end. Please try again shortly.")
-            console.log("error", error)
         }
     }
 

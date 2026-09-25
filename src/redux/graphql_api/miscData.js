@@ -1,10 +1,8 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
 import { gql } from "graphql-request";
-import { baseQueryWithReauthGraphQl } from "./baseQuery";
+import { graphqlApi } from "./graphqlBaseApi";
 
-export const miscDataApi = createApi({
-    reducerPath: 'miscApi',
-    baseQuery: baseQueryWithReauthGraphQl,
+// Injected into the shared GraphQL slice. The hooks below are unchanged.
+export const miscDataApi = graphqlApi.injectEndpoints({
     endpoints: (builder) => ({
         createLabels: builder.mutation({
             query: (name) => ({
@@ -34,7 +32,12 @@ export const miscDataApi = createApi({
                     // If creation succeeded
                     if (newLabel) {
                         dispatch(
-                            taskApi.util.updateQueryData('getLabel', "", (draft) => {
+                            // Was taskApi.util - but taskApi is not imported in
+                            // this file and getLabel is defined right below, on
+                            // this slice. So this line threw a ReferenceError
+                            // every time a label was created, and the catch
+                            // below swallowed it into a console.error.
+                            miscDataApi.util.updateQueryData('getLabel', "", (draft) => {
                                 // console.log("draft", draft)
                                 draft.data.getClientLabels.push(newLabel);
                             })
@@ -171,6 +174,7 @@ export const miscDataApi = createApi({
                                 _id
                                 summary
                                 project_key
+                                taskNumber
                             }
                                 hasMore
                                 total

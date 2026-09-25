@@ -47,9 +47,7 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                     project_leader: leaderValue
                 }
             }
-            console.log("payload", payload)
             const response = await createProject(payload).unwrap()
-            console.log("response", response)
             if (response.status === 200) {
                 const newProject = response.data
                 dispatch(addProject({
@@ -69,7 +67,6 @@ const UseTemplate = ({ showForm, setShowForm, fieldsData, project_slug }) => {
                 })
             }
         } catch (error) {
-            console.log("error", error)
             ShowToast.error('project creation failed', {
                 description: error.message,
                 useCustom: true,

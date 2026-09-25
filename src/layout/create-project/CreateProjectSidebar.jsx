@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button'
 import TooltipWrapper from '@/components/common/TooltipWrapper'
 
 const CreateProjectSidebar = ({ projectData, isLoading }) => {
-    console.log("isLoading", isLoading)
     const [formattedData, setFormattedData] = useState([])
     const { project_slug } = useParams()
     const navigate = useNavigate()

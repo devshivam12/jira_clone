@@ -14,7 +14,6 @@ const ProjectTab = () => {
   const { id } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { data: projectDetail } = useGetProjectByIdQuery(id)
-  console.log("projectDetail", projectDetail)
 
   const initialProjectName = projectDetail?.data?.name?.charAt(0)?.toUpperCase() ?? '';
   const currentTab = searchParams.get('tab') || 'detail'

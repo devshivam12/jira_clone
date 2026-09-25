@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import ManageAvatar from '@/components/common/ManageAvatar'
 import ShowToast from '@/components/common/ShowToast'
 import TooltipWrapper from '@/components/common/TooltipWrapper'
@@ -40,9 +40,12 @@ const EditTeam = () => {
 
   const [updateTeam, { isLoading: isTeamUpdate }] = useUpdateTeamMutation()
 
-  const userData = JSON.parse(localStorage.getItem('userData'))
-
-  console.log("userData", userData)
+  // Read once on mount instead of on every render. This was a synchronous
+  // localStorage read plus a JSON.parse per render, and because the parse
+  // handed back a new object every time it also kept the effect below firing
+  // on every render (see the dependency note there). userData only changes on
+  // login or logout, and both of those remount this screen.
+  const userData = useMemo(() => JSON.parse(localStorage.getItem('userData')), [])
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -73,7 +76,6 @@ const EditTeam = () => {
   })
 
   const { allProjects, currentProject } = useProjectData()
-  console.log("allProjects", allProjects)
 
   const [isEditingName, setIsEditingName] = useState(false)
   const [isDescriptionEdit, setIsDescriptionEdit] = useState(false)
@@ -100,15 +102,23 @@ const EditTeam = () => {
     }))
   }
 
-  const totalPages = Math.ceil(teamData?.data?.pagination?.totalCount / pagination.pageSize) || 1;
+  // Was pagination.pageSize, which this state has never had - the field is
+  // perPage. Dividing by undefined gave NaN, so totalPages always fell back to
+  // 1 and the pager never showed more than one page.
+  const totalPages = Math.ceil(teamData?.data?.pagination?.totalCount / pagination.perPage) || 1;
 
+  // Depends on the leader id and the current member id, not on the userData
+  // object and not on the flag it sets. The old list was [userData,
+  // isLeaveTeamVisible]: userData was rebuilt by JSON.parse on every render so
+  // this ran every render, and listing its own output as a dependency made it
+  // run again after it fired.
   useEffect(() => {
     const getLeaderId = teamData?.data?.teamLeader?.member_id
     const loginUserId = userData?.member_id
-    if (getLeaderId === loginUserId) {
+    if (getLeaderId && getLeaderId === loginUserId) {
       setIsLeaveTeamVisible(true)
     }
-  }, [userData, isLeaveTeamVisible])
+  }, [teamData?.data?.teamLeader?.member_id, userData?.member_id])
   // alert(isLeaveTeamVisible)
   useEffect(() => {
     const timerId = setTimeout(() => {
@@ -156,7 +166,6 @@ const EditTeam = () => {
         const data = { ...payload }
         const result = await updateTeam({ id, data }).unwrap()
 
-        console.log("result=========", result)
         if (result.status === 200) {
           ShowToast.success(result.message)
         }
@@ -178,7 +187,6 @@ const EditTeam = () => {
         }
         const response = await updateTeam({ id, data }).unwrap()
 
-        console.log("response-----------", response)
         if (response.status === 200) {
           ShowToast.success(response.message)
         }
@@ -192,7 +200,6 @@ const EditTeam = () => {
       }
 
     } catch (error) {
-      console.log("error", error)
       ShowToast.error(error.error)
     }
   }
@@ -234,7 +241,6 @@ const EditTeam = () => {
       })
       return data
     } catch (error) {
-      console.log("error", error)
     }
   }
 
@@ -245,15 +251,12 @@ const EditTeam = () => {
       })
       return data
     } catch (error) {
-      console.log("error", error)
     }
   }
 
   const handleSwitchProject = (projectId) => {
-    console.log("projectId", projectId)
     dispatch(switchProject(projectId))
     const findProject = allProjects.find(p => p._id === projectId)
-    console.log("findProject", findProject)
     const getProjectSlug = findProject?.project_slug
     const getTemplateSlug = findProject?.template.slug
     const getDefaultNavigation = findProject?.template.fields?.tabs.find(tab => tab.isDefault === true)
@@ -267,7 +270,6 @@ const EditTeam = () => {
       })
       return data;
     } catch (error) {
-      console.log("error", error)
     }
   }
 

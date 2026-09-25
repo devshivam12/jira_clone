@@ -1,11 +1,9 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
 import { gql } from "graphql-request";
-import { baseQueryWithReauthGraphQl } from "./baseQuery";
+import { graphqlApi } from "./graphqlBaseApi";
 
-export const sprintApi = createApi({
-    reducerPath: 'sprintApi',
-    baseQuery: baseQueryWithReauthGraphQl,
-    tagTypes: ['Sprint', 'Update Sprint'],
+// Injected into the shared GraphQL slice. The 'Sprint' and 'Update Sprint'
+// tags moved to the base slice; the hooks below are unchanged.
+export const sprintApi = graphqlApi.injectEndpoints({
     endpoints: (builder) => ({
         createSprint: builder.mutation({
             query: (payload) => ({
@@ -46,14 +44,12 @@ export const sprintApi = createApi({
                                     s => s._id === sprintId
                                 );
                                 if (sprintToUpdate) {
-                                    console.log("sprintToUpdate", sprintToUpdate)
                                     Object.assign(sprintToUpdate, updatedSprintData);
                                 }
                             }
                         )
                     );
                 } catch (error) {
-                    console.log("error while updating sprint cache", error)
                 }
             }
 

@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import ProjectDrawer from './ProjectDrawer'
 import { Button } from '@/components/ui/button'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import CommonDynamicTable from '@/components/data-table/common-dynamic-table'
 import { useGetProjectListQuery } from '@/redux/api/company/api'
 import ManageAvatar from '@/components/common/ManageAvatar'
@@ -14,7 +14,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 const Project = () => {
   const [openTemplate, setOpenTemplate] = useState(false)
   const { allProjects } = useProjectData()
-  console.log("allProjects", allProjects)
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useDispatch()
@@ -41,58 +40,66 @@ const Project = () => {
     ...(searchValue.leaderName && { leaderName: searchValue.leaderName }),
 
   })
-  console.log("isError", isError)
 
   const showLoading = isProjectLoading || isProjectFetching
 
-  const columns = [
+  const handleProjectSettings = useCallback((id) => {
+    navigate(`/dashboard/project/edit/${id}`)
+  }, [navigate])
+
+  const openProject = useCallback((projectId) => {
+    const findProject = allProjects.find(p => p._id === projectId)
+    if (!findProject) return
+
+    const getProjectSlug = findProject.project_slug
+    const getTemplateSlug = findProject.template?.slug
+    const tabs = findProject.template?.fields?.tabs || []
+    // A template does not always mark a default tab. Falling back to the first
+    // tab keeps the name from being a dead link instead of throwing.
+    const getDefaultTab = tabs.find(tab => tab.isDefault === true) || tabs[0]
+
+    if (!getProjectSlug || !getTemplateSlug || !getDefaultTab?.url) return
+
+    dispatch(switchProject(projectId))
+    navigate(`/dashboard/${getProjectSlug}/${getTemplateSlug}/${getDefaultTab.url}`)
+  }, [allProjects, dispatch, navigate])
+
+  // Fixed widths keep the columns from resizing between the loading skeleton
+  // and the loaded rows, and stop a long project name from squeezing the rest.
+  const columns = useMemo(() => [
     {
       accessorKey: 'name',
       header: 'Name',
       enableSorting: false,
-      enableFiltering: true,
-      cell: ({ row }) => {
-        const redirectToProject = () => {
-
-          const projectId = row.original._id
-          // console.log("projectId", projectId)
-          dispatch(switchProject(projectId))
-          const findProject = allProjects.find(p => p._id === projectId)
-          // console.log("findProject", findProject)
-
-          const getProjectSlug = findProject?.project_slug
-          const getTemplateSlug = findProject?.template.slug
-          const getDefaultTab = findProject?.template?.fields?.tabs.find(tab => tab.isDefault === true)
-
-          navigate(`/dashboard/${getProjectSlug}/${getTemplateSlug}/${getDefaultTab.url}`)
-        }
-        return (
-          <span
-            className='text-blue-900 hover:cursor-pointer hover:underline'
-            onClick={redirectToProject}
-          >
-            {row.original.name}
-          </span>
-        )
-      }
+      // No header filter here. The toolbar search box already searches by name,
+      // and two controls for the same field only confused the header row.
+      enableFiltering: false,
+      meta: { width: '32%' },
+      cell: ({ row }) => (
+        <button
+          type="button"
+          className='inline-block max-w-full truncate rounded align-middle text-left font-medium text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+          onClick={() => openProject(row.original._id)}
+        >
+          {row.original.name}
+        </button>
+      )
     },
     {
       accessorKey: 'project_key',
       header: 'Key',
       enableFiltering: true,
       enableSorting: true,
+      meta: { width: '14%' },
       cell: ({ getValue }) => <span className="font-medium">{getValue()}</span>,
     },
-    // {
-    //   accessorKey: 'template_slug',
-    //   header: 'Type'
-    // },
     {
       accessorKey: 'project_slug',
       header: 'Type',
+      meta: { width: '18%' },
       cell: ({ getValue }) => {
         const slug = getValue();
-        if (!slug) return
+        if (!slug) return <span className="text-neutral-400">&mdash;</span>
 
         const formattedSlug = slug.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 
@@ -104,21 +111,22 @@ const Project = () => {
       header: 'Lead',
       enableFiltering: true,
       enableSorting: false,
+      meta: { width: '26%' },
       cell: ({ row }) => {
         const leader = row.original.leaderDetails
-        console.log('leader', leader)
         if (!leader) {
-          return <span className="text-muted-foreground">No leader assigned</span>
+          return <span className="text-neutral-400">Unassigned</span>
         }
 
         return (
-          <div className='flex items-center gap-x-4'>
+          <div className='flex min-w-0 items-center gap-2'>
             <ManageAvatar
+              size='sm'
               firstName={leader.first_name}
               lastName={leader.last_name}
               image={leader.image}
             />
-            <span>{leader.first_name + " " + leader.last_name}</span>
+            <span className='truncate'>{leader.first_name + " " + leader.last_name}</span>
           </div>
 
         )
@@ -127,13 +135,14 @@ const Project = () => {
     {
       id: 'actions',
       header: 'Actions',
+      meta: { width: '10%', align: 'right' },
       cell: ({ row }) => {
         const project = row.original
 
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="icon">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -165,11 +174,7 @@ const Project = () => {
         )
       }
     }
-  ]
-
-  const handleProjectSettings = (id) => {
-    navigate(`/dashboard/project/edit/${id}`)
-  }
+  ], [openProject, handleProjectSettings])
 
   const tableData = useMemo(() => {
     if (!projectData?.data?.projectData) {
@@ -183,7 +188,6 @@ const Project = () => {
   const totalCount = projectData?.data?.pagination?.totalCount || 0
 
   const handleSearchChange = (newSearchValues) => {
-    console.log("Search values received:", newSearchValues)
 
     setSearchValue(prev => {
       const updated = { ...prev }
@@ -206,47 +210,43 @@ const Project = () => {
         }
       })
 
-      console.log("Updated search values:", updated)
       return updated
     })
   }
 
   return (
-    <div className='space-y-5'>
+    <div className='space-y-6 py-4'>
+      {/* Header. Same shape as the team page: title on the left, secondary
+          actions then the primary action on the right. */}
       <div className='flex items-center justify-between'>
-        <h1 className="text-neutral-500 text-2xl font-semibold">Project</h1>
-        <div className='flex items-center gap-x-2'>
-          <Button variant="teritary" onClick={() => navigate('/create-project/software_management', { state: { from: location.pathname } })} >
-            Create Project
-          </Button>
+        <h1 className="text-2xl font-semibold text-neutral-500">Projects</h1>
+        <div className='flex items-center gap-2'>
           <Button variant="outline" onClick={() => setOpenTemplate(true)}>
             Templates
+          </Button>
+          <Button variant="teritary" onClick={() => navigate('/create-project/software_management', { state: { from: location.pathname } })} >
+            Create project
           </Button>
           <ProjectDrawer openDrawer={openTemplate} onClose={() => setOpenTemplate(false)} />
         </div>
       </div>
 
-
-      <div >
-        <CommonDynamicTable
-          data={tableData}
-          columns={columns}
-          searchPlaceholder='Search project by name'
-          searchColumn='name'
-          showPagination={true}
-          pagination={pagination}
-          onPaginationChange={setPagination}
-          sorting={sorting}
-          onSortingChange={setSorting}
-          searchValue={searchValue}
-          onSearchChange={handleSearchChange}
-          totalCount={totalCount}
-          isLoading={showLoading}
-          pageSizeOptions={[10, 20, 30, 50, 100]}
-        />
-      </div>
-
-
+      <CommonDynamicTable
+        data={tableData}
+        columns={columns}
+        searchPlaceholder='Search project by name'
+        searchColumn='name'
+        showPagination={true}
+        pagination={pagination}
+        onPaginationChange={setPagination}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        totalCount={totalCount}
+        isLoading={showLoading}
+        pageSizeOptions={[10, 20, 30, 50, 100]}
+      />
     </div>
   )
 }

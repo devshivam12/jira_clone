@@ -26,9 +26,7 @@ const projectSlice = createSlice({
             state.allProjectsId = action.payload;
         },
         addProject: (state, action) => {
-            console.log('Adding project:', action.payload);
             const newProject = action.payload;
-            console.log("newProject", newProject)
             // Add to allProjects array if not already exists
             const existingProjectIndex = state.allProjects.findIndex(p => p._id === newProject._id);
             if (existingProjectIndex === -1) {
@@ -42,8 +40,6 @@ const projectSlice = createSlice({
             }
 
             // Optionally set as current project (if it's the first project or specified)
-            console.log('Current project exists:', !!state.currentProject);
-            console.log('setAsCurrent flag:', action.payload.setAsCurrent);
             if (!state.currentProject || action.payload.setAsCurrent) {
                 console.log('Setting as current project'); // Debug log
                 state.currentProject = newProject;

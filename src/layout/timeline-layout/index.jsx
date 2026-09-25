@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Search, CalendarRange, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useProjectData } from "@/hooks/useProjectData";
 import EditIssue from "@/layout/backlog-layout/[id]/EditIssue";
 import { useGetTimelineDataQuery, useUpdateTaskDatesMutation } from "@/redux/graphql_api/timeline";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ShowToast from "@/components/common/ShowToast";
+import TooltipWrapper from "@/components/common/TooltipWrapper";
 import TimelineChart from "./TimelineChart";
 import RunningNowStrip from "./RunningNowStrip";
 import {
@@ -45,7 +47,7 @@ const groupKey = (epic, groupBy) => {
 };
 
 const Timeline = () => {
-  const { currentProject, workFlow, importance } = useProjectData();
+  const { currentProject, workFlow, importance, workType } = useProjectData();
   const projectId = currentProject?._id;
 
   // Opens on the quarter view: the axis is the running year split into its
@@ -61,6 +63,13 @@ const Timeline = () => {
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [highlightEpicId, setHighlightEpicId] = useState(null);
+
+  // The sprint band under the axis. On by default, the way the rest of the
+  // chart's context (today line, gridlines) is: a scrum roadmap is read
+  // against its delivery cycles, so hiding them by default would mean the
+  // first thing most readers do is go looking for the switch. The toggle is
+  // only offered when the project has sprints in the period on screen.
+  const [showSprints, setShowSprints] = useState(true);
 
   // `period` picks the calendar span (quarter/half-year/year); `periodAnchor`
   // is a date inside whichever one is currently shown, so the prev/next
@@ -338,6 +347,32 @@ const Timeline = () => {
                 />
               </div>
 
+              {/* Same idea as Jira's Sprints switch in the timeline's view
+                  settings: the band is context for the bars, not another list,
+                  so it can be put away when the chart gets busy. */}
+              {sprints.length > 0 && (
+                <TooltipWrapper
+                  direction="bottom"
+                  content={showSprints ? "Hide sprint markers" : "Show sprint markers"}
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowSprints((prev) => !prev)}
+                    aria-pressed={showSprints}
+                    className={cn(
+                      "h-9 gap-1.5 rounded-lg px-2.5 text-sm font-medium",
+                      showSprints
+                        ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-700"
+                        : "text-neutral-500"
+                    )}
+                  >
+                    <CalendarRange size={15} />
+                    Sprints
+                  </Button>
+                </TooltipWrapper>
+              )}
+
               <Select value={groupBy} onValueChange={setGroupBy}>
                 <SelectTrigger className="h-9 w-[140px] text-sm rounded-lg">
                   <SelectValue placeholder="Group by" />
@@ -363,34 +398,39 @@ const Timeline = () => {
               {/* Steps through the calendar span picked below, one period at
                   a time. Clicking the label itself jumps back to today. */}
               <div className="flex items-center rounded-lg border border-neutral-200 h-9 bg-white">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-8 rounded-r-none"
-                  onClick={goToPreviousPeriod}
-                  title="Previous period"
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <button
-                  type="button"
-                  onClick={goToCurrentPeriod}
-                  className="min-w-[76px] px-1 text-center text-sm font-semibold text-neutral-700 hover:text-blue-600"
-                  title="Jump to the current period"
-                >
-                  {periodLabel}
-                </button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-8 rounded-l-none"
-                  onClick={goToNextPeriod}
-                  title="Next period"
-                >
-                  <ChevronRight size={16} />
-                </Button>
+                <TooltipWrapper direction="bottom" content="Previous period">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-8 rounded-r-none"
+                    onClick={goToPreviousPeriod}
+                    aria-label="Previous period"
+                  >
+                    <ChevronLeft size={16} />
+                  </Button>
+                </TooltipWrapper>
+                <TooltipWrapper direction="bottom" content="Jump to the current period">
+                  <button
+                    type="button"
+                    onClick={goToCurrentPeriod}
+                    className="min-w-[76px] px-1 text-center text-sm font-semibold text-neutral-700 hover:text-blue-600"
+                  >
+                    {periodLabel}
+                  </button>
+                </TooltipWrapper>
+                <TooltipWrapper direction="bottom" content="Next period">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-8 rounded-l-none"
+                    onClick={goToNextPeriod}
+                    aria-label="Next period"
+                  >
+                    <ChevronRight size={16} />
+                  </Button>
+                </TooltipWrapper>
               </div>
 
               {/* Controls how much of the roadmap the server is asked for. */}
@@ -413,6 +453,8 @@ const Timeline = () => {
         <div className="flex-1 min-h-0">
           <TimelineChart
             epics={epics}
+            sprints={sprints}
+            showSprints={showSprints}
             rangeStart={rangeStart}
             rangeEnd={rangeEnd}
             pxPerDay={pxPerDay}
@@ -427,6 +469,9 @@ const Timeline = () => {
             projectId={projectId}
             workFlow={workFlow}
             importance={importance}
+            // Only for the work type badge on child task rows; the chart's own
+            // rows are always epics.
+            workType={workType}
             onCommitDates={handleCommitDates}
             onChanged={refetch}
             hasMore={hasMore}

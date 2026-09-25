@@ -58,7 +58,6 @@ const AutoLogin = () => {
             try {
 
                 const authResponse = await axios.post(`${import.meta.env.VITE_SERVER}/user/auth/token-base-auth`, { token });
-                console.log("authResponse", authResponse)
 
                 if (authResponse.data.status === 200) {
                     const { project_details, ...userData } = authResponse.data.user;
@@ -80,7 +79,6 @@ const AutoLogin = () => {
                     // ShowToast.success('You are authorized', {
                     //     description: response.message
                     // })
-                    console.log("authResponse.data.user.clientId", authResponse.data.user.clientId)
                     // Step 2: Fetch company projects
                     const projectsResponse = await axios.get(
                         `${import.meta.env.VITE_SERVER}/company/work-space/get-companyProject`,
@@ -116,7 +114,6 @@ const AutoLogin = () => {
                     })
                 }
             } catch (error) {
-                console.log("error", error)
                 navigate('/login');
                 ShowToast.error('Authentication failed', {
                     description: error.message

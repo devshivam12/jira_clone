@@ -1,489 +1,128 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-
-import { Button } from '@/components/ui/button'
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { format } from 'date-fns'
-import { Label } from '@/components/ui/label'
-
-import { Check, ChevronDown, ChevronUp, Flag, Link, Pen, Plus, Share2, ThumbsUp, X, Image as ImageIcon, Search, AlignLeft, Send, AlertCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { Controller } from 'react-hook-form'
 import { useSearchParams } from 'react-router-dom'
-import { DottedSeparator } from '@/components/dotted-separator'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import DynamicDropdownSelector from '@/components/common/DynamicDropdownSelector'
-import WorkSelector from '@/components/common/WorkSelector'
-import { useProjectData } from '@/hooks/useProjectData'
-import { taskApi, useAddVotesMutation, useDeleteTaskMutation, useGetTaskByIdQuery, useGetTaskVotesMutation, useUpdateIssueMutation } from '@/redux/graphql_api/task'
-import CommonDropdownMenu from '@/components/common/CommonDropdownMenu'
-import LabelSelector from '@/components/common/LabelSelector'
-import RichTextEditor from '@/components/ui/richTextEditor'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import CommentComponent from '@/components/common/CommentComponent'
-import { useUserData } from '@/hooks/useUserData'
-import { Controller, useForm } from 'react-hook-form'
-import TooltipWrapper from '@/components/common/TooltipWrapper'
-import ManageAvatar from '@/components/common/ManageAvatar'
-import ShowToast from '@/components/common/ShowToast'
-import { useDispatch } from 'react-redux'
-import { Skeleton } from '@/components/ui/skeleton'
-import AddFlag from '@/components/common/AddFlag'
-import DeleteTaskDialog from '@/components/common/DeleteTaskDialog'
-import ChildIssuesSection from '@/components/common/ChildIssuesSection'
+import { ChevronDown, ChevronUp, ExternalLink, Link, Pen, Plus, ThumbsUp, X } from 'lucide-react'
 
-const EditIssue = ({ issue }) => {
-    const { control, handleSubmit, setValue, watch, reset, getValues } = useForm({
-        defaultValues: {
-            taskNumber: 0,
-            task_status: "",
-            importance: "",
-            description: "",
-            assigneeDetail: {},
-            reporterDetail: {},
-            creatorDetail: {},
-            teamDetail: {},
-            sprintDetail: {},
-            labels: [],
-            project_key: "",
-            summary: "",
-            work_type: ""
-        }
-    })
-    const [vote, setVote] = useState({})
-    const [taskDetail, setTaskDetail] = useState({})
-    const [voteDetail, setVoteDetail] = useState([])
-    const [isScrolled, setIsScrolled] = useState(false)
-    const { userData } = useUserData()
-    const { currentProject, workType, importance, workFlow } = useProjectData()
+import AddFlag from '@/components/common/AddFlag'
+import ChildIssuesSection from '@/components/common/ChildIssuesSection'
+import CommentComponent from '@/components/common/CommentComponent'
+import CommonDropdownMenu from '@/components/common/CommonDropdownMenu'
+import DeleteTaskDialog from '@/components/common/DeleteTaskDialog'
+import DynamicDropdownSelector from '@/components/common/DynamicDropdownSelector'
+import TooltipWrapper from '@/components/common/TooltipWrapper'
+import WorkSelector from '@/components/common/WorkSelector'
+import { DottedSeparator } from '@/components/dotted-separator'
+import TaskDescriptionField from '@/components/task-detail/TaskDescriptionField'
+import TaskDueDateField from '@/components/task-detail/TaskDueDateField'
+import TaskFlagPopover from '@/components/task-detail/TaskFlagPopover'
+import TaskPeopleFields from '@/components/task-detail/TaskPeopleFields'
+import TaskSummaryField from '@/components/task-detail/TaskSummaryField'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useTaskDetail } from '@/hooks/useTaskDetail'
+
+// The task panel beside the backlog and the timeline. It reads the `issueId`
+// search param, so any row click anywhere can open it by setting that one value.
+//
+// All of the behaviour lives in useTaskDetail, which the full page at
+// /dashboard/:project_slug/:template_slug/view/:task_id shares. This file only
+// decides how the panel looks in a 480px column.
+const EditIssue = () => {
     const [searchParams, setSearchParams] = useSearchParams()
     const taskId = searchParams.get('issueId')
+    const [isScrolled, setIsScrolled] = useState(false)
 
-    const { data: getTask, isFetching: taskFetching } = useGetTaskByIdQuery({
-        operationName: "getTaskDetail",
-        variables: {
-            taskId: taskId
-        }
-    }, {
-        skip: !taskId,
-    })
-    const task = getTask?.data?.getTaskDetail?.data
-    useEffect(() => {
-        if (task) {
-            reset({
-                taskNumber: task.taskNumber,
-                summary: task?.summary,
-                description: task?.description,
-                task_status: task?.task_status,
-                work_type: task?.work_type,
-                project_key: task?.project_key,
-                labels: task?.labels,
-                assigneeDetail: task?.assigneeDetail,
-                reporterDetail: task?.reporterDetail,
-                creatorDetail: task?.creatorDetail,
-                importance: task?.importance,
-                teamDetail: task?.teamDetail,
-                sprintDetail: task?.sprintDetail
-            })
-            setTaskDetail({
-                projectKey: task?.project_key,
-                taskNumber: task?.taskNumber,
-                work_type: task?.work_type
-            })
-
-            setVote({
-                count: task?.vote?.count,
-                hasVoted: task?.vote?.hasVoted
-            })
-        }
-    }, [task, taskId, reset])
-    const dispatch = useDispatch()
-    const [updateTask, { isLoading: taskSubmit }] = useUpdateIssueMutation()
-    const [getVotes, { isLoading: voteLoading }] = useGetTaskVotesMutation()
-    const [addVotes, { isLoading: addVoteLoading }] = useAddVotesMutation()
-    const summaryRef = useRef(null)
-
-    const [openParent, setOpenParent] = useState(false)
-    const [expandDetails, setExpandDetails] = useState(true)
-    const [openCommand, setOpenCommand] = useState(false)
-    const commandRef = useRef(null)
-    const [isEditing, setIsEditing] = useState(false)
-    const [isEditingSummary, setIsEditingSummary] = useState(false)
-    const [tempSummary, setTempSummary] = useState("")
-    const [activeDropdown, setActiveDropdown] = useState(null)
-    const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false)
-    const [currentFlagTask, setCurrentFlagTask] = useState(null)
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-    const [deleteTask, { isLoading: deleteLoading }] = useDeleteTaskMutation()
-
-
-    const taskTypes = useMemo(() => workFlow.map((status, index) => ({
-        id: index + 1,
-        name: status.name,
-        value: status.slug,
-        color: status.color
-    })), [workFlow]);
-
-    const importanceTypes = useMemo(() => importance?.map((imp, index) => ({
-        id: index + 1,
-        name: imp.name,
-        value: imp.slug,
-        color: imp.color
-    })), [importance])
-
-
-    const handleUpdateTask = useCallback(async (key, value, fullDetail) => {
-        try {
-            const payload = {
-                operationName: "updateTask",
-                variables: {
-                    taskId: taskId,
-                    key: key,
-                    value: value,
-                    ...(fullDetail !== undefined && { fullDetail })
-                }
-            }
-            const response = await updateTask(payload).unwrap()
-            // Unflag functionality can rely on this directly
-            if (key === 'isFlagged' && value === false) {
-                ShowToast.success("Flag removed successfully")
-            }
-        } catch (error) {
-            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-        }
-    }, [taskId, userData, currentProject, updateTask])
-
-    const toggleTaskStatusDropdown = useCallback((isOpen) => {
-        if (isOpen) setActiveDropdown('task_status');
-        else setActiveDropdown(null);
-    }, [])
-
-    const toggleImportanceDropdown = useCallback((isOpen) => {
-        if (isOpen) setActiveDropdown('importance');
-        else setActiveDropdown(null);
-    }, [])
-
-    useEffect(() => {
-        summaryRef.current = getValues("summary")
-    }, [])
-
-    const changeTaskStatus = useCallback((status) => {
-        handleUpdateTask('task_status', status)
-    }, [handleUpdateTask])
-
-    const changeImportance = useCallback((imp) => {
-        handleUpdateTask('importance', imp)
-    }, [handleUpdateTask])
-
-    const changleAssignee = useCallback((ass) => {
-        handleUpdateTask('assigneeId', ass?._id || null, ass || null)
-    }, [handleUpdateTask])
-
-    const changeLables = useCallback((label) => {
-        handleUpdateTask('labels', label)
-    }, [handleUpdateTask])
-
-    const changeTeam = useCallback((team) => {
-        handleUpdateTask('teamId', team?._id || null, team || null)
-    }, [handleUpdateTask])
-
-    const changeReporter = useCallback((report) => {
-        handleUpdateTask('reporterId', report?._id || null, report || null)
-    }, [handleUpdateTask])
-
-    const data_f_vote = useCallback((v) => {
-        const fullName = v?.first_name + " " + v?.last_name
-        return (
-            <div className='flex items-center gap-x-2'>
-                <ManageAvatar
-                    firstName={v?.fist_name}
-                    lastName={v?.last_name}
-                    image={v?.image}
-                    size='sm'
-                />
-                <span>{fullName}</span>
-            </div>
-        )
-    }, [])
-
-    const handleToggleVote = useCallback(async () => {
-        const isRemoving = vote.hasVoted
-        try {
-            const payload = {
-                operationName: "addVote",
-                variables: {
-                    taskId: taskId,
-                    memberId: userData?.memberId,
-                    isRemove: isRemoving
-                }
-            }
-
-            const result = await addVotes(payload).unwrap()
-
-            if (result?.data?.addVote?.status === true) {
-                // console.log("cxxcxc", typeof taskId)
-                dispatch(
-                    taskApi.util.updateQueryData(
-                        'getTaskById',
-                        { operationName: "getTaskDetail", variables: { taskId: taskId } },
-                        (draft) => {
-                            // console.log("Draft as JSON:", JSON.parse(JSON.stringify(draft)))
-                            if (draft?.data?.getTaskDetail?.data?.vote) {
-                                // console.log("console.log(draft.data.getTaskDetail.data.vote)", console.log(draft.data.getTaskDetail.data.vote))
-                                draft.data.getTaskDetail.data.vote.count =
-                                    isRemoving ? Math.max(0, draft.data.getTaskDetail.data.vote.count - 1)
-                                        : draft.data.getTaskDetail.data.vote.count + 1
-                                draft.data.getTaskDetail.data.vote.hasVoted = !isRemoving
-                            }
-                        }
-                    )
-                )
-
-            }
-        } catch (error) {
-            console.error("Error toggling vote:", error)
-            ShowToast.error(`Failed to ${isRemoving ? 'remove' : 'add'} vote: ${error?.message || 'Unknown error'}`)
-        }
-    }, [vote.hasVoted, taskId, userData?.memberId, addVotes])
-
-    const fetchVotes = useCallback(async () => {
-        try {
-            const payload = {
-                operationName: "getVote",
-                variables: {
-                    taskId: taskId
-                }
-            }
-            const result = await getVotes(payload).unwrap()
-            const votes = result?.data?.getVote?.data
-            if (votes.length > 0) {
-                const formattedVotes = votes.map(v => ({
-                    id: v?._id,
-                    label: data_f_vote(v)
-                }));
-
-                const match = userData?.memberId
-                // console.log("match", match)
-                const mResult = vote?.hasVoted ? true : false
-
-                const menuItems = [
-                    {
-                        id: vote.hasVoted ? 'remove-vote' : 'add-vote',
-                        label: vote.hasVoted ? 'Remove vote' : 'Add vote',
-                        danger: vote.hasVoted,
-                        onSelect: () => handleToggleVote()
-                    },
-                    { type: 'separator' },
-                    ...formattedVotes
-                ];
-                // console.log("menuItems", menuItems)
-                setVoteDetail(menuItems);
-            }
-        } catch (error) {
-            // console.log("error", error)
-            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-        }
-    }, [taskId, getVotes, data_f_vote, vote.hasVoted, handleToggleVote])
-
-    const handleVoteOpen = useCallback((open) => {
-        if (open && voteDetail.length === 0) {
-            fetchVotes()
-        }
-    }, [voteDetail.length, fetchVotes])
-
-    const handleSprintChange = useCallback((selectedSprint) => {
-        handleUpdateTask(
-            'sprintId',
-            selectedSprint?._id || null,
-            selectedSprint || null
-        )
-    }, [handleUpdateTask])
-
-    const workItemMenuItems = [
-        {
-            id: task?.flagDetail?.isFlagged ? 'remove-flag' : 'add-flag',
-            label: task?.flagDetail?.isFlagged ? 'Remove flag' : 'Add flag',
-            onSelect: () => {
-                if (task?.flagDetail?.isFlagged) {
-                    handleUpdateTask('isFlagged', false)
-                } else {
-                    setCurrentFlagTask({
-                        _id: taskId,
-                        workType: task?.work_type,
-                        project_key: task?.project_key,
-                        taskNumber: task?.taskNumber,
-                        summary: task?.summary
-                    })
-                    setIsFlagDialogOpen(true)
-                }
-            }
-        },
-        {
-            id: vote.hasVoted ? 'remove-vote' : 'add-vote',
-            label: vote.hasVoted ? 'Remove vote' : 'Add vote',
-            danger: vote.hasVoted,
-            onSelect: handleToggleVote
-        },
-        { type: 'separator' },
-        {
-            id: 'add-parent',
-            label: task?.parentDetail ? "Change parent" : "Add parent",
-            type: 'submenu',
-            content: (
-                <DynamicDropdownSelector
-                    slug="parent"
-                    onChange={(parent, { onClose } = {}) => {
-                        handleSelectEpic(parent);
-                        onClose?.();
-                    }}
-                    label="Select epic"
-                    showDropdown
-                />
-            )
-        },
-        {
-            id: 'clone',
-            label: 'Clone'
-        },
-        {
-            id: 'move',
-            label: 'Move'
-        },
-        {
-            id: 'archive',
-            label: 'Archive'
-        },
-        {
-            id: 'delete',
-            label: 'Delete',
-            danger: true,
-            onSelect: () => setIsDeleteDialogOpen(true)
-        },
-        { type: 'separator' },
-        {
-            id: 'export-excel',
-            label: 'Export excel'
-        },
-        {
-            id: 'export-pdf',
-            label: 'Export pdf'
-        }
-    ];
-
-    const workRelatItem = [
-        {
-            id: 'create-sub-task',
-            label: 'Create subtask',
-        },
-        {
-            id: 'add-to-sprint',
-            label: 'Add to sprint',
-            type: 'submenu',
-            content: (
-                <DynamicDropdownSelector
-                    slug="sprint"
-                    onChange={(sprint, { onClose } = {}) => {
-                        handleSprintChange(sprint);
-                        onClose?.();
-                    }}
-                    label="Select sprint"
-                    showDropdown
-                />
-            )
-        },
-        {
-            id: 'link-work-item',
-            label: 'Link work item',
-        },
-        { type: 'separator' },
-        {
-            id: 'add-attachement',
-            label: 'Add atachement',
-        },
-        {
-            id: 'add-weblink',
-            label: 'Add weblink',
-        },
-    ];
-
-    const renderIcon = useCallback((item) => {
-        let work = workType.find(t => t.slug === item)
-        if (item && work) {
-            return <div className={`w-6 h-6 rounded-md flex items-center justify-center ${work.color}`}>
-                <img
-                    src={work.icon}
-                    className="w-4 h-4 filter brightness-0 invert"
-                />
-            </div>
-        }
-    }, [workType])
-
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setSearchParams((prev) => {
-            const params = new URLSearchParams(prev);
-            params.delete("issueId");
-            return params;
-        })
-    }
-
-    // Clicking a child in the list below swaps the panel over to that item,
-    // the same way a row click anywhere else opens one.
-    const handleOpenChild = useCallback((childId) => {
-        setSearchParams((prev) => {
-            const params = new URLSearchParams(prev);
-            params.set("issueId", childId);
-            return params;
+            const params = new URLSearchParams(prev)
+            params.delete("issueId")
+            return params
         })
     }, [setSearchParams])
 
-    const handleDeleteTask = useCallback(async (reason) => {
-        try {
-            const payload = {
-                operationName: "deleteTask",
-                variables: {
-                    taskId: taskId,
-                    reason: reason
-                }
-            }
-            const response = await deleteTask(payload).unwrap()
-            if (response?.data?.deleteTask?.status === 200) {
-                ShowToast.success("Task moved to archive")
-                setIsDeleteDialogOpen(false)
-                handleClose()
-            } else {
-                ShowToast.error(response?.data?.deleteTask?.message || "Could not delete the task")
-            }
-        } catch (error) {
-            ShowToast.error(`Something is wrong, Please check after sometime ${error}`)
-        }
-    }, [taskId, deleteTask])
+    // Clicking a child or the parent swaps the panel over to that item, the
+    // same way a row click anywhere else opens one.
+    const handleOpenChild = useCallback((childId) => {
+        setSearchParams((prev) => {
+            const params = new URLSearchParams(prev)
+            params.set("issueId", childId)
+            return params
+        })
+    }, [setSearchParams])
 
-    const handleClickOutside = (event) => {
-        if (commandRef.current && !commandRef.current.contains(event.target)) {
-            setOpenCommand(false);
-        }
-    };
-    const handleSelectEpic = useCallback((selectedParent) => {
-        handleUpdateTask('parentId', selectedParent._id || null, selectedParent || null)
-        setOpenParent(false)
-    }, [handleUpdateTask])
+    const {
+        task,
+        taskDetail,
+        taskKey,
+        taskUrl,
+        taskFetching,
+        currentProject,
+        userData,
+        parentHeaderLabel,
 
-    const handleRemoveEpic = () => {
-        handleUpdateTask('parentId', null)
-    }
-    // console.log("openParent", openParent)
-    useEffect(() => {
-        if (openCommand) {
-            document.addEventListener("click", handleClickOutside);
-        } else {
-            document.removeEventListener("click", handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener("click", handleClickOutside);
-        };
-    }, [openCommand]);
+        control,
+
+        taskTypes,
+        importanceTypes,
+        renderIcon,
+
+        activeDropdown,
+        toggleTaskStatusDropdown,
+        toggleImportanceDropdown,
+
+        isEditingSummary,
+        setIsEditingSummary,
+        tempSummary,
+        setTempSummary,
+        summaryRef,
+        handleSaveSummary,
+
+        isEditing,
+        setIsEditing,
+        handleSaveDescription,
+
+        expandDetails,
+        setExpandDetails,
+
+        openParent,
+        setOpenParent,
+        handleSelectEpic,
+        handleRemoveEpic,
+
+        changeTaskStatus,
+        changeImportance,
+        changeAssignee,
+        changeLabels,
+        changeTeam,
+        changeReporter,
+        changeDueDate,
+
+        vote,
+        voteDetail,
+        voteLoading,
+        addVoteLoading,
+        handleVoteOpen,
+
+        isFlagDialogOpen,
+        setIsFlagDialogOpen,
+        currentFlagTask,
+        closeFlagDialog,
+        confirmFlag,
+        removeFlag,
+
+        isDeleteDialogOpen,
+        setIsDeleteDialogOpen,
+        handleDeleteTask,
+        deleteLoading,
+
+        workItemMenuItems,
+        workRelatItem,
+        handleCopyLink
+    } = useTaskDetail(taskId, { onAfterDelete: handleClose })
 
     const handleScrollEffect = (e) => {
         const scrolled = e.target.scrollTop > 0
@@ -555,8 +194,22 @@ const EditIssue = ({ issue }) => {
                     <CardHeader className="m-0 pb-0 px-0 pt-2 bg-white">
                         <CardTitle >
                             <div className='flex items-center justify-between px-2 h-12'>
-                                <div className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md group flex items-center h-full'>
-                                    {task?.parentDetail === null && (
+                                <div className='hover:bg-neutral-200/40 cursor-pointer px-2 py-2 rounded-md group flex items-center h-full min-w-0'>
+                                    {task?.parentDetail ? (
+                                        // A task that belongs to an epic shows the epic name here, so
+                                        // the parent is visible without scrolling to the parent row.
+                                        <TooltipWrapper content={parentHeaderLabel}>
+                                            <div
+                                                className="flex items-center gap-2 min-w-0 max-w-[260px]"
+                                                onClick={() => handleOpenChild(task.parentDetail._id)}
+                                            >
+                                                {renderIcon('epic')}
+                                                <span className="text-xs font-medium text-neutral-600 truncate group-hover:underline">
+                                                    {parentHeaderLabel}
+                                                </span>
+                                            </div>
+                                        </TooltipWrapper>
+                                    ) : (
                                         <DropdownMenu open={openParent} onOpenChange={setOpenParent} modal={false}>
                                             <DropdownMenuTrigger asChild>
                                                 <div className="cursor-pointer flex items-center">
@@ -609,78 +262,36 @@ const EditIssue = ({ issue }) => {
                                         </div>
                                     )}
 
-                                    {task?.flagDetail?.isFlagged && (
+                                    <div className="flex justify-center items-center">
+                                        <TaskFlagPopover flagDetail={task?.flagDetail} onRemoveFlag={removeFlag} />
+                                    </div>
+
+                                    {/* The panel is 480px wide, which is tight for a
+                                        long description or a busy comment thread.
+                                        This opens the same work item on its own page
+                                        in a new tab, where there is room for both. */}
+                                    {taskUrl && (
                                         <div className="flex justify-center items-center">
-                                            <Popover modal={false}>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        type="button"
-                                                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                    >
-                                                        <Flag size={20} fill="currentColor" />
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent
-                                                    align="end"
-                                                    side="bottom"
-                                                    sideOffset={12}
-                                                    className="w-80 p-0 border border-red-100/80 shadow-xl rounded-xl overflow-hidden bg-white z-[60]"
+                                            <TooltipWrapper content="Open in new tab">
+                                                <Button
+                                                    asChild
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-neutral-500 hover:text-neutral-700"
                                                 >
-                                                    <div className="bg-red-50/80 px-4 py-3 border-b border-red-100 flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <Flag size={16} className="text-red-500" fill="currentColor" />
-                                                            <h4 className="text-sm font-semibold text-red-900">
-                                                                Flagged
-                                                            </h4>
-                                                        </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-7 px-2.5 text-xs text-red-700 hover:text-red-800 hover:bg-white border border-transparent hover:border-red-200 shadow-sm"
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                handleUpdateTask("isFlagged", false);
-                                                            }}
-                                                        >
-                                                            Remove flag
-                                                        </Button>
-                                                    </div>
-                                                    <div className="p-4 text-sm bg-white">
-                                                        {(task.flagDetail?.flaggedBy?.first_name || task.flagDetail?.flaggedAt) && (
-                                                            <div className="mb-3 flex items-center flex-wrap gap-x-1.5 gap-y-1 text-xs text-neutral-500">
-                                                                {task.flagDetail?.flaggedBy?.first_name && (
-                                                                    <span className="font-medium text-neutral-700">
-                                                                        By {task.flagDetail.flaggedBy.first_name} {task.flagDetail.flaggedBy.last_name ?? ""}
-                                                                    </span>
-                                                                )}
-                                                                {task.flagDetail?.flaggedAt && task.flagDetail?.flaggedBy?.first_name && (
-                                                                    <span>•</span>
-                                                                )}
-                                                                {task.flagDetail?.flaggedAt && (
-                                                                    <span>{format(new Date(task.flagDetail.flaggedAt), "MMM d, yyyy")}</span>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                        {task.flagDetail?.reason ? (
-                                                            <div
-                                                                className="text-neutral-600 leading-relaxed break-words"
-                                                                dangerouslySetInnerHTML={{ __html: task.flagDetail.reason }}
-                                                            />
-                                                        ) : (
-                                                            <span className="text-neutral-500 italic">No reason provided</span>
-                                                        )}
-                                                    </div>
-                                                </PopoverContent>
-                                            </Popover>
+                                                    <a
+                                                        href={taskUrl}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        aria-label="Open in new tab"
+                                                    >
+                                                        <ExternalLink size={18} />
+                                                    </a>
+                                                </Button>
+                                            </TooltipWrapper>
                                         </div>
                                     )}
-                                    <div className="flex justify-center items-center">
-                                        <Button variant="ghost" size="icon" type="button" className="text-neutral-500 hover:text-neutral-700">
-                                            <Share2 size={20} />
-                                        </Button>
-                                    </div>
+
                                     <div className="flex justify-center items-center">
                                         <CommonDropdownMenu items={workItemMenuItems} />
                                     </div>
@@ -701,14 +312,18 @@ const EditIssue = ({ issue }) => {
                 >
                     <div className='flex flex-col gap-5 [&::-webkit-scrollbar]:hidden"'>
                         <div className='flex flex-col gap-2'>
-                            <div className="flex items-center cursor-pointer hover:underline group">
+                            <div className="flex items-center group">
                                 <span className="text-neutral-500 font-normal text-base flex items-center gap-x-2">
                                     {renderIcon(taskDetail?.work_type)}
-                                    {taskDetail?.projectKey} - {taskDetail?.taskNumber}
+                                    {taskKey}
 
-                                    {/* Hover icon */}
                                     <TooltipWrapper content={"Copy link"}>
-                                        <Button variant='default' size="icon" type="button">
+                                        <Button
+                                            variant='default'
+                                            size="icon"
+                                            type="button"
+                                            onClick={handleCopyLink}
+                                        >
                                             <Link
                                                 size={16}
                                                 className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -718,8 +333,6 @@ const EditIssue = ({ issue }) => {
                                 </span>
                             </div>
                         </div>
-
-
 
                         {task?.parentDetail && (
                             <div className="flex items-center cursor-pointer hover:underline group">
@@ -773,97 +386,17 @@ const EditIssue = ({ issue }) => {
                             </div>
                         )}
 
-                        <div className='w-full'>
-                            <Controller
-                                name="summary"
-                                control={control}
-                                render={({ field }) => (
-                                    !isEditingSummary ? (
-                                        // Show only a short preview (2 lines) by default so a long
-                                        // summary does not take over the panel. Clicking opens the
-                                        // full summary in an auto-growing field where the whole text
-                                        // is visible and editable.
-                                        <div
-                                            title={field.value || ""}
-                                            className="text-2xl leading-snug font-semibold text-neutral-800 py-2 px-3 hover:bg-neutral-200/50 rounded-md cursor-text transition-all min-h-[48px] break-words border border-transparent line-clamp-2"
-                                            onClick={() => {
-                                                setTempSummary(field.value);
-                                                setIsEditingSummary(true);
-                                                setTimeout(() => {
-                                                    const el = summaryRef.current;
-                                                    if (el) {
-                                                        el.focus();
-                                                        // Grow to fit the full summary on open.
-                                                        el.style.height = 'auto';
-                                                        el.style.height = `${el.scrollHeight}px`;
-                                                    }
-                                                }, 50);
-                                            }}
-                                        >
-                                            {field.value || "Your summary"}
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col gap-2 w-full">
-                                            <Textarea
-                                                ref={(e) => {
-                                                    field.ref(e);
-                                                    summaryRef.current = e;
-                                                }}
-                                                value={tempSummary}
-                                                rows={1}
-                                                onChange={(e) => {
-                                                    setTempSummary(e.target.value);
-                                                    // Keep the field tall enough to show the whole summary.
-                                                    e.target.style.height = 'auto';
-                                                    e.target.style.height = `${e.target.scrollHeight}px`;
-                                                }}
-                                                placeholder="Your summary"
-                                                // text-2xl and md:text-2xl together stop the base Textarea's
-                                                // md:text-sm from shrinking the summary on wider screens.
-                                                className="text-2xl md:text-2xl leading-snug font-semibold text-neutral-800 border-2 border-blue-500 py-2 px-3 shadow-none focus-visible:ring-0 transition-all bg-white resize-none min-h-[48px] overflow-hidden break-words"
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                                        // Enter saves, Shift+Enter adds a new line.
-                                                        e.preventDefault();
-                                                        field.onChange(tempSummary);
-                                                        handleUpdateTask('summary', tempSummary);
-                                                        setIsEditingSummary(false);
-                                                    } else if (e.key === 'Escape') {
-                                                        setIsEditingSummary(false);
-                                                    }
-                                                }}
-                                            />
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button
-                                                    type="button"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="h-8 w-8 rounded-md bg-white hover:bg-neutral-100 shadow-sm border border-neutral-200 text-neutral-600 hover:text-neutral-900"
-                                                    onClick={() => {
-                                                        field.onChange(tempSummary);
-                                                        handleUpdateTask('summary', tempSummary);
-                                                        setIsEditingSummary(false);
-                                                    }}
-                                                >
-                                                    <Check size={16} strokeWidth={2.5} />
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="h-8 w-8 rounded-md bg-white hover:bg-neutral-100 shadow-sm border border-neutral-200 text-neutral-600 hover:text-neutral-900"
-                                                    onClick={() => setIsEditingSummary(false)}
-                                                >
-                                                    <X size={16} strokeWidth={2.5} />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )
-                                )}
-                            />
-                        </div>
-                        <div className='flex items-center flex-wrap gap-3'>
+                        <TaskSummaryField
+                            control={control}
+                            isEditing={isEditingSummary}
+                            setIsEditing={setIsEditingSummary}
+                            tempSummary={tempSummary}
+                            setTempSummary={setTempSummary}
+                            summaryRef={summaryRef}
+                            onSave={handleSaveSummary}
+                        />
 
+                        <div className='flex items-center flex-wrap gap-3'>
                             <div className="flex items-center justify-center">
                                 <Controller
                                     name='task_status'
@@ -909,70 +442,13 @@ const EditIssue = ({ issue }) => {
                                 <CommonDropdownMenu triggerIcon={<Plus size={18} />} triggerTooltip='Add or create related work' items={workRelatItem} />
                             </div>
                         </div>
-                        <div className="flex flex-col gap-2">
-                            <Label className="text-neutral-600 font-medium text-sm ml-1">Description</Label>
 
-                            {!isEditing ? (
-                                <div
-                                    onClick={() => setIsEditing(true)}
-                                    className="min-h-[60px] py-3 px-3 border border-neutral-200 hover:border-neutral-400/50 rounded-md transition cursor-pointer hover:bg-neutral-100/50"
-                                >
-                                    <Controller
-                                        name="description"
-                                        control={control}
-                                        render={({ field }) => (
-                                            field.value ? (
-                                                <div
-                                                    className="text-neutral-500  px-2 font-normal text-sm max-w-none"
-                                                    dangerouslySetInnerHTML={{ __html: field.value }}
-                                                />
-                                            ) : (
-                                                <span className="text-neutral-400">Add a description....</span>
-                                            )
-                                        )}
-                                    />
-                                </div>
-                            ) : (
-                                <div className="mt-2 overflow-hidden animate-in fade-in duration-200">
-                                    <Controller
-                                        name="description"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <div className="mt-2 border rounded-md overflow-hidden">
-                                                <RichTextEditor
-                                                    content={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Add description..."
-                                                    minHeight="150px"
-                                                />
-                                            </div>
-                                        )}
-                                    />
-                                    <div className="flex justify-end gap-2 p-2 bg-neutral-50 border-t">
-                                        <Button
-                                            variant="default"
-                                            type="button"
-                                            size="sm"
-                                            onClick={() => setIsEditing(false)}
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
-                                            variant="teritary"
-                                            type="button"
-                                            size="sm"
-                                            onClick={() => {
-                                                const value = getValues("description")
-                                                handleUpdateTask("description", value)
-                                                setIsEditing(false)
-                                            }}
-                                        >
-                                            Save
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <TaskDescriptionField
+                            control={control}
+                            isEditing={isEditing}
+                            setIsEditing={setIsEditing}
+                            onSave={handleSaveDescription}
+                        />
                     </div>
 
                     <ChildIssuesSection
@@ -993,87 +469,24 @@ const EditIssue = ({ issue }) => {
                         </CardHeader>
                         {expandDetails && (
                             <CardContent className="bg-neutral-200/10 py-5 px-4 flex flex-col gap-6 relative rounded-b-md">
-                                <div className='flex flex-col gap-1.5'>
-                                    <Label className='text-sm text-neutral-600 font-medium'>
-                                        Assignee
-                                    </Label>
-                                    <Controller
-                                        name="assigneeDetail"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <DynamicDropdownSelector
-                                                slug={'member'}
-                                                value={field.value}
-                                                onChange={changleAssignee}
-                                                label={"Select assignee"}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <TaskPeopleFields
+                                    control={control}
+                                    changeAssignee={changeAssignee}
+                                    changeLabels={changeLabels}
+                                    changeTeam={changeTeam}
+                                    changeReporter={changeReporter}
+                                />
 
-                                <div className='flex flex-col gap-1.5 w-full'>
-                                    <Label className='text-sm text-neutral-600 font-medium'>
-                                        Labels
-                                    </Label>
-                                    <Controller
-                                        name='labels'
-                                        control={control}
-                                        render={({ field }) => (
-                                            <LabelSelector
-                                                onChange={changeLables}
-                                                value={field.value}
-                                            />
-                                        )}
-                                    />
-                                </div>
-
-                                <div className='flex flex-col gap-1.5'>
-                                    <Label className='text-sm text-neutral-600 font-medium'>
-                                        Team
-                                    </Label>
-                                    <Controller
-                                        name="teamDetail"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <DynamicDropdownSelector
-                                                slug={'team'}
-                                                onChange={changeTeam}
-                                                value={field.value}
-                                                label={"Choose a team"}
-                                            />
-                                        )}
-                                    />
-                                </div>
-
-                                {/* For Report  */}
-
-                                <div className='flex flex-col gap-1.5'>
-                                    <Label className='text-sm text-neutral-600 font-medium'>
-                                        Reporter
-                                    </Label>
-                                    <Controller
-                                        name="reporterDetail"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <DynamicDropdownSelector
-                                                slug={'member'}
-                                                value={field.value}
-                                                onChange={changeReporter}
-                                                label={"Add repoter"}
-                                            />
-                                        )}
-                                    />
-                                </div>
-
+                                <TaskDueDateField control={control} onChange={changeDueDate} />
                             </CardContent>
-
-                        )
-                        }
+                        )}
                     </Card>
 
                     <div className='mt-8'>
                         <Label className="text-neutral-500">Activity</Label>
-                        <Tabs>
+                        {/* Without defaultValue no tab is selected on first
+                            render and the comment box never shows. */}
+                        <Tabs defaultValue='comments'>
                             <TabsList>
                                 <TabsTrigger value='comments'>
                                     Comments
@@ -1085,7 +498,11 @@ const EditIssue = ({ issue }) => {
                             </TabsList>
                             <TabsContent value='comments'>
                                 <CommentComponent userData={userData} />
-                                {/* <HistoryComponent /> */}
+                            </TabsContent>
+                            <TabsContent value='history'>
+                                <p className="py-6 text-sm text-neutral-400">
+                                    The change history is not available yet.
+                                </p>
                             </TabsContent>
                         </Tabs>
                     </div>
@@ -1097,15 +514,8 @@ const EditIssue = ({ issue }) => {
                     setIsOpen={setIsFlagDialogOpen}
                     taskInfo={currentFlagTask}
                     isFlagged={true}
-                    onConfirm={(reason) => {
-                        handleUpdateTask('isFlagged', true, currentFlagTask._id)
-                        setIsFlagDialogOpen(false)
-                        setCurrentFlagTask(null)
-                    }}
-                    onCancel={() => {
-                        setIsFlagDialogOpen(false)
-                        setCurrentFlagTask(null)
-                    }}
+                    onConfirm={confirmFlag}
+                    onCancel={closeFlagDialog}
                 />
             )}
             <DeleteTaskDialog

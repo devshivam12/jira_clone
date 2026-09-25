@@ -9,7 +9,6 @@ const DashboardRedirect = () => {
     const navigate = useNavigate()
     const {currentProject, projectSlug, templateSlug, defaultTab} = useProjectData()
 
-    console.log("currentProject", currentProject)
     
     useEffect(() => {
         dispatch(loadLastAccessedProject())

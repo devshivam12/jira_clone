@@ -10,17 +10,10 @@ import { timelineApi, useGetEpicChildrenQuery } from "@/redux/graphql_api/timeli
 import { useQuickCreateTaskMutation } from "@/redux/graphql_api/task";
 import ShowToast from "./ShowToast";
 
-// How many children to show at once. The panel is a summary of the work under
-// a task, not a full backlog, so it stays on one page.
 const CHILD_LIMIT = 50;
 
 const EMPTY_LIST = Object.freeze([]);
 
-// The "Child work items" block inside the task editor. It lists everything
-// whose parent is this task and lets a new child be added inline, which is the
-// same relationship the Timeline draws under an epic. Creating here uses
-// quickCreateTask with a parentId, so the new item shows up on the Timeline
-// under the same epic without any extra step.
 const ChildIssuesSection = ({ taskId, projectId, onOpenChild }) => {
     const { workFlow, importance } = useProjectData();
     const dispatch = useDispatch();
@@ -55,9 +48,6 @@ const ChildIssuesSection = ({ taskId, projectId, onOpenChild }) => {
             ShowToast.error("Summary is required");
             return;
         }
-        // Status and importance are required by the API but there is nowhere
-        // sensible to pick them in a one line form, so a new child starts on
-        // the first step of the project's own workflow.
         const firstStatus = workFlow?.[0]?.slug;
         const firstImportance = importance?.[0]?.slug;
         if (!projectId || !firstStatus || !firstImportance) {
@@ -83,9 +73,6 @@ const ChildIssuesSection = ({ taskId, projectId, onOpenChild }) => {
                 ShowToast.success(response?.message || "Child work item created");
                 setSummary("");
                 refetch();
-                // The Timeline shows a done/total count per epic and draws a
-                // row per child, so its data is stale the moment a child is
-                // added from here.
                 dispatch(timelineApi.util.invalidateTags(["Timeline"]));
             } else {
                 ShowToast.error(response?.message || "Could not create the child work item");

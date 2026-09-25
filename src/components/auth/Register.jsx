@@ -83,7 +83,6 @@ const Register = () => {
   };
 
   const handleSignUp = async (data) => {
-    console.log("data", data)
     try {
 
       const response = await registerUser({
@@ -94,10 +93,8 @@ const Register = () => {
         last_name: data.last_name,
       }).unwrap();
 
-      console.log("response", response)
       const userData = response.user
       if (response.status === 201) {
-        console.log("userData", userData)
         dispatch(userExist(response.user));
         dispatch(setClientId(response.user.clientId));
         navigate(`/choose-project?token=${response.user.token}&clientId=${response.user.clientId}`)
@@ -124,7 +121,6 @@ const Register = () => {
         })
       }
     } catch (error) {
-      console.log("error", error)
       // dispatch(userNotExist(true))
       ShowToast.error('Registeration failed', {
         description: error.message,

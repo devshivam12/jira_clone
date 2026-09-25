@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, Radio } from "lucide-react";
 import ManageAvatar from "@/components/common/ManageAvatar";
+import TooltipWrapper from "@/components/common/TooltipWrapper";
 import { cn } from "@/lib/utils";
 import { getEpicTheme } from "./epicColors";
 import { daysFromToday, getEpicProgress } from "./timelineDate";
@@ -69,11 +70,12 @@ const RunningEpicCard = React.memo(function RunningEpicCard({ epic, onSelect }) 
           />
           {/* Where the calendar says the epic should be by now. */}
           {timePct !== null && (
-            <span
-              className="absolute -top-0.5 h-2.5 w-0.5 rounded-full bg-neutral-400"
-              style={{ left: `${timePct}%` }}
-              title="Expected progress by today"
-            />
+            <TooltipWrapper content="Expected progress by today">
+              <span
+                className="absolute -top-0.5 h-2.5 w-0.5 rounded-full bg-neutral-400"
+                style={{ left: `${timePct}%` }}
+              />
+            </TooltipWrapper>
           )}
         </div>
 

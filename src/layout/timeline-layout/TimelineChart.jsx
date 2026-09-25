@@ -1,39 +1,50 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays } from "date-fns";
-import { ChevronRight, Loader2, Plus, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, Flag, Loader2, Maximize2, Plus, SlidersHorizontal } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import EpicBar from "./EpicBar";
 import ChildTaskBar from "./ChildTaskBar";
 import EpicDetailsPopover from "./EpicDetailsPopover";
+import EpicTasksDialog from "./EpicTasksDialog";
+import SprintMarkers, { SprintBoundaries } from "./SprintMarkers";
 import DependencyLines from "./DependencyLines";
 import InlineCreateTaskRow from "@/components/data-table/inline-create-task-row";
 import ManageAvatar from "@/components/common/ManageAvatar";
 import TooltipWrapper from "@/components/common/TooltipWrapper";
 import { cn } from "@/lib/utils";
-import { getEpicTheme } from "./epicColors";
+import { getEpicTheme, getStatusColorProps } from "./epicColors";
 import { useEpicChildren, usePruneExpanded } from "./useEpicChildren";
 import {
   buildAxisColumns,
   quarterKey,
   dateToX,
   xToDate,
+  formatTaskDateRange,
   getBarGeometry,
   isRunningNow,
+  layoutSprints,
   MIN_PX_PER_DAY,
   MAX_PX_PER_DAY,
+  SPRINT_LANE_HEIGHT,
 } from "./timelineDate";
 
 const EPIC_ROW_HEIGHT = 56;
 // Child rows are only a little shorter than an epic row. They carry a real
 // bar with a readable label inside it, so squeezing them into a thin strip
 // made the tasks under an epic hard to read and hard to hit with a pointer.
+// The label cell holds two lines - name on top, status and dates below - and
+// that is what this height is set for.
 const CHILD_ROW_HEIGHT = 46;
-const CHILD_MORE_HEIGHT = 30;
-// The "add a task" line that closes off an epic's box.
-const CHILD_ADD_HEIGHT = 34;
+const CHILD_MORE_HEIGHT = 34;
+// The "add a task" line that closes off an epic's group.
+const CHILD_ADD_HEIGHT = 36;
 const LABEL_WIDTH = 288;
 const HEADER_HEIGHT = 44;
+
+// A finished task is drawn muted with a tick instead of a status dot. Projects
+// name this step themselves, so both the slug and the label are checked.
+const DONE_STATUS_WORDS = new Set(["done", "complete", "completed", "closed"]);
 
 // The sticky label cell for one epic. Split out and memoized so scrolling
 // (which changes only the mounted window) doesn't re-render the label of
@@ -45,6 +56,7 @@ const EpicRowLabel = React.memo(function EpicRowLabel({
   onToggle,
   onAddChild,
   onOpenDetails,
+  onOpenAllTasks,
 }) {
   // Precomputed here rather than inline in JSX so we don't allocate a fresh
   // split() array for every row on every render.
@@ -61,18 +73,24 @@ const EpicRowLabel = React.memo(function EpicRowLabel({
       className="shrink-0 sticky left-0 z-10 border-r border-neutral-200 bg-white group-hover/row:bg-neutral-50 flex items-center gap-2 pl-2 pr-3 transition-colors"
       style={{ width: LABEL_WIDTH }}
     >
-      <button
-        type="button"
-        onClick={() => onToggle(epic._id)}
-        disabled={childCount === 0}
-        className={cn(
-          "shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 transition-colors",
-          childCount === 0 ? "opacity-25 cursor-default" : "hover:bg-neutral-200 hover:text-neutral-700"
-        )}
-        title={childCount === 0 ? "No child tasks" : isExpanded ? "Hide tasks" : "Show tasks"}
+      <TooltipWrapper
+        content={childCount === 0 ? "No child tasks" : isExpanded ? "Hide tasks" : "Show tasks"}
       >
-        <ChevronRight size={15} className={cn("transition-transform duration-150", isExpanded && "rotate-90")} />
-      </button>
+        {/* aria-disabled instead of disabled: a disabled button receives no
+            pointer events, so the tooltip that explains why it does nothing
+            would never open. The click is guarded instead. */}
+        <button
+          type="button"
+          onClick={() => { if (childCount > 0) onToggle(epic._id); }}
+          aria-disabled={childCount === 0}
+          className={cn(
+            "shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 transition-colors",
+            childCount === 0 ? "opacity-25 cursor-default" : "hover:bg-neutral-200 hover:text-neutral-700"
+          )}
+        >
+          <ChevronRight size={15} className={cn("transition-transform duration-150", isExpanded && "rotate-90")} />
+        </button>
+      </TooltipWrapper>
 
       <span className={cn("h-6 w-1 shrink-0 rounded-full", theme.bar)} />
 
@@ -97,31 +115,50 @@ const EpicRowLabel = React.memo(function EpicRowLabel({
         </span>
       )}
 
+      {/* Opens the epic's whole task list in a dialog. The rows under a bar
+          are a peek - a narrow label column, 25 tasks at a time - so an epic
+          with more than a screenful of work needs somewhere with room to read
+          it properly. Only offered when there is something to open. */}
+      {childCount > 0 && (
+        <TooltipWrapper content={`View all ${childCount} tasks`}>
+          <button
+            type="button"
+            onClick={() => onOpenAllTasks(epic._id)}
+            aria-label={`View all ${childCount} tasks`}
+            className="shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 opacity-0 focus:opacity-100 group-hover/row:opacity-100 hover:bg-blue-50 hover:text-blue-600 transition-opacity"
+          >
+            <Maximize2 size={13} />
+          </button>
+        </TooltipWrapper>
+      )}
+
       {/* Adds a task under this epic. Hidden until the row is hovered (or the
           button itself is focused, so it stays reachable from the keyboard)
           because one always-on icon per row turns the label column into a
-          wall of plus signs. Plain `title` rather than TooltipWrapper: these
-          two sit in every mounted row, and a Radix tooltip root per row is a
-          lot of live objects for a one-line hint. */}
-      <button
-        type="button"
-        onClick={() => onAddChild(epic)}
-        title="Add a task to this epic"
-        className="shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 opacity-0 focus:opacity-100 group-hover/row:opacity-100 hover:bg-blue-50 hover:text-blue-600 transition-opacity"
-      >
-        <Plus size={15} />
-      </button>
+          wall of plus signs. */}
+      <TooltipWrapper content="Add a task to this epic">
+        <button
+          type="button"
+          onClick={() => onAddChild(epic)}
+          aria-label="Add a task to this epic"
+          className="shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 opacity-0 focus:opacity-100 group-hover/row:opacity-100 hover:bg-blue-50 hover:text-blue-600 transition-opacity"
+        >
+          <Plus size={15} />
+        </button>
+      </TooltipWrapper>
 
       {/* Colour and dependencies live in their own small popover; the bar
           itself now opens the full editor instead. */}
-      <button
-        type="button"
-        onClick={() => onOpenDetails(epic._id)}
-        title="Colour and dependencies"
-        className="shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 opacity-0 focus:opacity-100 group-hover/row:opacity-100 hover:bg-neutral-200 hover:text-neutral-700 transition-opacity"
-      >
-        <SlidersHorizontal size={14} />
-      </button>
+      <TooltipWrapper content="Colour and dependencies">
+        <button
+          type="button"
+          onClick={() => onOpenDetails(epic._id)}
+          aria-label="Colour and dependencies"
+          className="shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 opacity-0 focus:opacity-100 group-hover/row:opacity-100 hover:bg-neutral-200 hover:text-neutral-700 transition-opacity"
+        >
+          <SlidersHorizontal size={14} />
+        </button>
+      </TooltipWrapper>
 
       {epic.assigneeDetail?._id && (
         <ManageAvatar
@@ -136,68 +173,167 @@ const EpicRowLabel = React.memo(function EpicRowLabel({
   );
 });
 
-// One slice of the box that wraps everything under an expanded epic.
+// The branch drawn down the left of everything under an expanded epic: a line
+// in the parent epic's colour with a short elbow into each row, so a run of
+// tasks reads as hanging off the bar above it. The last row of a group stops
+// its line at the elbow, which closes the branch the way a tree view does.
 //
-// The box is not a single tall element. Only a window of rows is ever
-// mounted, so a real container around them would have to be as tall as the
-// whole group whether or not any of it is on screen - the same mistake the
-// dependency overlay used to make. Instead every row draws its own slice:
-// side borders always, a rounded top on the first slice, a rounded bottom on
-// the last. Stacked together they read as one box, and the browser only ever
-// paints the part you can see.
+// Every row draws its own piece rather than a real container wrapping the
+// group. Only a window of rows is ever mounted, so a container would have to
+// be as tall as the whole group whether or not any of it is on screen - the
+// same mistake the dependency overlay used to make.
+const ChildRail = React.memo(function ChildRail({ theme, isGroupEnd }) {
+  return (
+    <span className="relative shrink-0 w-5 self-stretch" aria-hidden="true">
+      <span
+        className={cn(
+          "absolute left-1.5 top-0 w-[2px] rounded-full opacity-60",
+          theme.bar,
+          // Stops level with the elbow on the closing row, so the branch ends
+          // in an "L" instead of running past its last item.
+          isGroupEnd ? "h-[calc(50%_+_1px)]" : "h-full"
+        )}
+      />
+      <span
+        className={cn(
+          "absolute left-1.5 top-1/2 h-[2px] w-2.5 -translate-y-1/2 rounded-full opacity-60",
+          theme.bar
+        )}
+      />
+    </span>
+  );
+});
+
+// The sticky label cell shared by a child row, its "show more" line and its
+// "add task" line, so all three sit on the same rail and the same indent.
 //
-// It lives in the label column, which is 288px. Extending it across the track
-// would mean a bordered element up to twenty thousand pixels wide per row.
+// The background has to be fully opaque: this cell is what the bars slide
+// behind when the chart is scrolled sideways.
 const ChildGroupCell = React.memo(function ChildGroupCell({
-  accent,
-  isGroupStart,
+  theme,
   isGroupEnd,
   children,
 }) {
   return (
     <div
-      className="shrink-0 sticky left-0 z-10 border-r border-neutral-200 bg-white flex items-stretch pl-7 pr-3"
+      className="shrink-0 sticky left-0 z-10 flex items-stretch gap-1.5 border-r border-neutral-200 bg-neutral-50 pl-4 pr-2.5 transition-colors group-hover/child:bg-blue-50"
       style={{ width: LABEL_WIDTH }}
     >
-      <div
-        className={cn(
-          "flex flex-1 min-w-0 items-stretch overflow-hidden border-x border-neutral-200 bg-neutral-50",
-          isGroupStart && "rounded-t-lg border-t",
-          isGroupEnd && "rounded-b-lg border-b"
-        )}
-      >
-        {/* Carries the parent epic's colour down the whole group, so a run of
-            tasks is tied to the bar it belongs to at a glance. Unbroken
-            because the row divider below starts after it. */}
-        <span className={cn("w-1 shrink-0", accent)} />
-        <div
-          className={cn(
-            "flex min-w-0 flex-1 items-center gap-2 px-2",
-            !isGroupStart && "border-t border-neutral-200/70"
-          )}
-        >
-          {children}
-        </div>
-      </div>
+      <ChildRail theme={theme} isGroupEnd={isGroupEnd} />
+      <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
     </div>
   );
 });
 
+// One child task in the label column. Two lines, because a single line of
+// "dot, key, name" left most of a 46px row empty and told the reader nothing
+// they could act on: the status, the dates and who owns it were all only
+// available by opening the task.
 const ChildRowLabel = React.memo(function ChildRowLabel({
   task,
-  statusColor,
-  statusName,
-  accent,
-  isGroupStart,
+  status,
+  workTypeMeta,
+  theme,
   isGroupEnd,
 }) {
   const taskKey = task.project_key && task.taskNumber ? `${task.project_key}-${task.taskNumber}` : null;
+  const dateLabel = useMemo(
+    () => formatTaskDateRange(task.startDate, task.dueDate),
+    [task.startDate, task.dueDate]
+  );
+  const [firstName, lastName] = useMemo(
+    () => (task.assigneeDetail?.name || "").split(" "),
+    [task.assigneeDetail?.name]
+  );
+  const dot = getStatusColorProps(status?.color);
+  const isDone = !!status?.isDone;
 
   return (
-    <ChildGroupCell accent={accent} isGroupStart={isGroupStart} isGroupEnd={isGroupEnd}>
-      <span className={cn("h-2 w-2 shrink-0 rounded-full", statusColor || "bg-neutral-300")} title={statusName} />
-      {taskKey && <span className="shrink-0 text-[11px] font-semibold text-neutral-400">{taskKey}</span>}
-      <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-700">{task.summary}</span>
+    <ChildGroupCell theme={theme} isGroupEnd={isGroupEnd}>
+      {/* The same work type icon the backlog rows use, so a bug under an epic
+          is recognisable here without reading anything. */}
+      {workTypeMeta?.icon ? (
+        <TooltipWrapper content={workTypeMeta.name}>
+          <span
+            className={cn(
+              "shrink-0 grid h-[18px] w-[18px] place-items-center rounded-md",
+              workTypeMeta.color || "bg-neutral-300"
+            )}
+          >
+            <img
+              src={workTypeMeta.icon}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-2.5 w-2.5 filter brightness-0 invert"
+            />
+          </span>
+        </TooltipWrapper>
+      ) : (
+        <span
+          style={dot.style}
+          className={cn("h-2 w-2 shrink-0 rounded-full", dot.className)}
+        />
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          {taskKey && (
+            <span className="shrink-0 text-[10px] font-bold tracking-wide text-neutral-400">
+              {taskKey}
+            </span>
+          )}
+          {/* The line is truncated to fit the label column, so the tooltip is
+              often the only way to read the whole name. */}
+          <TooltipWrapper content={task.summary}>
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[12.5px] font-medium leading-tight",
+                isDone ? "text-neutral-400 line-through" : "text-neutral-800"
+              )}
+            >
+              {task.summary}
+            </span>
+          </TooltipWrapper>
+          {task.isFlagged && (
+            <Flag size={10} className="shrink-0 text-rose-500" fill="currentColor" />
+          )}
+        </div>
+
+        <div className="mt-1 flex items-center gap-1.5">
+          <TooltipWrapper content={status?.name || "No status"}>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-1.5 py-[1px] text-[9.5px] font-semibold uppercase tracking-wide text-neutral-500 ring-1 ring-neutral-200">
+              <span
+                style={dot.style}
+                className={cn("h-1.5 w-1.5 rounded-full", dot.className)}
+              />
+              <span className="max-w-[72px] truncate">{status?.name || "No status"}</span>
+            </span>
+          </TooltipWrapper>
+          <span
+            className={cn(
+              "truncate text-[10px] leading-none",
+              dateLabel ? "text-neutral-400" : "text-neutral-300 italic"
+            )}
+          >
+            {dateLabel || "No dates"}
+          </span>
+        </div>
+      </div>
+
+      {task.assigneeDetail?._id && (
+        <span className="shrink-0">
+          {/* The avatar carries the project tooltip itself, so the name is
+              shown the same way here as on the epic row above. */}
+          <ManageAvatar
+            firstName={firstName}
+            lastName={lastName}
+            size="xs"
+            showTooltip
+            tooltipContent={task.assigneeDetail.name}
+          />
+        </span>
+      )}
     </ChildGroupCell>
   );
 });
@@ -242,54 +378,58 @@ const AxisHeaderColumns = React.memo(function AxisHeaderColumns({
             style={{ left: col.x, width: col.width }}
           >
             {isClickable ? (
-              <button
-                type="button"
-                onClick={() => onSelectQuarter(col.start)}
-                aria-pressed={isSelected}
-                className={cn(
-                  "h-full w-full min-w-0 flex flex-col justify-center px-3 pb-1.5 text-left leading-tight transition-colors",
-                  !isSelected && "hover:bg-blue-50/50 hover:text-blue-600"
-                )}
-                title={
+              <TooltipWrapper
+                direction="bottom"
+                content={
                   isSelected
                     ? `${col.label} (${col.sublabel}) is being shown`
                     : `Show the epics of ${col.label} (${col.sublabel})`
                 }
               >
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate">{col.label}</span>
-                  {isCurrent && (
-                    <span className="shrink-0 rounded-full bg-rose-500 px-1.5 py-px text-[8px] font-bold leading-none text-white">
-                      Now
-                    </span>
-                  )}
-                </span>
-                <span
+                <button
+                  type="button"
+                  onClick={() => onSelectQuarter(col.start)}
+                  aria-pressed={isSelected}
                   className={cn(
-                    "block truncate text-[9px] font-semibold normal-case tracking-normal",
-                    isSelected ? "text-blue-500" : "text-neutral-400"
+                    "h-full w-full min-w-0 flex flex-col justify-center px-3 pb-1.5 text-left leading-tight transition-colors",
+                    !isSelected && "hover:bg-blue-50/50 hover:text-blue-600"
                   )}
                 >
-                  {col.sublabel}
-                </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="truncate">{col.label}</span>
+                    {isCurrent && (
+                      <span className="shrink-0 rounded-full bg-rose-500 px-1.5 py-px text-[8px] font-bold leading-none text-white">
+                        Now
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "block truncate text-[9px] font-semibold normal-case tracking-normal",
+                      isSelected ? "text-blue-500" : "text-neutral-400"
+                    )}
+                  >
+                    {col.sublabel}
+                  </span>
 
-                {/* Every quarter carries a bar along the bottom of its column,
-                    so the four of them read as a row of bars you can click,
-                    not just column headings. The running quarter's is red -
-                    it marks all three of its months rather than only the
-                    single day the today line sits on - the selected one's is
-                    blue, and the rest stay grey until hovered. */}
-                <span
-                  className={cn(
-                    "absolute inset-x-0 bottom-0 h-1.5 transition-colors",
-                    isCurrent
-                      ? "bg-rose-500"
-                      : isSelected
-                        ? "bg-blue-500"
-                        : "bg-neutral-200 group-hover/col:bg-blue-300"
-                  )}
-                />
-              </button>
+                  {/* Every quarter carries a bar along the bottom of its
+                      column, so the four of them read as a row of bars you can
+                      click, not just column headings. The running quarter's is
+                      red - it marks all three of its months rather than only
+                      the single day the today line sits on - the selected
+                      one's is blue, and the rest stay grey until hovered. */}
+                  <span
+                    className={cn(
+                      "absolute inset-x-0 bottom-0 h-1.5 transition-colors",
+                      isCurrent
+                        ? "bg-rose-500"
+                        : isSelected
+                          ? "bg-blue-500"
+                          : "bg-neutral-200 group-hover/col:bg-blue-300"
+                    )}
+                  />
+                </button>
+              </TooltipWrapper>
             ) : (
               <span className="flex-1 min-w-0 truncate">{col.label}</span>
             )}
@@ -303,13 +443,17 @@ const AxisHeaderColumns = React.memo(function AxisHeaderColumns({
                 the chart so the whole year keeps fitting the screen, and a
                 handle that fights that would only look broken. */}
             {onResizeStart && (
-              <div
-                className="absolute inset-y-0 -right-1 w-2 cursor-ew-resize z-10 flex justify-center"
-                onPointerDown={onResizeStart(col)}
-                title="Drag to zoom the timeline (all columns scale together)"
+              <TooltipWrapper
+                direction="bottom"
+                content="Drag to zoom the timeline (all columns scale together)"
               >
-                <div className="w-0.5 h-full bg-transparent group-hover/col:bg-blue-400/70 group-active/col:bg-blue-500" />
-              </div>
+                <div
+                  className="absolute inset-y-0 -right-1 w-2 cursor-ew-resize z-10 flex justify-center"
+                  onPointerDown={onResizeStart(col)}
+                >
+                  <div className="w-0.5 h-full bg-transparent group-hover/col:bg-blue-400/70 group-active/col:bg-blue-500" />
+                </div>
+              </TooltipWrapper>
             )}
           </div>
         );
@@ -366,11 +510,18 @@ const EpicRow = React.memo(function EpicRow({
   onAddChild,
   onCommitDates,
   onOpenDetails,
+  onOpenAllTasks,
   onOpenTask,
 }) {
   return (
     <div
-      className="group/row flex absolute left-0 w-full border-b border-neutral-200"
+      className={cn(
+        "group/row flex absolute left-0 w-full",
+        // An open epic keeps no line between itself and its first task, so the
+        // epic and the branch below it read as one block rather than as a row
+        // that happens to be followed by some others.
+        !isExpanded && "border-b border-neutral-200"
+      )}
       // Positioned with `top`, not `transform`. A transform would make each
       // row its own stacking context, trapping the sticky label's z-10
       // inside it so the today line and the dependency overlay would paint
@@ -384,6 +535,7 @@ const EpicRow = React.memo(function EpicRow({
         onToggle={onToggle}
         onAddChild={onAddChild}
         onOpenDetails={onOpenDetails}
+        onOpenAllTasks={onOpenAllTasks}
       />
       {/* overflow-hidden clips bars to the visible period. An epic can start
           inside the quarter and end long after it, and without this its bar
@@ -411,87 +563,88 @@ const EpicRow = React.memo(function EpicRow({
 });
 
 // A child task's row. The whole row is the click target (label cell and track
-// alike) so a task with no dates - which has only a text marker on the track -
+// alike) so a task with no dates - which draws nothing on the track at all -
 // is just as easy to open as one with a bar.
 //
-// No bottom border: the box drawn by ChildGroupCell is what separates the
-// rows now, and a border across the row would cut straight through it. The
-// last row of a group closes the box off across the track instead.
+// `group/child` is what ties the two halves together: hovering anywhere on the
+// row tints the label cell and lights up the bar, even though the two are far
+// apart on screen. The tint itself is only ever applied to the 288px label
+// cell and to the bar, never to this element, which is as wide as the whole
+// timeline - up to twenty thousand pixels - and would repaint that entire strip
+// twice for every pointer move between rows.
+//
+// No bottom border except on the last row of a group: the rail is what ties
+// the rows together, and a line under each one cut the branch into slices.
 const ChildRow = React.memo(function ChildRow({
   task,
   top,
   totalWidth,
   rangeStart,
   pxPerDay,
-  parentLeft,
-  statusColor,
-  statusName,
-  accent,
-  isGroupStart,
+  status,
+  workTypeMeta,
+  theme,
   isGroupEnd,
   onOpenTask,
 }) {
   return (
     <div
       className={cn(
-        "flex absolute left-0 w-full bg-neutral-50/40 cursor-pointer",
+        "group/child flex absolute left-0 w-full bg-neutral-50/40 cursor-pointer",
         isGroupEnd && "border-b border-neutral-200"
       )}
       style={{ height: CHILD_ROW_HEIGHT, top }}
       onClick={() => onOpenTask(task._id)}
-      title={`Open ${task.summary}`}
     >
       <ChildRowLabel
         task={task}
-        statusColor={statusColor}
-        statusName={statusName}
-        accent={accent}
-        isGroupStart={isGroupStart}
+        status={status}
+        workTypeMeta={workTypeMeta}
+        theme={theme}
         isGroupEnd={isGroupEnd}
       />
-      {/* Same reason as the epic track above: no hover tint on a
-          full-timeline-width element. */}
       <div className="relative flex-1 overflow-hidden" style={{ width: totalWidth }}>
         <ChildTaskBar
           task={task}
           rangeStart={rangeStart}
           pxPerDay={pxPerDay}
-          statusColor={statusColor}
-          statusName={statusName}
-          fallbackLeft={parentLeft}
+          status={status}
+          theme={theme}
         />
       </div>
     </div>
   );
 });
 
-// "Load more tasks" / "Loading tasks", drawn as another slice of the box.
+// "Show the rest" / "Loading tasks", sitting on the same rail as the tasks.
 const ChildMoreRow = React.memo(function ChildMoreRow({
   row,
   top,
   onLoadMore,
 }) {
+  const remaining = row.totalCount ? Math.max(row.totalCount - row.loaded, 0) : 0;
+
   return (
     <div
       className={cn(
-        "flex absolute left-0 w-full bg-neutral-50/40",
+        "group/child flex absolute left-0 w-full bg-neutral-50/40",
         row.isGroupEnd && "border-b border-neutral-200"
       )}
       style={{ height: CHILD_MORE_HEIGHT, top }}
     >
-      <ChildGroupCell accent={row.accent} isGroupStart={row.isGroupStart} isGroupEnd={row.isGroupEnd}>
+      <ChildGroupCell theme={row.theme} isGroupEnd={row.isGroupEnd}>
         {row.loading ? (
-          <span className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400">
             <Loader2 size={11} className="animate-spin" /> Loading tasks…
           </span>
         ) : (
           <button
             type="button"
             onClick={() => onLoadMore(row.epicId)}
-            className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+            className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2 py-1 text-[10.5px] font-semibold text-blue-600 shadow-sm transition-colors hover:border-blue-300 hover:bg-blue-50"
           >
-            Load more tasks
-            {row.totalCount ? ` (${row.loaded} of ${row.totalCount})` : ""}
+            <ChevronDown size={12} />
+            {remaining ? `Show ${remaining} more` : "Show more tasks"}
           </button>
         )}
       </ChildGroupCell>
@@ -499,26 +652,42 @@ const ChildMoreRow = React.memo(function ChildMoreRow({
   );
 });
 
-// The line that closes the box off. Adding a task from here is the same action
-// as the "+" on the epic row above, put where someone reading the list of
-// tasks is already looking.
-const ChildAddRow = React.memo(function ChildAddRow({ row, top, onAddChild }) {
+// The line that closes the branch off. Adding a task from here is the same
+// action as the "+" on the epic row above, put where someone reading the list
+// of tasks is already looking - and so is opening the full list, which is
+// most wanted exactly here, at the bottom of a group that only shows part of
+// the epic.
+const ChildAddRow = React.memo(function ChildAddRow({ row, top, onAddChild, onOpenAllTasks }) {
+  const childCount = row.epic.totalChildren || 0;
+
   return (
     <div
       className={cn(
-        "flex absolute left-0 w-full bg-neutral-50/40",
+        "group/child flex absolute left-0 w-full bg-neutral-50/40",
         row.isGroupEnd && "border-b border-neutral-200"
       )}
       style={{ height: CHILD_ADD_HEIGHT, top }}
     >
-      <ChildGroupCell accent={row.accent} isGroupStart={row.isGroupStart} isGroupEnd={row.isGroupEnd}>
+      <ChildGroupCell theme={row.theme} isGroupEnd={row.isGroupEnd}>
         <button
           type="button"
           onClick={() => onAddChild(row.epic)}
-          className="flex items-center gap-1.5 text-[12px] font-medium text-neutral-400 hover:text-blue-600"
+          className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-neutral-300 bg-white px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-neutral-400 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
         >
-          <Plus size={13} /> Add task
+          <Plus size={12} /> Add task
         </button>
+
+        {childCount > 0 && (
+          <TooltipWrapper content={`View all ${childCount} tasks`}>
+            <button
+              type="button"
+              onClick={() => onOpenAllTasks(row.epic._id)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-neutral-500 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <Maximize2 size={11} /> View all
+            </button>
+          </TooltipWrapper>
+        )}
       </ChildGroupCell>
     </div>
   );
@@ -526,6 +695,8 @@ const ChildAddRow = React.memo(function ChildAddRow({ row, top, onAddChild }) {
 
 const TimelineChart = ({
   epics,
+  sprints,
+  showSprints = false,
   rangeStart,
   rangeEnd,
   pxPerDay: pxPerDayProp,
@@ -537,6 +708,7 @@ const TimelineChart = ({
   projectId,
   workFlow,
   importance,
+  workType,
   onCommitDates,
   onChanged,
   hasMore,
@@ -557,6 +729,11 @@ const TimelineChart = ({
   // showing live data after an edit and follows the bar across zoom changes
   // and re-sorts instead of pointing at a stale snapshot.
   const [detailsId, setDetailsId] = useState(null);
+
+  // Which epic's full task list is open, held the same way and for the same
+  // reason. The dialog is mounted only while this is set, so an epic that was
+  // never opened costs nothing.
+  const [allTasksId, setAllTasksId] = useState(null);
 
   const { expanded, toggleEpic, refreshEpic, loadMoreChildren, pruneTo } = useEpicChildren();
   usePruneExpanded(epics, pruneTo);
@@ -599,6 +776,17 @@ const TimelineChart = ({
     [rangeStart, rangeEnd, pxPerDay, axisUnit]
   );
 
+  // Sprint pills for the band under the axis, and the boundaries they drop
+  // down the rows. Worked out even while the band is switched off, because the
+  // list is short and the layout is cheap next to re-running it the moment
+  // somebody turns it back on.
+  const sprintLayout = useMemo(
+    () => layoutSprints(sprints, rangeStart, rangeEnd, pxPerDay),
+    [sprints, rangeStart, rangeEnd, pxPerDay]
+  );
+  const sprintBandOn = showSprints && sprintLayout.items.length > 0;
+  const sprintBandHeight = sprintBandOn ? sprintLayout.laneCount * SPRINT_LANE_HEIGHT : 0;
+
   // Only drawn when today actually falls inside the period being viewed.
   // Stepping back to an earlier quarter puts today past the right edge, which
   // would widen the scrollable area and leave a stray red line sitting in
@@ -610,6 +798,11 @@ const TimelineChart = ({
   // does not re-render on every parent render the way a fresh Date would make
   // it. Only meaningful while quarter columns are on.
   const currentQuarterKey = axisUnit === "quarter" ? quarterKey(today) : null;
+  // The quarter view says "we are here" with the red bar and the "Now" chip on
+  // the running quarter, so the floating "Today" pill would only be a third
+  // copy of the same fact sitting on top of that quarter's label. The thin
+  // today line down the rows stays either way.
+  const showTodayBadge = showToday && axisUnit !== "quarter";
 
   const statusOptions = useMemo(
     () => (workFlow || []).map((s, i) => ({ id: i + 1, name: s.name, value: s.slug, color: s.color })),
@@ -619,11 +812,40 @@ const TimelineChart = ({
     () => (importance || []).map((imp, i) => ({ id: i + 1, name: imp.name, value: imp.slug, color: imp.color })),
     [importance]
   );
+  // One entry per workflow step, built once. Child rows read their status from
+  // here, so the name, the dot colour and "is this finished" are worked out for
+  // the whole project instead of per row, and the object handed to a row keeps
+  // the same identity across scroll frames - which is what lets the memoized
+  // rows bail out of re-rendering.
   const statusBySlug = useMemo(() => {
     const map = new Map();
-    (workFlow || []).forEach((s) => map.set(s.slug, s));
+    (workFlow || []).forEach((s) => {
+      const slug = (s.slug || "").toLowerCase();
+      const name = (s.name || "").toLowerCase();
+      map.set(s.slug, {
+        name: s.name,
+        color: s.color,
+        isDone: DONE_STATUS_WORDS.has(slug) || DONE_STATUS_WORDS.has(name),
+      });
+    });
     return map;
   }, [workFlow]);
+
+  // Work type (task, bug, story…) icons, keyed the same way, for the small
+  // badge on each child row.
+  const workTypeBySlug = useMemo(() => {
+    const map = new Map();
+    (workType || []).forEach((w) => map.set(w.slug, w));
+    return map;
+  }, [workType]);
+
+  // Priority names and colours, for the epic's task dialog. The chart's own
+  // rows have no room for this column, so nothing else reads it.
+  const importanceBySlug = useMemo(() => {
+    const map = new Map();
+    (importance || []).forEach((imp) => map.set(imp.slug, imp));
+    return map;
+  }, [importance]);
 
   // Epics and their expanded children flattened into one list, so a single
   // virtualizer covers both and child rows scroll as part of the same
@@ -660,13 +882,16 @@ const TimelineChart = ({
 
       if (!state) continue;
 
-      // Everything below belongs to one box. `groupStart` remembers where it
-      // began so the first and last slices can be flagged once the group is
+      // Everything below belongs to one branch. `groupStart` remembers where it
+      // began so the first and last pieces can be flagged once the group is
       // complete - which piece comes last depends on whether there is more to
       // load, so it can't be decided while pushing.
       const groupStart = list.length;
-      const accent = getEpicTheme(epic.color).bar;
-      const parentLeft = getBarGeometry(epic, rangeStart, pxPerDay)?.left || 0;
+      // The whole theme, not just the bar colour: the rail, the child bars and
+      // their borders all come from it. Themes are a fixed lookup table, so the
+      // object below is shared by every row of the group and stays the same
+      // across renders.
+      const theme = getEpicTheme(epic.color);
 
       for (const child of state.children) {
         list.push({
@@ -675,8 +900,7 @@ const TimelineChart = ({
           height: CHILD_ROW_HEIGHT,
           top,
           task: child,
-          parentLeft,
-          accent,
+          theme,
         });
         top += CHILD_ROW_HEIGHT;
       }
@@ -691,12 +915,12 @@ const TimelineChart = ({
           loading: state.loading,
           loaded: state.children.length,
           totalCount: state.totalCount,
-          accent,
+          theme,
         });
         top += CHILD_MORE_HEIGHT;
       }
 
-      // Held back only while the first page is still on its way, so the box
+      // Held back only while the first page is still on its way, so the group
       // doesn't briefly show an empty "Add task" line before its tasks
       // arrive. Once anything is loaded it stays put, including while a
       // later page loads, so the group doesn't change height under a click.
@@ -708,13 +932,14 @@ const TimelineChart = ({
           height: CHILD_ADD_HEIGHT,
           top,
           epic,
-          accent,
+          theme,
         });
         top += CHILD_ADD_HEIGHT;
       }
 
+      // Only the last piece is flagged: it is the one that stops the rail and
+      // closes the group off with a line.
       if (list.length > groupStart) {
-        list[groupStart].isGroupStart = true;
         list[list.length - 1].isGroupEnd = true;
       }
     }
@@ -722,8 +947,12 @@ const TimelineChart = ({
     return { rows: list, epicRowById: byId, rowsHeight: top };
     // `today` is a fresh Date every render but only feeds a same-day
     // comparison, so it is deliberately not a dependency.
+    //
+    // Neither is the zoom. This pass places rows vertically only; the one
+    // thing here that read the axis was the date-less task marker, and that
+    // is gone, so zooming no longer rebuilds the whole row list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epics, expanded, rangeStart, pxPerDay]);
+  }, [epics, expanded]);
 
   const detailsRow = detailsId ? epicRowById.get(detailsId) : null;
   const detailsEpic = detailsRow?.epic || null;
@@ -738,6 +967,14 @@ const TimelineChart = ({
     if (detailsId && !detailsRow) setDetailsId(null);
   }, [detailsId, detailsRow]);
 
+  // Read live off the current list for the same reason, so an epic renamed or
+  // rescheduled while its task dialog is open shows the new values in the
+  // dialog header too.
+  const allTasksEpic = allTasksId ? epicRowById.get(allTasksId)?.epic || null : null;
+  useEffect(() => {
+    if (allTasksId && !allTasksEpic) setAllTasksId(null);
+  }, [allTasksId, allTasksEpic]);
+
   // The rows live below the sticky header, but the element that actually
   // scrolls is the outer container. scrollMargin tells
   // the virtualizer about that offset so the mounted window lines up with
@@ -745,6 +982,9 @@ const TimelineChart = ({
   // than via offsetTop, which would silently return a wrong value if the
   // container ever stopped being the offsetParent.
   const [trackOffset, setTrackOffset] = useState(0);
+  // Re-measured whenever the header changes height, which is what turning the
+  // sprint band on and off does. Left at its first value, every mounted row
+  // would sit one band's worth away from where the virtualizer thinks it is.
   useLayoutEffect(() => {
     const track = trackRef.current;
     const scroller = scrollRef.current;
@@ -752,7 +992,7 @@ const TimelineChart = ({
     const offset =
       track.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     setTrackOffset(offset);
-  }, []);
+  }, [sprintBandHeight]);
 
   // Row heights are exact and known up front, so the virtualizer never has to
   // measure DOM nodes. It reads them through a ref because estimateSize is
@@ -880,6 +1120,11 @@ const TimelineChart = ({
     window.addEventListener("pointerup", handleUp);
   }, [onPxPerDayChange]);
 
+  // Nothing to drag in the quarter view: its width is pinned to the viewport
+  // so the year keeps fitting, and a handle there would be pulling against a
+  // value that gets recomputed straight back.
+  const resizeHandler = fitToWidth ? null : startColumnResize;
+
   useEffect(() => () => columnResizeDetachRef.current?.(), []);
 
   // Stable identity keeps the memoized bars from re-rendering on every
@@ -890,6 +1135,21 @@ const TimelineChart = ({
   }, []);
   const closeDetails = useCallback(() => setDetailsId(null), []);
 
+  const handleOpenAllTasks = useCallback((epicId) => setAllTasksId(epicId), []);
+  const closeAllTasks = useCallback(() => setAllTasksId(null), []);
+
+  // A task added or edited inside the dialog. The dialog keeps its own list up
+  // to date; the chart behind it still holds the old rows under that epic and
+  // the old x/y count on its label, so both are refreshed here.
+  //
+  // Creating calls this straight away - a new task should appear on the chart
+  // at once. Edits call it once, as the dialog closes, rather than on every
+  // dropdown, so a run of small changes is one refetch instead of ten.
+  const handleDialogDataChanged = useCallback(() => {
+    if (allTasksId) refreshEpic(allTasksId);
+    onChanged?.();
+  }, [allTasksId, refreshEpic, onChanged]);
+
   return (
     <div className="flex flex-col h-full min-w-0">
       <div
@@ -897,36 +1157,59 @@ const TimelineChart = ({
         className="flex-1 overflow-auto relative bg-white [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-neutral-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-neutral-400 [&::-webkit-scrollbar-corner]:bg-transparent"
       >
         <div style={{ width: LABEL_WIDTH + totalWidth, minWidth: "100%" }}>
-          <div className="flex sticky top-0 z-20 bg-white border-b border-neutral-200">
-            <div
-              className="shrink-0 border-r border-neutral-200 bg-white sticky left-0 z-30 flex items-center gap-2 pl-4 pr-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400"
-              style={{ width: LABEL_WIDTH, height: HEADER_HEIGHT }}
-            >
-              <span className="flex-1">Epic</span>
-              {/* Same action as the "Add epic" row at the bottom of the list,
-                  put where it stays reachable. The bottom row scrolls away
-                  once a project has more epics than fit on screen. */}
-              <TooltipWrapper content="Create epic" direction="bottom">
-                <button
-                  type="button"
-                  onClick={() => openCreateRow(null)}
-                  className="shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+          {/* The whole header is one sticky block so the axis and the sprint
+              band below it stay together while the rows scroll under them. */}
+          <div className="sticky top-0 z-20 bg-white border-b border-neutral-200">
+            <div className="flex">
+              <div
+                className="shrink-0 border-r border-neutral-200 bg-white sticky left-0 z-30 flex items-center gap-2 pl-4 pr-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400"
+                style={{ width: LABEL_WIDTH, height: HEADER_HEIGHT }}
+              >
+                <span className="flex-1">Epic</span>
+                {/* Same action as the "Add epic" row at the bottom of the list,
+                    put where it stays reachable. The bottom row scrolls away
+                    once a project has more epics than fit on screen. */}
+                <TooltipWrapper content="Create epic" direction="bottom">
+                  <button
+                    type="button"
+                    onClick={() => openCreateRow(null)}
+                    className="shrink-0 h-6 w-6 grid place-items-center rounded-md text-neutral-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  >
+                    <Plus size={15} />
+                  </button>
+                </TooltipWrapper>
+              </div>
+              <div className="relative" style={{ width: totalWidth, height: HEADER_HEIGHT }}>
+                <AxisHeaderColumns
+                  axisColumns={axisColumns}
+                  todayX={todayX}
+                  showToday={showTodayBadge}
+                  onResizeStart={resizeHandler}
+                  onSelectQuarter={onSelectQuarter}
+                  selectedQuarterKey={selectedQuarterKey}
+                  currentQuarterKey={currentQuarterKey}
+                />
+              </div>
+            </div>
+
+            {/* The delivery cycles the dates above belong to. A roadmap in a
+                scrum team is read against sprint boundaries, so without this
+                the reader has to work out from a month label which cycle a bar
+                lands in. Only drawn when the project actually has sprints in
+                the period on screen. */}
+            {sprintBandOn && (
+              <div className="flex border-t border-neutral-200/80 bg-neutral-50/50">
+                <div
+                  className="shrink-0 border-r border-neutral-200 bg-white sticky left-0 z-30 flex items-center pl-4 pr-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400"
+                  style={{ width: LABEL_WIDTH, height: sprintBandHeight }}
                 >
-                  <Plus size={15} />
-                </button>
-              </TooltipWrapper>
-            </div>
-            <div className="relative" style={{ width: totalWidth, height: HEADER_HEIGHT }}>
-              <AxisHeaderColumns
-                axisColumns={axisColumns}
-                todayX={todayX}
-                showToday={showToday}
-                onResizeStart={startColumnResize}
-                onSelectQuarter={onSelectQuarter}
-                selectedQuarterKey={selectedQuarterKey}
-                currentQuarterKey={currentQuarterKey}
-              />
-            </div>
+                  Sprints
+                </div>
+                <div className="relative" style={{ width: totalWidth, height: sprintBandHeight }}>
+                  <SprintMarkers items={sprintLayout.items} />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="relative" ref={trackRef}>
@@ -948,6 +1231,12 @@ const TimelineChart = ({
                 style={{ left: LABEL_WIDTH, width: totalWidth, height: rowsHeight }}
               >
                 <AxisGridLines axisColumns={axisColumns} selectedQuarterKey={selectedQuarterKey} />
+                {/* Sits in the same layer as the month gridlines, so a sprint
+                    edge that falls on a month edge draws one line, not two
+                    side by side. */}
+                {sprintBandOn && (
+                  <SprintBoundaries items={sprintLayout.items} height={rowsHeight} />
+                )}
               </div>
 
               {virtualItems.map((virtualRow) => {
@@ -971,13 +1260,13 @@ const TimelineChart = ({
                       onAddChild={handleAddChild}
                       onCommitDates={onCommitDates}
                       onOpenDetails={handleOpenDetails}
+                      onOpenAllTasks={handleOpenAllTasks}
                       onOpenTask={onOpenTask}
                     />
                   );
                 }
 
                 if (row.kind === "child") {
-                  const status = statusBySlug.get(row.task.task_status);
                   return (
                     <ChildRow
                       key={row.key}
@@ -986,11 +1275,9 @@ const TimelineChart = ({
                       totalWidth={totalWidth}
                       rangeStart={rangeStart}
                       pxPerDay={pxPerDay}
-                      parentLeft={row.parentLeft}
-                      statusColor={status?.color}
-                      statusName={status?.name}
-                      accent={row.accent}
-                      isGroupStart={row.isGroupStart}
+                      status={statusBySlug.get(row.task.task_status)}
+                      workTypeMeta={workTypeBySlug.get(row.task.work_type)}
+                      theme={row.theme}
                       isGroupEnd={row.isGroupEnd}
                       onOpenTask={onOpenTask}
                     />
@@ -999,7 +1286,13 @@ const TimelineChart = ({
 
                 if (row.kind === "child-add") {
                   return (
-                    <ChildAddRow key={row.key} row={row} top={top} onAddChild={handleAddChild} />
+                    <ChildAddRow
+                      key={row.key}
+                      row={row}
+                      top={top}
+                      onAddChild={handleAddChild}
+                      onOpenAllTasks={handleOpenAllTasks}
+                    />
                   );
                 }
 
@@ -1082,17 +1375,44 @@ const TimelineChart = ({
                     <Plus size={15} /> Add epic
                   </button>
                 </div>
-                <div
-                  className="relative flex-1 cursor-cell hover:bg-blue-50/40 transition-colors"
-                  style={{ width: totalWidth }}
-                  onClick={handleTrackClick}
-                  title="Click to add an epic starting here"
-                />
+                {/* The strip is as wide as the whole chart, and Radix places a
+                    tooltip against the middle of its trigger, so the hint is
+                    anchored to the row rather than to the pointer. It still
+                    lands inside the viewport, which is enough for a one-line
+                    hint on a click target this large. */}
+                <TooltipWrapper content="Click to add an epic starting here">
+                  <div
+                    className="relative flex-1 cursor-cell hover:bg-blue-50/40 transition-colors"
+                    style={{ width: totalWidth }}
+                    onClick={handleTrackClick}
+                  />
+                </TooltipWrapper>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Mounted only while an epic's list is open, so the dialog's own query
+          (and the tasks it holds) exist for exactly as long as it is on
+          screen. Outside the scrolling container: it is a modal over the whole
+          page, not part of the chart surface. */}
+      {allTasksEpic && (
+        <EpicTasksDialog
+          epic={allTasksEpic}
+          workFlow={workFlow}
+          statusBySlug={statusBySlug}
+          workTypeBySlug={workTypeBySlug}
+          importanceBySlug={importanceBySlug}
+          projectId={projectId}
+          statusOptions={statusOptions}
+          importanceOptions={importanceOptions}
+          onOpenTask={onOpenTask}
+          onCreated={handleDialogDataChanged}
+          onTaskChanged={handleDialogDataChanged}
+          onClose={closeAllTasks}
+        />
+      )}
 
       {createRow && (
         <div className="border-t border-neutral-200 bg-white">

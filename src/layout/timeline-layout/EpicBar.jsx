@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays } from "date-fns";
+import TooltipWrapper from "@/components/common/TooltipWrapper";
 import { cn } from "@/lib/utils";
 import { getBarGeometry, getEpicProgress } from "./timelineDate";
 import { getEpicTheme } from "./epicColors";
@@ -132,49 +133,52 @@ const EpicBar = ({ epic, rangeStart, pxPerDay, isRunning, isHighlighted, onCommi
 
   return (
     <>
-      <div
-        className={cn(
-          // The track itself is the pale colour and the progress fill is the
-          // solid one, so how far along an epic is reads from across the room
-          // instead of needing the number.
-          "absolute top-1/2 -translate-y-1/2 h-7 rounded-full cursor-grab active:cursor-grabbing group select-none",
-          "transition-shadow duration-150 hover:shadow-lg",
-          theme.barSoft,
-          isRunning && "ring-2 ring-offset-1 ring-offset-white shadow-md",
-          isRunning && theme.ring,
-          isHighlighted && "ring-2 ring-blue-500 ring-offset-2 ring-offset-white",
-          preview && "shadow-lg"
-        )}
-        style={{ left, width }}
-        onPointerDown={startDrag("move")}
-        onClick={handleBarClick}
-        title={`${epic.summary} — click to open, drag to reschedule`}
-      >
-        {total > 0 && workPct > 0 && (
+      {/* The bar is also the drag handle. Radix closes the tooltip on pointer
+          down, so it gets out of the way as soon as a drag starts. */}
+      <TooltipWrapper content={`${epic.summary} — click to open, drag to reschedule`}>
+        <div
+          className={cn(
+            // The track itself is the pale colour and the progress fill is the
+            // solid one, so how far along an epic is reads from across the room
+            // instead of needing the number.
+            "absolute top-1/2 -translate-y-1/2 h-7 rounded-full cursor-grab active:cursor-grabbing group select-none",
+            "transition-shadow duration-150 hover:shadow-lg",
+            theme.barSoft,
+            isRunning && "ring-2 ring-offset-1 ring-offset-white shadow-md",
+            isRunning && theme.ring,
+            isHighlighted && "ring-2 ring-blue-500 ring-offset-2 ring-offset-white",
+            preview && "shadow-lg"
+          )}
+          style={{ left, width }}
+          onPointerDown={startDrag("move")}
+          onClick={handleBarClick}
+        >
+          {total > 0 && workPct > 0 && (
+            <div
+              className={cn("absolute inset-y-0 left-0 rounded-full pointer-events-none", theme.bar)}
+              style={{ width: `${workPct}%` }}
+            />
+          )}
+
           <div
-            className={cn("absolute inset-y-0 left-0 rounded-full pointer-events-none", theme.bar)}
-            style={{ width: `${workPct}%` }}
+            className="absolute inset-y-0 left-0 w-2.5 cursor-ew-resize rounded-l-full opacity-0 group-hover:opacity-100 bg-black/15"
+            onPointerDown={startDrag("resize-start")}
           />
-        )}
+          <div
+            className="absolute inset-y-0 right-0 w-2.5 cursor-ew-resize rounded-r-full opacity-0 group-hover:opacity-100 bg-black/15"
+            onPointerDown={startDrag("resize-end")}
+          />
 
-        <div
-          className="absolute inset-y-0 left-0 w-2.5 cursor-ew-resize rounded-l-full opacity-0 group-hover:opacity-100 bg-black/15"
-          onPointerDown={startDrag("resize-start")}
-        />
-        <div
-          className="absolute inset-y-0 right-0 w-2.5 cursor-ew-resize rounded-r-full opacity-0 group-hover:opacity-100 bg-black/15"
-          onPointerDown={startDrag("resize-end")}
-        />
-
-        {showInnerLabel && (
-          <span className="absolute inset-0 flex items-center gap-1.5 px-3 pointer-events-none">
-            <span className="truncate text-[11px] font-semibold text-neutral-800">{epic.summary}</span>
-            {total > 0 && (
-              <span className="ml-auto shrink-0 text-[10px] font-bold text-neutral-600/80">{workPct}%</span>
-            )}
-          </span>
-        )}
-      </div>
+          {showInnerLabel && (
+            <span className="absolute inset-0 flex items-center gap-1.5 px-3 pointer-events-none">
+              <span className="truncate text-[11px] font-semibold text-neutral-800">{epic.summary}</span>
+              {total > 0 && (
+                <span className="ml-auto shrink-0 text-[10px] font-bold text-neutral-600/80">{workPct}%</span>
+              )}
+            </span>
+          )}
+        </div>
+      </TooltipWrapper>
 
       {!showInnerLabel && (
         <span

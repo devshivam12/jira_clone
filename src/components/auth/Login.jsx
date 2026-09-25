@@ -118,7 +118,6 @@ const Login = () => {
   const handleLogin = async (formData) => {
     try {
       const response = await login(formData).unwrap()
-      console.log("response", response)
 
       if (response.status === 200) {
         setOtpEmail(response.data?.email || formData.email || '')
@@ -149,7 +148,6 @@ const Login = () => {
       }
 
     } catch (error) {
-      console.log("error", error)
       ShowToast.error(error.message)
     }
   }
@@ -166,7 +164,6 @@ const Login = () => {
     }
     try {
       const response = await verifyOtp({ email: otpEmail, otp }).unwrap()
-      console.log("verify response", response)
 
       if (response.status === 200 && response.user) {
         completeAuth(response)
@@ -178,7 +175,6 @@ const Login = () => {
         })
       }
     } catch (error) {
-      console.log("error", error)
       setOtp('')
       ShowToast.error(error.message || 'Something went wrong, please try again')
     }
@@ -227,7 +223,6 @@ const Login = () => {
     };
     handleLogin(formData)
   }
-  console.log("error", error)
 
   return (
     <div className='flex items-center justify-center h-screen'>

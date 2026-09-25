@@ -161,7 +161,6 @@ const CreateBacklog = ({ createSprint, onIssueClick, userData, projectData, view
       })
 
       const result = res?.data?.data?.filterTask
-      console.log("resultresultresultresult", result)
       if (result) {
 
         setFilteredIssue(prev => {

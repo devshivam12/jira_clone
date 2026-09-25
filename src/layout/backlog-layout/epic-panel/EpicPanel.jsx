@@ -213,6 +213,7 @@ const EpicPanel = ({ projectData, onClose, onViewChange }) => {
         {showCreateRow ? (
           <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">
             <InlineCreateTaskRow
+              compact
               projectId={currentProjectId}
               workType="epic"
               statusOptions={taskTypes}

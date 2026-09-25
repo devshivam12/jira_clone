@@ -24,3 +24,16 @@ const FALLBACK = THEMES["bg-purple-500"];
 export function getEpicTheme(color) {
   return THEMES[color] || FALLBACK;
 }
+
+// Workflow status colours come from the project template, where they are saved
+// either as a Tailwind class ("bg-blue-500") or as a hex value ("#2563eb").
+// A hex string used as a class name paints nothing, so it has to go through
+// the style attribute instead. Returns props to spread onto the dot/pill:
+// `{ className }` for a class, `{ style }` for a hex.
+export function getStatusColorProps(color) {
+  if (!color) return { className: "bg-neutral-300" };
+  if (typeof color === "string" && color.startsWith("#")) {
+    return { style: { backgroundColor: color } };
+  }
+  return { className: color };
+}

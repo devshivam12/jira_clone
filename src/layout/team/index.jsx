@@ -69,7 +69,6 @@ const Team = () => {
 
   const handleSelectMember = (memberId) => {
     const selected = memberSuggestions.find(m => m.value === memberId)
-    console.log('Selected member:', selected)
     navigate(`/dashboard/peoples/edit/${selected.value}`)
     // Handle selection logic here
   }

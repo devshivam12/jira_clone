@@ -43,8 +43,11 @@ const WorkSelector = ({ initialValue, value, workTypes, onChange, open, onOpenCh
                 className={`flex items-center gap-2 border-none rounded-md px-2 py-0.5 transition-colors w-30 text-start h-auto ${selectedWork?.color ? selectedWork.color : 'bg-white'}`}
             >
                 {selectedWork ? (
-                    <div className="py-1">
-                        <span className={`text-sm font-medium truncate ${selectedWork.color && 'text-white'}`}>
+                    // min-w-0 lets the label shrink, so in a narrow column the
+                    // name is cut with an ellipsis instead of pushing the
+                    // arrow out of the box.
+                    <div className="min-w-0 flex-1 py-1">
+                        <span className={`block truncate text-sm font-medium ${selectedWork.color && 'text-white'}`}>
                             {selectedWork.name}
                         </span>
                     </div>

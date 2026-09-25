@@ -52,7 +52,6 @@ const AppSidebar = ({
 }) => {
     const location = useLocation()
     const {currentProject, projectSlug, templateSlug, defaultTab, loading, error} = useProjectData()
-    console.log("currentProject", currentProject)
 
     const projectManagementTabs = currentProject.template.fields.tabs.map((item) => ({
         title: item.title,

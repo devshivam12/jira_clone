@@ -10,7 +10,6 @@ const useAuth = () => {
         refetchOnMountOrArgChange: true,
         skip: !localStorage.getItem('accessToken')
     })
-    console.log("data", data)
     useEffect(() => {
         if (isUninitialized) return;
         if (isLoading) {
@@ -19,7 +18,6 @@ const useAuth = () => {
         else if (data) {
             dispatch(userExist(data.data))
             if (data?.data?.clientId) {
-                console.log("data?.data?.clientId", data?.data?.clientId)
                 dispatch(setClientId(data.data.clientId));
             }
         }

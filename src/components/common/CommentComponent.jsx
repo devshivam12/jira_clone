@@ -30,7 +30,6 @@ const CommentComponent = ({ userData }) => {
         if (!isEditing) setIsEditing(true);
         setCommentData(prev => prev + `<p>${msg}</p>`);
     };
-    console.log("userData", userData)
     return (
         <div className="space-y-4 py-4 max-w-full">
             {/* Custom CSS to override CKEditor Colors */}

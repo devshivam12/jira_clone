@@ -1,23 +1,8 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { baseQueryWithReauth } from '../baseQuery'
+import { restApi } from '../restBaseApi'
 
-export const team = createApi({
-    baseQuery: baseQueryWithReauth, 
-    // fetchBaseQuery({
-    //     baseUrl: import.meta.env.VITE_SERVER,
-    //     credentials: "include",
-    //     prepareHeaders: (headers) => {
-    //         const token = localStorage.getItem("accessToken")
-    //         const userData = JSON.parse(localStorage.getItem('userData'));
-    //         console.log("userData", userData)
-    //         if (token && userData) {
-    //             headers.set('Authorization', token)
-    //             headers.set('x-clientId', userData.clientId)
-    //         }
-    //         return headers
-    //     }
-    // }),
-    tagTypes: ["People", "Team"],
+// Injected into the shared REST slice. The exported name and every hook below
+// are unchanged. Tag types moved to restBaseApi.js.
+export const team = restApi.injectEndpoints({
     endpoints: (build) => ({
 
         addPeople: build.mutation({

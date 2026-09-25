@@ -22,11 +22,9 @@ import { useNavigate } from 'react-router-dom'
 const ProjectDrawer = ({ openDrawer, onClose }) => {
     const navigate = useNavigate()
     const { projectSlug, templateSlug } = useProjectData()
-    console.log("projectSlug", projectSlug)
     const { data: projectData, isLoading: isProjectLoading } = useGetTemplateQuery(projectSlug, {
         skip : !openDrawer
     })
-    console.log("projectData", projectData)
     const template = projectData?.data?.templates
     return (
         <Sheet modal={false} open={openDrawer} onOpenChange={onClose} >

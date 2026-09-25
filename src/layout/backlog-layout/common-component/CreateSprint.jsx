@@ -31,10 +31,8 @@ const formatTimeFromISO = (isoString) => {
 };
 
 const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
-  console.log("sprintId", sprintId)
   const { allProjects, currentProject } = useProjectData()
   const { userData } = useUserData()
-  console.log("userData", userData)
 
   const [createSprint, { isLoading: createSprintLoading, isSuccess }] = useCreateSprintMutation()
   const [updateSprint, { isLoading: updateSprintLoading }] = useUpdateSprintMutation()
@@ -43,10 +41,7 @@ const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
     skip: !isOpen || sprintId === null
   })
 
-  console.log("getSprintDetails", getSprintDetails)
   const sprint = getSprintDetails?.data?.getSprintById
-  console.log("sprint", sprint)
-  console.log("api is fail", fetchingSprint)
   const [duration, setDuration] = useState("custom")
   const [openStartDate, setOpenStartDate] = useState(false);
   const [openStartTime, setOpenStartTime] = useState(false);
@@ -65,7 +60,6 @@ const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
       isDefault: item._id === currentProject?._id
     }
   }), [allProjects, currentProject?._id])
-  console.log("projectOptions", projectOptions)
 
   const { register, setValue, watch, getValues, handleSubmit, control, formState: { errors }, reset } = useForm({
     defaultValues: {
@@ -86,7 +80,6 @@ const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
     { value: "3-week", label: "3 Week" },
     { value: "4-week", label: "4 Week" },
   ]
-  console.log("durationOptions", durationOptions)
   const startDateWatcher = useWatch({ control, name: "startDate" });
   const endDateWatcher = useWatch({ control, name: "endDate" })
 
@@ -154,7 +147,6 @@ const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
   }, [duration, setValue])
 
   const onSubmit = async (data) => {
-    console.log("Form data submitted (raw):", data);
 
     const combineDateTime = (dateObj, timeStr) => {
       if (!dateObj || !timeStr) return null;
@@ -200,8 +192,6 @@ const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
         };
 
         const updateResult = await updateSprint(payload).unwrap();
-        console.log("updateSprint", updateResult);
-        console.log("updateResult?.data?.updateSprint?.statusCode", updateResult?.data?.updateSprint?.statusCode)
         if (updateResult?.data?.updateSprint?.statusCode === 200 && updateResult?.data?.updateSprint?.success === true) {
           ShowToast.success(updateResult?.data?.updateSprint?.message, 2000);
           onClose();
@@ -214,7 +204,6 @@ const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
           variables: allVariables
         }
         const result = await createSprint(payload);
-        console.log("result for creating a sprint", result);
 
         const responseData = result.data.data.createSprint;
         if (responseData.statusCode === 200 || responseData.statusCode === 201) {
@@ -225,7 +214,6 @@ const CreateSprint = ({ isOpen, onClose, sprintId = null }) => {
         }
       }
     } catch (error) {
-      console.log("Error submitting sprint:", error);
       ShowToast.error(error.message || "An unexpected error occurred.", 2000);
     }
   };

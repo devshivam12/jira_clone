@@ -28,14 +28,11 @@ const UserButton = () => {
         const storeData = localStorage.getItem("userData");
         return storeData ? JSON.parse(storeData) : null
     })
-    console.log("userData", userData)
     const [logout, { isLoading }] = useLogoutMutation()
 
     const fullName = userData?.first_name.charAt(0).toUpperCase() + userData?.first_name.slice(1) + " " + userData?.last_name.charAt(0).toUpperCase() + userData?.last_name.slice(1)
-    console.log("fullName", fullName)
 
     const name = userData?.first_name.charAt(0).toUpperCase() + userData?.last_name.charAt(0).toUpperCase()
-    console.log("name", name)
     const avatarFallback = userData?.first_name.charAt(0).toUpperCase() ?? userData?.email.charAt(0).toUpperCase() ?? "U";
 
     const handleLogout = async () => {
@@ -63,7 +60,6 @@ const UserButton = () => {
                 useCustom : true
             })
         } catch (error) {
-            console.log("error", error)
             ShowToast.error('Logout failed', {
                 description: error.message,
                 duration : '4000',                

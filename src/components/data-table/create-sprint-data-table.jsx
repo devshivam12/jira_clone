@@ -835,7 +835,6 @@ const SprintTable = ({ projectData, searchQuery, filteredSprints, onLoadMore, ha
 
   const handleEditSprint = (id) => {
     setOpenSprint(true);
-    console.log("openSprint", openSprint)
     setSprintId(id);
   };
 

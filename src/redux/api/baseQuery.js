@@ -29,7 +29,6 @@ export const baseQueryWithReauth = async (args, api, extraOptions) => {
     try {
       await api.dispatch(apiAuth.endpoints.logout.initiate()).unwrap();
     } catch (error) {
-      console.log('Logout API call failed', error);
     }
 
     localStorage.removeItem('accessToken');

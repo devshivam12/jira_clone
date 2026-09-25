@@ -96,27 +96,11 @@ export function shiftPeriod(period, anchor, direction) {
   return addQuarters(anchor, direction);
 }
 
-// The axis range for the chart.
-//
-// When the caller has an explicit window (the period switcher's quarter /
-// half-year / year), that window IS the axis: exactly those months, nothing
-// added. It must not be widened to fit the epics that happen to overlap it,
-// and it must not be stretched to reach today. Doing either meant that
-// stepping back to an earlier quarter kept the axis anchored to today, so the
-// chart grew a month longer for every step back and the quarter you actually
-// picked ended up squeezed into the left edge.
-//
-// Only without a window (no period selected yet) does it fall back to
-// deriving a range from the data, padded a month each side so bars don't sit
-// flush against the edge.
 export function getTimelineRange(epics, sprints, windowStart, windowEnd) {
   if (windowStart && windowEnd) {
     const start = new Date(windowStart);
     const end = new Date(windowEnd);
     if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && start <= end) {
-      // Month-aligned so buildAxisColumns produces whole columns. Quarters,
-      // halves and years already fall on month boundaries, so this is a
-      // no-op for them and a safety net for any other window.
       return { start: startOfMonth(start), end: endOfMonth(end) };
     }
   }
@@ -204,9 +188,106 @@ export function getEpicProgress(epic, today = new Date()) {
   return { total, done, workPct, timePct };
 }
 
+// "3 Aug – 9 Aug" for a task with both dates, one side only when that is all
+// it has. A task with no dates draws nothing on the track at all, so the
+// caller can say so rather than leaving the reader wondering where its bar
+// went. Shared by the child rows on the chart and the epic's task dialog, so
+// the same task reads the same way in both places.
+export function formatTaskDateRange(startDate, dueDate) {
+  const start = startDate ? new Date(startDate) : null;
+  const due = dueDate ? new Date(dueDate) : null;
+  const startOk = start && !Number.isNaN(start.getTime());
+  const dueOk = due && !Number.isNaN(due.getTime());
+
+  if (startOk && dueOk) {
+    const from = format(start, "d MMM");
+    const to = format(due, "d MMM");
+    return from === to ? from : `${from} – ${to}`;
+  }
+  if (dueOk) return `Due ${format(due, "d MMM")}`;
+  if (startOk) return `From ${format(start, "d MMM")}`;
+  return null;
+}
+
 export function dateToX(date, rangeStart, pxPerDay) {
   if (!date) return 0;
   return differenceInCalendarDays(new Date(date), rangeStart) * pxPerDay;
+}
+
+// One row of sprint pills in the band under the axis. Two of them stacked
+// still read as a band rather than a second chart, which is all it is meant
+// to be.
+export const SPRINT_LANE_HEIGHT = 22;
+
+// Sprints of one project rarely overlap, but a project running two boards can
+// have two in flight at once. Those get their own lane so neither is hidden.
+// Past this many the band would be taller than the axis header it sits under,
+// so anything further over shares the last lane.
+const MAX_SPRINT_LANES = 3;
+
+// Breathing room between two pills that follow each other, so back to back
+// sprints read as two blocks and not one long one.
+const SPRINT_LANE_GAP = 4;
+
+// Turns the sprint list into pills placed on the axis: clipped to the visible
+// range, packed into lanes so overlapping sprints stay readable, and flagged
+// with whether they are running now.
+//
+// Sprints without both dates are dropped. A sprint with no end has no span to
+// draw, and guessing one would put a boundary on the chart that nobody set.
+export function layoutSprints(sprints, rangeStart, rangeEnd, pxPerDay, today = new Date()) {
+  const items = (sprints || [])
+    .map((sprint) => {
+      const start = sprint.startDate ? new Date(sprint.startDate) : null;
+      const end = sprint.endDate ? new Date(sprint.endDate) : null;
+      if (!start || !end) return null;
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+      if (end < start) return null;
+      // Entirely outside the period on screen.
+      if (end < rangeStart || start > rangeEnd) return null;
+
+      const clippedStart = start < rangeStart ? rangeStart : start;
+      const clippedEnd = end > rangeEnd ? rangeEnd : end;
+
+      return {
+        _id: sprint._id,
+        name: sprint.name || "Sprint",
+        left: dateToX(clippedStart, rangeStart, pxPerDay),
+        width: Math.max(
+          pxPerDay,
+          (differenceInCalendarDays(clippedEnd, clippedStart) + 1) * pxPerDay
+        ),
+        start,
+        end,
+        isRunning: today >= start && today <= end,
+        // A sprint running past either edge of the period gets a flat end on
+        // that side, so it reads as "continues" rather than as a sprint that
+        // happens to begin exactly where the chart does.
+        startsBefore: start < rangeStart,
+        endsAfter: end > rangeEnd,
+      };
+    })
+    .filter(Boolean)
+    // Left to right, so the packing below only ever has to look at where the
+    // last pill in each lane ended.
+    .sort((a, b) => a.left - b.left || a.width - b.width);
+
+  const laneEnds = [];
+  const placed = items.map((item) => {
+    let lane = laneEnds.findIndex((end) => item.left >= end);
+    if (lane === -1) {
+      if (laneEnds.length < MAX_SPRINT_LANES) {
+        laneEnds.push(0);
+        lane = laneEnds.length - 1;
+      } else {
+        lane = MAX_SPRINT_LANES - 1;
+      }
+    }
+    laneEnds[lane] = item.left + item.width + SPRINT_LANE_GAP;
+    return { ...item, lane };
+  });
+
+  return { items: placed, laneCount: laneEnds.length };
 }
 
 export function xToDate(x, rangeStart, pxPerDay) {

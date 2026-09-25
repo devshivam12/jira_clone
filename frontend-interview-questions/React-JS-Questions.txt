@@ -1,0 +1,12 @@
+👉 Explain how React handles reconciliation and the Virtual DOM.
+👉 How would you improve performance in a large React application (techniques + examples)?
+👉 What’s the difference between useCallback and useMemo, and when would you use them?
+👉 Design a reusable autocomplete/search component - what features and trade-offs would you consider?
+👉 How does the browser event loop work? Explain using async/await, promises, and setTimeout.
+👉 How would you prevent and mitigate XSS, CSRF, and CORS issues in a frontend application?
+👉 Describe how you would structure a scalable frontend architecture for a dashboard application.
+👉 How would you debug a performance bottleneck in UI rendering or slow state updates?
+👉 Explain how to test a complex React component -  what unit/integration/E2E test cases would you cover?
+👉 What are key Web Vitals (LCP, CLS, FID)? How would you optimize them in production apps?
+👉 When would you choose client-side rendering vs. server-side or hybrid rendering?
+👉 Describe a complex challenge you solved in a past project — what was the trade-off and final solution?

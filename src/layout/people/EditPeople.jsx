@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useGetMemberDetailWithIdQuery, useUploadMemberImageMutation } from '@/redux/api/company/team'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -24,14 +24,15 @@ const EditPeople = () => {
   const { data: memberData, isLoading: memberLoading, isFetching: memberFetching } = useGetMemberDetailWithIdQuery({
     member_id: id
   })
-  console.log("memberData", memberData)
 
   const [uploadMemberImage, { isLoading: isUploading }] = useUploadMemberImageMutation()
   const fileInputRef = useRef(null)
   const bannerInputRef = useRef(null)
   const [currentAction, setCurrentAction] = useState(null)
 
-  const userData = JSON.parse(localStorage.getItem('userData'))
+  // Read once on mount. This used to be a localStorage read plus a JSON.parse
+  // on every render of a 650 line component.
+  const userData = useMemo(() => JSON.parse(localStorage.getItem('userData')), [])
   const [editingField, setEditingField] = useState(null)
   const [fieldValues, setFieldValues] = useState({
     department: memberData?.data?.department || 'Your department',
@@ -76,7 +77,6 @@ const EditPeople = () => {
         ShowToast.error(response.message)
       }
     } catch (error) {
-      console.log("error", error)
       ShowToast.error(error?.message)
     }
   }
@@ -115,7 +115,12 @@ const EditPeople = () => {
     }
     document.addEventListener('mousedown', handleOutsid)
     return () => {
-      document.removeEventListener('moudedown', handleOutsid)
+      // Was removeEventListener('moudedown', ...) - a typo, so the name never
+      // matched and nothing was ever detached. This effect re-runs on every
+      // editingField change, so the document collected one more live listener
+      // each time, and each one held on to that render's closure. They stayed
+      // attached after the screen unmounted too.
+      document.removeEventListener('mousedown', handleOutsid)
     }
   }, [editingField])
 

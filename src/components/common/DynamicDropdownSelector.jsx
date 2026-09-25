@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, Loader2, X } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import ManageAvatar from "@/components/common/ManageAvatar";
-import { useGetAllMemberListQuery } from "@/redux/api/company/team";
 
 import { ScrollArea } from "../ui/scroll-area";
 import { useGetTeamDropdownQuery, useGetMemberDropdownQuery, useGetSprintDropdownQuery, useGetParentDropdownQuery } from "@/redux/graphql_api/miscData";
@@ -29,12 +28,22 @@ const SELECT_CONFIG = {
   [SELECT_TYPES.MEMBER]: {
     placeholder: 'Select member',
     emptyMessage: 'No members found',
-    getDisplayName: (item) => `${item.first_name} ${item.last_name}`,
-    getAvatarProps: (item) => ({
-      firstName: item.first_name,
-      lastName: item.last_name,
-      image: item.image
-    })
+    // The dropdown list gives first_name and last_name. A member already saved
+    // on a task comes back from getTaskDetail as one `name` field, so both
+    // shapes are handled here. Without the fallback the assignee and reporter
+    // read "undefined undefined".
+    getDisplayName: (item) => {
+      const joined = [item?.first_name, item?.last_name].filter(Boolean).join(' ');
+      return joined || item?.name || '';
+    },
+    getAvatarProps: (item) => {
+      const [firstWord, ...restWords] = (item?.name || '').trim().split(/\s+/);
+      return {
+        firstName: item?.first_name || firstWord || '',
+        lastName: item?.last_name || restWords.join(' '),
+        image: item?.image
+      };
+    }
   },
   [SELECT_TYPES.TEAM]: {
     placeholder: 'Select team',
@@ -58,6 +67,66 @@ const SELECT_CONFIG = {
     getAvatarProps: () => null
   }
 };
+
+// One entry per select type: which query hook to run, the fetch options that
+// type wants, and how to read the list out of its response shape.
+//
+// This component used to call all four hooks on every instance and rely on
+// `skip` to keep three of them quiet. `skip` stops the network request but not
+// the store subscription, so each dropdown held four subscriptions instead of
+// one, and the extraction useMemo below re-ran whenever any of the four query
+// states moved. A task detail panel renders five or six of these at once, so
+// that came to twenty-plus subscriptions for six dropdowns.
+const QUERY_BY_TYPE = {
+  [SELECT_TYPES.MEMBER]: {
+    useQuery: useGetMemberDropdownQuery,
+    fetchOptions: {
+      refetchOnMountOrArgChange: false,
+      refetchOnReconnect: false,
+      refetchOnFocus: false,
+    },
+    read: (data) => ({
+      items: data?.data?.memberDropdown?.members || [],
+      hasMore: data?.data?.memberDropdown?.hasMore || false,
+    }),
+  },
+  [SELECT_TYPES.TEAM]: {
+    useQuery: useGetTeamDropdownQuery,
+    fetchOptions: {
+      refetchOnMountOrArgChange: false,
+      refetchOnReconnect: true,
+    },
+    read: (data) => ({
+      items: data?.data?.teamDropdown?.teams || [],
+      hasMore: data?.data?.teamDropdown?.hasMore || false,
+    }),
+  },
+  [SELECT_TYPES.SPRINT]: {
+    useQuery: useGetSprintDropdownQuery,
+    fetchOptions: {
+      refetchOnMountOrArgChange: false,
+      refetchOnReconnect: true,
+    },
+    read: (data) => ({
+      items: data?.data?.sprintDropdown?.sprints || [],
+      hasMore: data?.data?.sprintDropdown?.hasMore || false,
+    }),
+  },
+  [SELECT_TYPES.PARENT]: {
+    useQuery: useGetParentDropdownQuery,
+    fetchOptions: {
+      refetchOnMountOrArgChange: false,
+      refetchOnReconnect: false,
+      refetchOnFocus: false,
+    },
+    read: (data) => ({
+      items: data?.data?.parentDropdown?.parents || [],
+      hasMore: data?.data?.parentDropdown?.hasMore || false,
+    }),
+  },
+};
+
+const EMPTY_ITEMS = [];
 
 const DropdownItem = memo(({ item, isSelected, config, onSelect, selectType }) => {
   const handleMouseDown = useCallback((e) => {
@@ -95,8 +164,12 @@ const DropdownItem = memo(({ item, isSelected, config, onSelect, selectType }) =
   );
 });
 
-const DynamicDropdownSelector = ({
-  slug = null,
+// The real component. `selectType` is fixed for the lifetime of one instance,
+// because the wrapper at the bottom of this file keys on it - so picking the
+// query hook out of QUERY_BY_TYPE below keeps a stable hook order.
+const DropdownSelectorBody = ({
+  selectType,
+  config,
   onChange,
   value,
   label,
@@ -105,17 +178,6 @@ const DynamicDropdownSelector = ({
   showDropdown = false,
   onClose
 }) => {
-  // Validate and normalize slug
-  const selectType =
-    slug === "team"
-      ? SELECT_TYPES.TEAM
-      : slug === "member"
-        ? SELECT_TYPES.MEMBER
-        : slug === "sprint"
-          ? SELECT_TYPES.SPRINT
-          : slug === 'parent' ? SELECT_TYPES.PARENT : null;
-
-  const config = SELECT_CONFIG[selectType];
   // State management
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -163,74 +225,19 @@ const DynamicDropdownSelector = ({
   }), [debouncedSearch, page]);
 
   const shouldFetch = isOpen || showDropdown
-  // API queries
-  const {
-    data: memberData,
-    isFetching: memberFetching,
-    error: memberError
-  } = useGetMemberDropdownQuery(queryParams, {
-    refetchOnMountOrArgChange: false,
-    refetchOnReconnect: false,
-    refetchOnFocus: false,
-    skip: !(shouldFetch && selectType === SELECT_TYPES.MEMBER),
+
+  // One query, chosen by type. Same fetch options and same skip condition as
+  // before, so when and what it requests has not changed.
+  const queryDef = QUERY_BY_TYPE[selectType];
+  const { data, isFetching, error: apiError } = queryDef.useQuery(queryParams, {
+    ...queryDef.fetchOptions,
+    skip: !shouldFetch,
   });
 
-  const {
-    data: teamData,
-    isFetching: teamFetching,
-    error: teamError
-  } = useGetTeamDropdownQuery(queryParams, {
-    refetchOnMountOrArgChange: false,
-    refetchOnReconnect: true,
-    skip: !(shouldFetch && selectType === SELECT_TYPES.TEAM),
-  });
-
-  const { data: sprintData, isFetching: sprintFetching, error: sprintError } = useGetSprintDropdownQuery(queryParams, {
-    refetchOnMountOrArgChange: false,
-    refetchOnReconnect: true,
-    skip: !(shouldFetch && selectType === SELECT_TYPES.SPRINT)
-  })
-
-  const { data: parentData, isFetching: parentFetching, error: parentError } = useGetParentDropdownQuery(queryParams, {
-    refetchOnMountOrArgChange: false,
-    refetchOnReconnect: false,
-    refetchOnFocus: false,
-    skip: !(shouldFetch && selectType === SELECT_TYPES.PARENT)
-  })
-
-  // Extract data based on type
-  const { items, hasMore, isFetching, apiError } = useMemo(() => {
-    if (selectType === SELECT_TYPES.MEMBER) {
-      return {
-        items: memberData?.data?.memberDropdown?.members || [],
-        hasMore: memberData?.data?.memberDropdown?.hasMore || false,
-        isFetching: memberFetching,
-        apiError: memberError
-      };
-    } else if (selectType === SELECT_TYPES.TEAM) {
-      return {
-        items: teamData?.data?.teamDropdown?.teams || [],
-        hasMore: teamData?.data?.teamDropdown?.hasMore || false,
-        isFetching: teamFetching,
-        apiError: teamError
-      };
-    } else if (selectType === SELECT_TYPES.SPRINT) {
-      return {
-        items: sprintData?.data?.sprintDropdown?.sprints || [],
-        hasMore: sprintData?.data?.sprintDropdown?.hasMore || false,
-        isFetching: sprintFetching,
-        apiError: sprintError
-      }
-    } else if (selectType === SELECT_TYPES.PARENT) {
-      return {
-        items: parentData?.data?.parentDropdown?.parents || [],
-        hasMore: parentData?.data?.parentDropdown?.hasMore || false,
-        isFetching: parentFetching,
-        apiError: parentError
-      }
-    }
-    return { items: [], hasMore: false, isFetching: false, apiError: null };
-  }, [selectType, memberData, teamData, sprintData, parentData, memberFetching, teamFetching, sprintFetching, parentFetching, memberError, teamError, sprintError, parentError]);
+  const { items, hasMore } = useMemo(
+    () => (data ? queryDef.read(data) : { items: EMPTY_ITEMS, hasMore: false }),
+    [data, queryDef]
+  );
 
   // Update items list when new data arrives
   useEffect(() => {
@@ -516,6 +523,37 @@ const DynamicDropdownSelector = ({
         )}
       </PopoverContent>
     </Popover>
+  );
+};
+
+// Maps the `slug` prop onto a select type, then mounts the body keyed on it.
+// The key matters: the body picks its query hook by type, so if a caller ever
+// swapped `slug` on a mounted dropdown, an unkeyed body would change hook
+// order between renders. Keying makes that a remount instead, which is also
+// the right behaviour - a member list and a sprint list share no state.
+const DynamicDropdownSelector = ({ slug = null, ...props }) => {
+  const selectType =
+    slug === "team"
+      ? SELECT_TYPES.TEAM
+      : slug === "member"
+        ? SELECT_TYPES.MEMBER
+        : slug === "sprint"
+          ? SELECT_TYPES.SPRINT
+          : slug === 'parent' ? SELECT_TYPES.PARENT : null;
+
+  const config = SELECT_CONFIG[selectType];
+  // An unrecognised slug has no config and no query. Previously this threw on
+  // the first read of config.placeholder; rendering nothing is safer and no
+  // working call site reaches this branch.
+  if (!config) return null;
+
+  return (
+    <DropdownSelectorBody
+      key={selectType}
+      selectType={selectType}
+      config={config}
+      {...props}
+    />
   );
 };
 

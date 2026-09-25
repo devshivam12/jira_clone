@@ -378,7 +378,6 @@ const BacklogTable = ({ issue, statusCount, onLoadMore, hasMore, isLoading, expa
                     label: 'Move to Backlog',
                     onSelect: (e) => {
                         e?.stopPropagation?.();
-                        console.log('Move to backlog');
                     }
                 },
                 {

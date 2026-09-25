@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp \"C:\\\\Users\\\\Admin\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\e--mern-stack-projects-jira-clone-frontend\\\\dbb33ced-c828-4505-9f96-ea296d6f9389\\\\scratchpad\\\\Timeline-Module-Summary.pdf\" \"C:\\\\Users\\\\Admin\\\\Desktop\\\\Timeline-Module-Summary.pdf\")",
+      "Read(//c/Users/Admin/Desktop/**)",
+      "Bash(docker compose *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); const d={...p.dependencies,...p.devDependencies}; Object.keys\\(d\\).filter\\(k=>/virtual|window|tanstack|virtuoso|infinite/i.test\\(k\\)\\).forEach\\(k=>console.log\\(k,d[k]\\)\\);\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('react',p.dependencies.react\\)\")",
+      "PowerShell(git -C \"e:\\\\mern_stack_projects\\\\jira_clone\\\\frontend\" status --short -- src/layout/timeline-layout/)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@tanstack/react-virtual/package.json'\\).version\\)\")",
+      "Read(//e/mern_stack_projects/jira_clone/**)",
+      "Bash(node -e \"const s=require\\('./package.json'\\).scripts; console.log\\(JSON.stringify\\(s,null,2\\)\\)\")",
+      "Bash(npm run *)",
+      "Read(//tmp/**)"
+    ]
+  }
+}

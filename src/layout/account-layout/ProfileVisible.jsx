@@ -73,7 +73,6 @@ const ProfileVisible = () => {
     return storeData ? JSON.parse(storeData) : {};
   });
 
-  console.log("UserData", userData);
   const [editingField, setEditingField] = useState(null)
   const [avatarImage, setAvatarImage] = useState(null);
   const [headerImage, setHeaderImage] = useState(null);

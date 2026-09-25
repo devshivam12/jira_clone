@@ -38,9 +38,6 @@ const CreateFirstCompanyProject = () => {
             skip: !selectTemplate
         }
     )
-    console.log("projectData", projectData)
-    console.log("templateData", templateData)
-    console.log("fieldsData", fieldsData?.data?.name)
 
     const { handleSubmit, register, reset, formState: { errors } } = useForm()
 
@@ -49,12 +46,9 @@ const CreateFirstCompanyProject = () => {
     const navigate = useNavigate()
 
     const handleCreateProject = async (data) => {
-        console.log("data", data)
         try {
             const token = searchParams.get('token')
             const clientId = searchParams.get('clientId')
-            console.log("token", token)
-            console.log("clientId", clientId)
             const query = {
                 project: {
                     project_slug: selectProject,
@@ -73,7 +67,6 @@ const CreateFirstCompanyProject = () => {
                     withCredentials: true
                 },
             );
-            console.log("response", response)
             if (response.status === 200) {
                 navigate(`/auth-callback?token=${token}&clientId=${clientId}`)
                 ShowToast.success('Project created', {
@@ -94,7 +87,6 @@ const CreateFirstCompanyProject = () => {
                 })
             }
         } catch (error) {
-            console.log("error", error)
             ShowToast.error('Please check error', {
                 description: error.message,
                 useCustom: true

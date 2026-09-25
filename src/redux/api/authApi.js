@@ -7,9 +7,7 @@ export const apiAuth = createApi({
         credentials: 'include',
         prepareHeaders: (headers) => {
             const userData = JSON.parse(localStorage.getItem('userData'));
-            console.log("userData", userData)
             let clientId = userData?.clientId
-            console.log("clientId", clientId)
             if (clientId) {
                 headers.set('x-clientId', clientId);
             }

@@ -1,11 +1,9 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
 import { gql } from "graphql-request";
-import { baseQueryWithReauthGraphQl } from "./baseQuery";
+import { graphqlApi } from "./graphqlBaseApi";
 
-export const taskApi = createApi({
-    reducerPath: 'taskApi',
-    baseQuery: baseQueryWithReauthGraphQl,
-    tagTypes: ['Task'],
+// Injected into the shared GraphQL slice instead of creating its own. The
+// exported name and every hook below are unchanged.
+export const taskApi = graphqlApi.injectEndpoints({
     endpoints: (builder) => ({
         createTask: builder.mutation({
             query: (payload) => ({
@@ -55,14 +53,14 @@ export const taskApi = createApi({
                 const { taskId, key, value, fullDetail } = payload.variables
                 // console.log("taskIdtaskIdtaskIdtaskId", taskId)
                 const state = getState();
-                const cacheEntries = state.taskApi.queries;
+                const cacheEntries = state[taskApi.reducerPath].queries;
 
                 // console.log("All cache entries:", cacheEntries);
                 // console.log("Looking for getBacklogList entries:",
                 //     Object.keys(cacheEntries).filter(key => key.includes('getBacklogList'))
                 // );
                 const patchResult = [];
-                const queryEntries = Object.values(state.taskApi.queries);
+                const queryEntries = Object.values(state[taskApi.reducerPath].queries);
 
                 const taskByIdQueries = queryEntries.filter(
                     (entry) => entry?.endpointName === 'getTaskById' && entry?.status === 'fulfilled'
@@ -225,7 +223,7 @@ export const taskApi = createApi({
                     )
                 )
                 const state = getState();
-                const queryEntries = Object.values(state.taskApi.queries);
+                const queryEntries = Object.values(state[taskApi.reducerPath].queries);
                 const backlogQueries = queryEntries.filter(
                     (entry) =>
                         entry?.endpointName === 'getBacklogList' &&

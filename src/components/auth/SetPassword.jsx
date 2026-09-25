@@ -50,17 +50,14 @@ const SetPassword = () => {
             }
 
             const response = await apiService.post("/company/team/set-password", payload, config)
-            console.log("response", response)
             const userData = response.data.user
             if (response.data.status === 200) {
                 localStorage.setItem('userData', JSON.stringify(userData))
                 localStorage.setItem('accessToken', response.data.user.token)
-                console.log("userData", userData)
                 dispatch(userExist(userData))
                 navigate('/dashboard')
             }
         } catch (error) {
-            console.log("error", error)
             // dispatch(userNotExist(userData))
         }
     }

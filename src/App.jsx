@@ -1,79 +1,62 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Register from './components/auth/Register'
-import Login from './components/auth/Login'
-import { useDispatch, useSelector } from 'react-redux'
-import axios from 'axios'
-import { server } from './constant/config'
-import { userExist, userNotExist } from './redux/reducers/auth'
+import { useDispatch } from 'react-redux'
 import Loader from './components/layout/Loader'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import DashboardLayout from './layout/DashboardLayout'
-import { ToastViewport } from './components/ui/toast'
-import ApiService from './api/apiService'
-import CreateWorkspaceForm from './layout/CreateWorkspaceForm'
-import AccountLayout from './layout/account-layout/index'
-import ProfileVisible from './layout/account-layout/ProfileVisible'
-import Email from './layout/account-layout/Email'
-import Security from './layout/account-layout/Security'
-
-
-import Summary from './layout/summary-layout/index'
-import Backlog from './layout/backlog-layout/index'
-import Board from './layout/board-layout/index'
-import Timeline from './layout/timeline-layout/index'
-import Forms from './layout/forms/index'
-import Team from './layout/team/index'
-import People from './layout/people/index'
 import PublicRoute from './components/auth/PublicRoute'
-import SetPassword from './components/auth/SetPassword'
-import EditTeam from './layout/team/EditTeam'
-// import ProjectLayout from './layout/ProjectLayout'
-import Project from './layout/projects'
-import ProjectLayout from './layout/ProjectLayout'
-import CreateProject from './layout/create-project'
-import CreateFirstCompanyProject from './components/auth/CreateFirstCompanyProject'
-import AutoLogin from './components/auth/AutoLogin'
-import { loadLastAccessedProject, setLastAccessedProject } from './redux/reducers/dynamicRouting'
-import DashboardRedirect from './components/auth/DashboardRedirect'
+import { loadLastAccessedProject } from './redux/reducers/dynamicRouting'
 import { Toaster } from 'sonner'
-import ProjectTab from './layout/projects/ProjectTab'
-import EditPeople from './layout/people/EditPeople'
+
+// Every page below is code split. They used to be static imports, which put
+// the whole app - timeline chart, data tables, rich text editor, auth screens -
+// into one 1.9 MB chunk that had to be downloaded and parsed before the login
+// screen could paint. Now each page is fetched the first time it is routed to.
+//
+// The guards (ProtectedRoute, PublicRoute) and the Loader stay eager on
+// purpose: they are tiny, they run on the very first paint, and the Loader is
+// the Suspense fallback so it cannot be lazy itself.
+const Login = lazy(() => import('./components/auth/Login'))
+const Register = lazy(() => import('./components/auth/Register'))
+const SetPassword = lazy(() => import('./components/auth/SetPassword'))
+const AutoLogin = lazy(() => import('./components/auth/AutoLogin'))
+const DashboardRedirect = lazy(() => import('./components/auth/DashboardRedirect'))
+const CreateFirstCompanyProject = lazy(() => import('./components/auth/CreateFirstCompanyProject'))
+
+const DashboardLayout = lazy(() => import('./layout/DashboardLayout'))
+const ProjectLayout = lazy(() => import('./layout/ProjectLayout'))
+const AccountLayout = lazy(() => import('./layout/account-layout/index'))
+
+const ProfileVisible = lazy(() => import('./layout/account-layout/ProfileVisible'))
+const Email = lazy(() => import('./layout/account-layout/Email'))
+const Security = lazy(() => import('./layout/account-layout/Security'))
+
+const Summary = lazy(() => import('./layout/summary-layout/index'))
+const Backlog = lazy(() => import('./layout/backlog-layout/index'))
+const Board = lazy(() => import('./layout/board-layout/index'))
+const Timeline = lazy(() => import('./layout/timeline-layout/index'))
+const List = lazy(() => import('./layout/list-layout/index'))
+const TaskView = lazy(() => import('./layout/task-layout/index'))
+const Forms = lazy(() => import('./layout/forms/index'))
+
+const Team = lazy(() => import('./layout/team/index'))
+const EditTeam = lazy(() => import('./layout/team/EditTeam'))
+const People = lazy(() => import('./layout/people/index'))
+const EditPeople = lazy(() => import('./layout/people/EditPeople'))
+const Project = lazy(() => import('./layout/projects'))
+const ProjectTab = lazy(() => import('./layout/projects/ProjectTab'))
+const CreateProject = lazy(() => import('./layout/create-project'))
 
 
 function App() {
   const accessToken = localStorage.getItem('accessToken')
   const dispatch = useDispatch()
 
-  // // const { user, loader } = useSelector((state => state.auth))
-  // const [user, setUser] = useState(null)
-  // const [loader, setLoader] = useState(true)
-  // // const dispatch = useDispatch()
-  // const apiService = new ApiService()
-
-  // useEffect(() => {
-  //   apiService.get(`${server}/user/auth/user-details`, { withCredentials: true })
-  //     .then((res) => {
-  //       // console.log("res", res.data.data)
-  //       // dispatch(userExist(res.data.data))
-  //       setUser(res.data.data)
-  //       setLoader(false)
-  //     })
-  //     .catch((error) => {
-  //       setUser(null)
-  //       setLoader(false)
-  //     })
-  // }, [])
-
-  // console.log("user", user)
   useEffect(() => {
     if (accessToken) {
       dispatch(loadLastAccessedProject())
     }
   }, [dispatch, accessToken])
 
-  console.log("lastAccessedProject", loadLastAccessedProject())
-  console.log("setLastAccessedProject", setLastAccessedProject())
 
   return (
     <>
@@ -91,19 +74,11 @@ function App() {
                   )
               }
             />
-            {/* <Route
-              path="/login"
-              element={
-                <ProtectedRoute user={!user} redirect='/'>
-                  <Login />
-                </ProtectedRoute>
-              } /> */}
             <Route path="/login" element={
               <PublicRoute>
                 <Login />
               </PublicRoute>
             } />
-            {/* <Route path="/register" element={<Register />} /> */}
             <Route path="/register" element={
               <PublicRoute>
                 <Register />
@@ -156,8 +131,13 @@ function App() {
                 <Route path="summary" element={<Summary />} />
                 <Route path="timeline" element={<Timeline />} />
                 <Route path="backlog" element={<Backlog />} />
+                <Route path="list" element={<List />} />
                 <Route path="board" element={<Board />} />
                 <Route path="forms" element={<Forms />} />
+                {/* Dedicated page for a single work item. The drawer opens the
+                    same task in a query param; this one keeps the id in the
+                    path so the link can be shared and opened in a new tab. */}
+                <Route path="view/:task_id" element={<TaskView />} />
               </Route>
             </Route>
 
@@ -190,8 +170,8 @@ function App() {
       <Toaster
         position="bottom-right"
         richColors
-        // expand={true}
-        // offset={{ bottom: '24px', right: "16px", left: "16px" }} 
+      // expand={true}
+      // offset={{ bottom: '24px', right: "16px", left: "16px" }}
       />
     </>
   )

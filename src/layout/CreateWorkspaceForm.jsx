@@ -32,7 +32,6 @@ const CreateWorkspaceForm = ({ onCancle }) => {
             formData.append('file', selectedFile)
 
             const response = await createWorkSpace(formData).unwrap();
-            console.log("response", response)
 
             if (response.status === 201) {
                 toast({
@@ -45,7 +44,6 @@ const CreateWorkspaceForm = ({ onCancle }) => {
             }
             onCancle()
         } catch (error) {
-            console.log("error", error)
             toast({
                 title: "Error",
                 description: error,
@@ -65,8 +63,6 @@ const CreateWorkspaceForm = ({ onCancle }) => {
         fileInputRef.current.click()
     }
 
-    console.log("selected file", selectedFile)
-    console.log("previewUrl", previewUrl)
 
     return (
         <Card className="w-full h-full border-none shadow-none">

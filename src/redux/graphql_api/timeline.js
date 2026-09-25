@@ -1,10 +1,8 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithReauthGraphQl } from "./baseQuery";
+import { graphqlApi } from "./graphqlBaseApi";
 
-export const timelineApi = createApi({
-    reducerPath: 'timelineApi',
-    baseQuery: baseQueryWithReauthGraphQl,
-    tagTypes: ['Timeline'],
+// Injected into the shared GraphQL slice. The 'Timeline' tag moved to the base
+// slice; the hooks below are unchanged.
+export const timelineApi = graphqlApi.injectEndpoints({
     endpoints: (builder) => ({
         // Paged by row. Every page for the same project + date window shares
         // one cache entry, and `merge` appends the incoming epics, so the
@@ -141,7 +139,7 @@ export const timelineApi = createApi({
             async onQueryStarted(payload, { dispatch, queryFulfilled, getState }) {
                 const { taskId, startDate, dueDate } = payload.variables || {};
                 const state = getState();
-                const timelineQueries = Object.values(state.timelineApi.queries).filter(
+                const timelineQueries = Object.values(state[timelineApi.reducerPath].queries).filter(
                     (entry) => entry?.endpointName === 'getTimelineData' && entry?.status === 'fulfilled'
                 );
 

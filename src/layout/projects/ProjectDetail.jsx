@@ -19,7 +19,6 @@ import { useDispatch } from 'react-redux'
 import { useParams } from 'react-router-dom'
 
 const ProjectDetail = ({ projectDetail }) => {
-    console.log("projectDetail", projectDetail)
     const initialProjectName = projectDetail?.data?.name?.charAt(0)?.toUpperCase() ?? '';
 
     const [updateProject, { isLoading }] = useUpdateProjectByIdMutation()
@@ -27,8 +26,6 @@ const ProjectDetail = ({ projectDetail }) => {
     const { id } = useParams()
     const dispatch = useDispatch()
 
-    console.log("params", id)
-    console.log()
     const [addProjectName, setAddProjectName] = useState('')
     const [openInfo, setOpenInfo] = useState(false)
     const [leaderValue, setLeaderValue] = useState(null)
@@ -45,18 +42,13 @@ const ProjectDetail = ({ projectDetail }) => {
                     project_leader: leaderValue
                 }
             }
-            console.log("payload", payload)
             const result = await updateProject(payload).unwrap()
-            console.log("result", result)
-            console.log("result.status", result.status)
             if (result.status === 201) {
-                console.log("this is working ")
 
                 dispatch(updateProjectReduxStore({
                     _id: id,
                     name: addProjectName,
                 }))
-                console.log("result.message", result.message)
                 ShowToast.success(result.message)
             }
             else if (result.status === 404) {
@@ -74,7 +66,6 @@ const ProjectDetail = ({ projectDetail }) => {
                 })
             }
         } catch (error) {
-            console.log("error", error)
             ShowToast.error("Please check the error", {
                 description: error?.data?.message,
                 useCustom: true,
